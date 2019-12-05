@@ -39,5 +39,6 @@ cp "$PREFIX_PROG_STRIPPED/psd" _build
 
 b_log "Building hostutils"
 (cd phoenix-rtos-hostutils/ && make $MAKEFLAGS $CLEAN all)
+mkdir -p $PREFIX_BOOT
 cp "$PREFIX_BUILD_HOST/prog.stripped/phoenixd" $PREFIX_BOOT
 cp "$PREFIX_BUILD_HOST/prog.stripped/psu" $PREFIX_BOOT
