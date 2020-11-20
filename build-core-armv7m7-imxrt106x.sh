@@ -13,7 +13,7 @@ set -e
 
 b_log "Building phoenix-rtos-kernel"
 KERNEL_MAKECMDGOALS="install-headers"
-(cd phoenix-rtos-kernel && CFLAGS+=$KERNEL_CFLAGS make $MAKEFLAGS "$CLEAN" $KERNEL_MAKECMDGOALS all)
+(cd phoenix-rtos-kernel && make $MAKEFLAGS "$CLEAN" $KERNEL_MAKECMDGOALS all)
 
 b_log "Building libphoenix"
 (cd libphoenix && make $MAKEFLAGS "$CLEAN" all install)
@@ -23,7 +23,7 @@ b_log "Building phoenix-rtos-filesystems"
 b_install "$PREFIX_PROG_STRIPPED/dummyfs" /sbin
 
 b_log "Building phoenix-rtos-devices"
-(cd phoenix-rtos-devices && CFLAGS+=$DEVICES_CFLAGS make $MAKEFLAGS "$CLEAN" all)
+(cd phoenix-rtos-devices && make $MAKEFLAGS "$CLEAN" all)
 #b_install "$PREFIX_PROG_STRIPPED/imx6ull-gpio" /sbin
 
 b_log "Building phoenix-rtos-usb"
