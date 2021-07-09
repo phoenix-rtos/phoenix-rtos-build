@@ -64,6 +64,7 @@ B_PORTS="n"
 B_PROJECT="n"
 B_IMAGE="n"
 B_TEST="n"
+B_PHOENIX_LONG_TESTS="n"
 
 for i in "$@"; do
 	case "$i"
@@ -82,6 +83,8 @@ for i in "$@"; do
 			B_PROJECT="y";;
 		image)
 			B_IMAGE="y";;
+		long_test)
+			export B_PHOENIX_LONG_TESTS="y";;
 		all)
 			B_FS="y"; B_CORE="y"; B_TEST="y"; B_PORTS="y"; B_PROJECT="y"; B_IMAGE="y";;
 	esac;
