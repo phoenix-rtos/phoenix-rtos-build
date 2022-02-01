@@ -75,7 +75,7 @@ for i in "$@"; do
 			B_FS="y";;
 		core)
 			B_CORE="y";;
-		test)
+		test|tests)
 			B_TEST="y";;
 		ports)
 			B_PORTS="y";;
@@ -84,7 +84,7 @@ for i in "$@"; do
 		image)
 			B_IMAGE="y";;
 		all)
-			B_FS="y"; B_CORE="y"; B_TEST="y"; B_PORTS="y"; B_PROJECT="y"; B_IMAGE="y";;
+			B_FS="y"; B_CORE="y"; B_PORTS="y"; B_PROJECT="y"; B_IMAGE="y";;
 	esac;
 done
 
