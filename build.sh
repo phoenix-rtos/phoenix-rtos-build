@@ -64,7 +64,7 @@ B_CORE="n"
 B_PORTS="n"
 B_PROJECT="n"
 B_IMAGE="n"
-B_TEST="n"
+export B_TEST="n"
 
 for i in "$@"; do
 	case "$i"
