@@ -22,7 +22,8 @@ endif
 # ARM Cortex Ax
 TARGETS_ARMCORTEXA := \
 	armv7a7-imx6ull \
-	armv7a9-zynq7000
+	armv7a9-zynq7000emu \
+  armv7a9-zynq7000hw
 
 TARGETS += $(TARGETS_ARMCORTEXA)
 ifneq (,$(filter $(TARGETS_ARMCORTEXA),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
