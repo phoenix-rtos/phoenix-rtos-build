@@ -24,6 +24,9 @@ CFLAGS :=
 LDFLAGS :=
 LDFLAGS_PREFIX :=
 
+# supported langauges
+LANGUAGE_EXTENSIONS := %.c %.cc %.cpp
+
 # specific "-Ox" flag can be set globally for project by setting OLVL variable
 ifneq ($(filter-out -O%,$(OLVL)),)
   $(error OLVL set but does not provide optimisation flags)
@@ -152,6 +155,19 @@ $(PREFIX_O)%.o: %.c
 	@printf "CC  %-24s\n" "$<"
 	$(SIL)$(CC) -c $(CFLAGS) "$(abspath $<)" -o "$@"
 	$(SIL)$(CC) -M  -MD -MP -MF $(PREFIX_O)$*.c.d -MT "$@" $(CFLAGS) $<
+
+# At now, C++ doesn't have its own flags. -Wstrict-prototypes is incorrect for CPP and has to be filtered out.
+$(PREFIX_O)%.o: %.cc
+	@mkdir -p $(@D)
+	@printf "CXX  %-24s\n" "$<"
+	$(SIL)$(CXX) -c $(filter-out -Wstrict-prototypes, $(CFLAGS)) "$(abspath $<)" -o "$@"
+	$(SIL)$(CXX) -M  -MD -MP -MF $(PREFIX_O)$*.cc.d -MT "$@" $(filter-out -Wstrict-prototypes, $(CFLAGS)) $<
+
+$(PREFIX_O)%.o: %.cpp
+	@mkdir -p $(@D)
+	@printf "CXX  %-24s\n" "$<"
+	$(SIL)$(CXX) -c $(filter-out -Wstrict-prototypes, $(CFLAGS)) "$(abspath $<)" -o "$@"
+	$(SIL)$(CXX) -M  -MD -MP -MF $(PREFIX_O)$*.cpp.d -MT "$@" $(filter-out -Wstrict-prototypes, $(CFLAGS)) $<
 
 $(PREFIX_O)%.o: %.S
 	@mkdir -p $(@D)

@@ -9,6 +9,7 @@
 CROSS ?=
 
 CC = $(CROSS)gcc
+CXX = $(CROSS)g++
 
 OLVL ?= -O2
 CFLAGS += $(OLVL)
