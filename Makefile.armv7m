@@ -9,6 +9,7 @@
 CROSS ?= arm-phoenix-
 
 CC := $(CROSS)gcc
+CXX := $(CROSS)g++
 
 # common Cortex-M CFLAGS
 OLVL ?= -O2
@@ -76,7 +77,10 @@ GCCLIB := $(shell $(CC) $(CFLAGS) -print-libgcc-file-name)
 CRTBEGIN := $(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
 CRTEND := $(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
 PHOENIXLIB := $(shell $(CC) $(CFLAGS) -print-file-name=libphoenix.a)
-LDLIBS := $(PHOENIXLIB) $(GCCLIB) $(CRTBEGIN) $(CRTEND)
+# The filter-out enables proper building because if libstdc++ is not available, LIBSTDCPP will be empty.
+LIBSTDCPP := $(filter-out libstdc++.a, $(shell $(CC) $(CFLAGS) -print-file-name=libstdc++.a))
+# For arm, the implementation of exceptions, defined in libgcc, uses abort() from libphoenix
+LDLIBS := $(LIBSTDCPP) --start-group $(PHOENIXLIB) $(GCCLIB) --end-group $(CRTBEGIN) $(CRTEND)
 
 OBJCOPY = $(CROSS)objcopy
 OBJDUMP = $(CROSS)objdump

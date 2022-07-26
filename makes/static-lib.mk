@@ -30,8 +30,11 @@ ABS_HEADERS_DIR := $(abspath $(LOCAL_DIR)/$(LOCAL_HEADERS_DIR))
 SRCS += $(addprefix $(LOCAL_DIR), $(LOCAL_SRCS))
 HEADERS += $(addprefix $(LOCAL_DIR), $(LOCAL_HEADERS))
 
+# removing all files with unsupported extensions
+SRCS := $(filter $(LANGUAGE_EXTENSIONS), $(SRCS))
+
 # linking prerequisites
-OBJS.$(NAME) := $(patsubst %.c,$(PREFIX_O)%.o,$(SRCS))
+OBJS.$(NAME) := $(patsubst %,$(PREFIX_O)%.o,$(basename $(SRCS)))
 
 # compilation prerequisites - component order-only dependency
 $(OBJS.$(NAME)): | $(DEPS)
@@ -41,7 +44,7 @@ $(OBJS.$(NAME)): | $(DEPS)
 $(OBJS.$(NAME)): CFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CFLAGS) $(LOCAL_CFLAGS)
 
 # dynamically generated dependencies (file-to-file dependencies)
-DEPS.$(NAME) := $(patsubst %.c,$(PREFIX_O)%.c.d,$(SRCS))
+DEPS.$(NAME) := $(patsubst %,$(PREFIX_O)%.d,$(SRCS))
 -include $(DEPS.$(NAME))
 
 # rule for installing headers
