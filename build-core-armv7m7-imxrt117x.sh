@@ -4,7 +4,7 @@
 #
 # Builder for Phoenix-RTOS core components
 #
-# Copyright 2018, 2019 Phoenix Systems
+# Copyright 2018-2022 Phoenix Systems
 # Author: Kaja Swat, Aleksander Kaminski, Pawel Pisarczyk
 #
 
@@ -26,6 +26,9 @@ make -C "phoenix-rtos-usb" libusb usb-headers install
 
 b_log "Building phoenix-rtos-devices"
 make -C "phoenix-rtos-devices" all install
+
+b_log "Building phoenix-rtos-usb"
+make -C "phoenix-rtos-usb" usb usb-install USB_HCD_LIBS="libusbehci"
 
 b_log "Building coreutils"
 make -C "phoenix-rtos-utils" all install
