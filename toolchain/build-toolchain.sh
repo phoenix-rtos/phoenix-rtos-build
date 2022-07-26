@@ -175,11 +175,49 @@ build_gcc_stage2() {
     log "installing GCC (stage2)"
     make install-gcc install-target-libgcc
 
-    # TODO: build libstdc++ -> for now it fails because of libphoenix missing features
-
     # FIXME: keep the symlink for now until install dir changes in libphoenix and kernel would be well-propagated
     #rm -r "${SYSROOT:?}/usr"
     popd > /dev/null
+}
+
+build_libstdcpp() {
+    # use new compiler for the below builds
+    OLDPATH="$PATH"
+    PATH="$TOOLCHAIN_PREFIX/bin":$PATH
+
+    # create "libbuilddir" directory for libstdc++
+    rm -rf "${BUILD_ROOT}/${GCC}/build/${TARGET}/libstdc++-v3"
+    mkdir -p "${BUILD_ROOT}/${GCC}/build/${TARGET}/libstdc++-v3"
+    pushd "${BUILD_ROOT}/${GCC}/build/${TARGET}/libstdc++-v3" > /dev/null
+
+    log "building stdlibc++"
+    # LIBSTDC++ compilation options
+    # --host -> target is a host for libstdc++
+    # --with-libphoenix -> use libphoenix as standard C library
+    # --enable-tls -> enable Thread Local Storage
+    # --disable-nls ->  all compiler messages will be in english
+    # --disable-shared -> disable building shared libraries [default=yes]
+    # --srcdir -> point to the directory with source files, because the current directory is incorrect for srcdir
+    # --enable-cxx-flags -> enable passing additional flags used during libstdc++ compilation
+
+    # now, we use files from generic for every category in libstdc++v3/config directory
+    ../../../libstdc++-v3/configure --target="${TARGET}" \
+                                    --host="${TARGET}" \
+                                    --prefix="${SYSROOT}" \
+                                    --with-libphoenix \
+                                    --enable-tls \
+                                    --disable-nls \
+                                    --disable-shared \
+                                    --srcdir="../../../libstdc++-v3" \
+                                    --enable-cxx-flags="-ffunction-sections -fdata-sections"
+
+    make
+
+    log "installing stdlibc++"
+    make install
+
+    popd > /dev/null
+    PATH="$OLDPATH"
 }
 
 strip_binaries() {
@@ -204,6 +242,7 @@ build_gcc_stage1;
 
 build_libc;
 build_gcc_stage2;
+build_libstdcpp;
 
 strip_binaries;
 
