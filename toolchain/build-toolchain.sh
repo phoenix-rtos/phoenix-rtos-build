@@ -115,7 +115,7 @@ build_gcc_stage1() {
     # --with-newlib -> do note generate standard library includes by fixincludes, do not include _eprintf in libgcc
     # --disable-libssp -> stack smashing protector library disabled
     # --disable-nls -> all compiler messages will be in english
-    # --disable-tls -> disable Thread Local Storage as it's not supported Yet (note: C11 incompatibility?)
+    # --enable-tls -> enable Thread Local Storage
     # --enable-initfini-array -> force init/fini array support instead of .init .fini sections
     # --disable-decimal-float -> not relevant for other than i386 and PowerPC
     # --disable-libquadmath -> not using fortran and quad floats
@@ -126,7 +126,7 @@ build_gcc_stage1() {
                  --with-sysroot="${SYSROOT}" \
                  --enable-languages=c,c++ --with-newlib \
                  --with-headers=yes \
-                 --disable-tls \
+                 --enable-tls \
                  --enable-initfini-array \
                  --disable-decimal-float \
                  --disable-libquadmath \
