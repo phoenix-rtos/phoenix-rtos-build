@@ -19,6 +19,8 @@ CFLAGS += $(OLVL)
 CFLAGS += -Wall -Wstrict-prototypes -g\
 	-fomit-frame-pointer -mcmodel=medany -fno-builtin -DTARGET_RISCV64
 
+CFLAGS += $(filter-out -Wstrict-prototypes, $(CFLAGS))
+
 AR = $(CROSS)ar
 ARFLAGS = -r
 
@@ -29,7 +31,7 @@ CRTBEGIN := $(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
 CRTEND := $(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
 PHOENIXLIB := $(shell $(CC) $(CFLAGS) -print-file-name=libphoenix.a)
 # The filter-out enables proper building because if libstdc++ is not available, LIBSTDCPP will be empty.
-LIBSTDCPP := $(filter-out libstdc++.a, $(shell $(CC) $(CFLAGS) -print-file-name=libstdc++.a))
+LIBSTDCPP := $(filter-out libstdc++.a, $(shell $(CXX) $(CXXFLAGS) -print-file-name=libstdc++.a))
 LDLIBS := $(LIBSTDCPP) $(PHOENIXLIB) $(GCCLIB) $(CRTBEGIN) $(CRTEND)
 
 OBJCOPY = $(CROSS)objcopy

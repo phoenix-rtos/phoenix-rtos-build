@@ -28,6 +28,8 @@ CFLAGS += -Wall -Wstrict-prototypes -g\
 		-mcpu=$(cpu) -mtune=$(cpu) -mthumb\
 		-fomit-frame-pointer -mno-unaligned-access -fdata-sections -ffunction-sections
 
+CXXFLAGS += $(filter-out -Wstrict-prototypes, $(CFLAGS))
+
 VADDR_KERNEL_INIT = 0xc0000000
 
 AR = $(CROSS)ar
@@ -40,9 +42,10 @@ CRTBEGIN := $(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
 CRTEND := $(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
 PHOENIXLIB := $(shell $(CC) $(CFLAGS) -print-file-name=libphoenix.a)
 # The filter-out enables proper building because if libstdc++ is not available, LIBSTDCPP will be empty.
-LIBSTDCPP := $(filter-out libstdc++.a, $(shell $(CC) $(CFLAGS) -print-file-name=libstdc++.a))
+LIBSTDCPP := $(filter-out libstdc++.a, $(shell $(CXX) $(CXXFLAGS) -print-file-name=libstdc++.a))
 # For arm, the implementation of exceptions, defined in libgcc, uses abort() from libphoenix
 LDLIBS := $(LIBSTDCPP) --start-group $(PHOENIXLIB) $(GCCLIB) --end-group $(CRTBEGIN) $(CRTEND)
+
 
 OBJCOPY = $(CROSS)objcopy
 OBJDUMP = $(CROSS)objdump

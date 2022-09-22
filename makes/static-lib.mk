@@ -10,6 +10,7 @@
 # - DEPS - list of components from current repo to be completed before starting this one
 #
 # - LOCAL_CFLAGS  - additional CFLAGS for current component compilation
+# - LOCAL_CXXFLAGS  - additional CXXFLAGS for current component compilation
 #
 
 
@@ -39,9 +40,10 @@ OBJS.$(NAME) := $(patsubst %,$(PREFIX_O)%.o,$(basename $(SRCS)))
 # compilation prerequisites - component order-only dependency
 $(OBJS.$(NAME)): | $(DEPS)
 
-# potentially custom CFLAGS/LDFLAGS for compilation and linking
-# add ABS_HEADERS_DIR to CFLAGS to build always using local headers instead of installed ones
+# potentially custom CFLAGS/CXXFLAGS/LDFLAGS for compilation and linking
+# add ABS_HEADERS_DIR to CFLAGS/CXXFLAGS to build always using local headers instead of installed ones
 $(OBJS.$(NAME)): CFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CFLAGS) $(LOCAL_CFLAGS)
+$(OBJS.$(NAME)): CXXFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CXXFLAGS) $(LOCAL_CXXFLAGS)
 
 # dynamically generated dependencies (file-to-file dependencies)
 DEPS.$(NAME) := $(patsubst %,$(PREFIX_O)%.d,$(SRCS))
@@ -103,3 +105,4 @@ DEPS :=
 SRCS :=
 HEADERS :=
 LOCAL_CFLAGS :=
+LOCAL_CXXFLAGS :=

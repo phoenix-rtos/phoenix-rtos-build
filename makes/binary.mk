@@ -10,6 +10,7 @@
 # - DEPS - list of components from current repo to be completed before starting this one
 # - LIBS - names of the static libs to link the binary against (without .a suffix)
 # - LOCAL_CFLAGS  - additional CFLAGS for current component compilation
+# - LOCAL_CXXFLAGS - additional CXXFLAGS for current component compilation
 # - LOCAL_LDFLAGS - additional LDFLAGS for current component linking
 # - LOCAL_INSTALL_PATH - custom rootfs dir for the binary to be installed (if not provided - DEFAULT_INSTALL_PATH)
 
@@ -42,9 +43,10 @@ RESOLVED_LIBS += $(patsubst %,$(PREFIX_A)%.a, $(LIBS))
 DEPS += $(DEP_LIBS)
 $(OBJS.$(NAME)): | $(DEPS)
 
-# potentially custom CFLAGS/LDFLAGS for compilation and linking
-# add ABS_HEADERS_DIR to CFLAGS as a first -I path to build always using local headers instead of installed ones
+# potentially custom CFLAGS/CXXFLAGS/LDFLAGS for compilation and linking
+# add ABS_HEADERS_DIR to CFLAGS/CXXFLAGS as a first -I path to build always using local headers instead of installed ones
 $(OBJS.$(NAME)): CFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CFLAGS) $(LOCAL_CFLAGS)
+$(OBJS.$(NAME)): CXXFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CXXFLAGS) $(LOCAL_CXXFLAGS)
 $(PREFIX_PROG)$(NAME): LDFLAGS:=$(LDFLAGS) $(LOCAL_LDFLAGS)
 
 # dynamically generated dependencies (file-to-file dependencies)
@@ -108,5 +110,6 @@ SRCS :=
 HEADERS :=
 LIBS :=
 LOCAL_CFLAGS :=
+LOCAL_CXXFLAGS :=
 LOCAL_LDFLAGS :=
 LOCAL_INSTALL_PATH :=
