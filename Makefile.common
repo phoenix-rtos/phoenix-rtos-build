@@ -21,10 +21,11 @@ TARGET_SUBFAMILY ?= $(word 2,$(subst -, ,$(TARGET)-))
 
 # reset env variables
 CFLAGS :=
+CXXFLAGS :=
 LDFLAGS :=
 LDFLAGS_PREFIX :=
 
-# supported langauges
+# supported languages
 LANGUAGE_EXTENSIONS := %.c %.cc %.cpp
 
 # specific "-Ox" flag can be set globally for project by setting OLVL variable
@@ -37,6 +38,7 @@ ifeq ($(DEBUG), 1)
   OLVL := -Og
 else
   CFLAGS += -DNDEBUG
+  CXXFLAGS += -DNDEBUG
 endif
 
 TOPDIR := $(CURDIR)
@@ -93,18 +95,23 @@ LDFLAGS += -L$(LIBC_INSTALL_DIR)
 
 # remove local dev path from macros
 CFLAGS += -fmacro-prefix-map=$(dir $(TOPDIR))=
+CXXFLAGS += -fmacro-prefix-map=$(dir $(TOPDIR))=
 
 ifneq ($(KERNEL), 1)
   CFLAGS += -I$(PREFIX_H)
+  CXXFLAGS += -I$(PREFIX_H)
 endif
 
 #
 # Generic rules
 #
-.PHONY: help export-cflags export-ldflags
+.PHONY: help export-cflags export-cxxflags export-ldflags
 
 export-cflags:
 	@echo $(CFLAGS)
+
+export-cxxflags:
+	@echo $(CXXFLAGS)
 
 export-ldflags:
 	@echo $(LDFLAGS)
@@ -118,6 +125,7 @@ help:
 	@echo "  install         install DEFAULT_COMPONENTS into PREFIX_ROOTFS"
 	@echo "  clean           clean ALL_COMPONENTS"
 	@echo "  export-cflags   outputs contents of CFLAGS variable"
+	@echo "  export-cxxflags outputs contents of CXXFLAGS variable"
 	@echo "  export-ldflags  outputs contents of LDFLAGS variable"
 	@echo
 	@echo "available per-target make targets:"
@@ -156,18 +164,17 @@ $(PREFIX_O)%.o: %.c
 	$(SIL)$(CC) -c $(CFLAGS) "$(abspath $<)" -o "$@"
 	$(SIL)$(CC) -M  -MD -MP -MF $(PREFIX_O)$*.c.d -MT "$@" $(CFLAGS) $<
 
-# At now, C++ doesn't have its own flags. -Wstrict-prototypes is incorrect for CPP and has to be filtered out.
 $(PREFIX_O)%.o: %.cc
 	@mkdir -p $(@D)
 	@printf "CXX  %-24s\n" "$<"
-	$(SIL)$(CXX) -c $(filter-out -Wstrict-prototypes, $(CFLAGS)) "$(abspath $<)" -o "$@"
-	$(SIL)$(CXX) -M  -MD -MP -MF $(PREFIX_O)$*.cc.d -MT "$@" $(filter-out -Wstrict-prototypes, $(CFLAGS)) $<
+	$(SIL)$(CXX) -c $(CXXFLAGS) "$(abspath $<)" -o "$@"
+	$(SIL)$(CXX) -M  -MD -MP -MF $(PREFIX_O)$*.cc.d -MT "$@" $(CXXFLAGS) $<
 
 $(PREFIX_O)%.o: %.cpp
 	@mkdir -p $(@D)
 	@printf "CXX  %-24s\n" "$<"
-	$(SIL)$(CXX) -c $(filter-out -Wstrict-prototypes, $(CFLAGS)) "$(abspath $<)" -o "$@"
-	$(SIL)$(CXX) -M  -MD -MP -MF $(PREFIX_O)$*.cpp.d -MT "$@" $(filter-out -Wstrict-prototypes, $(CFLAGS)) $<
+	$(SIL)$(CXX) -c $(CXXFLAGS) "$(abspath $<)" -o "$@"
+	$(SIL)$(CXX) -M  -MD -MP -MF $(PREFIX_O)$*.cpp.d -MT "$@" $(CXXFLAGS) $<
 
 $(PREFIX_O)%.o: %.S
 	@mkdir -p $(@D)

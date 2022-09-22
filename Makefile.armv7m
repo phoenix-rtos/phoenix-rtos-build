@@ -66,7 +66,7 @@ else
   STRIP = $(PREFIX_PROJECT)/phoenix-rtos-build/scripts/strip.py $(CROSS)strip --strip-unneeded -R .rel.text
 endif
 
-
+CXXFLAGS += $(filter-out -Wstrict-prototypes, $(CFLAGS))
 
 AR = $(CROSS)ar
 ARFLAGS = -r
@@ -78,9 +78,10 @@ CRTBEGIN := $(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
 CRTEND := $(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
 PHOENIXLIB := $(shell $(CC) $(CFLAGS) -print-file-name=libphoenix.a)
 # The filter-out enables proper building because if libstdc++ is not available, LIBSTDCPP will be empty.
-LIBSTDCPP := $(filter-out libstdc++.a, $(shell $(CC) $(CFLAGS) -print-file-name=libstdc++.a))
+LIBSTDCPP := $(filter-out libstdc++.a, $(shell $(CXX) $(CXXFLAGS) -print-file-name=libstdc++.a))
 # For arm, the implementation of exceptions, defined in libgcc, uses abort() from libphoenix
 LDLIBS := $(LIBSTDCPP) --start-group $(PHOENIXLIB) $(GCCLIB) --end-group $(CRTBEGIN) $(CRTEND)
+
 
 OBJCOPY = $(CROSS)objcopy
 OBJDUMP = $(CROSS)objdump

@@ -31,3 +31,5 @@ ifneq ($(NOSAN), 1)
 CFLAGS += -fsanitize=address,undefined
 LDFLAGS += -fsanitize=address,undefined
 endif
+
+CXXFLAGS += $(filter-out -Wstrict-prototypes, $(CFLAGS))
