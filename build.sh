@@ -10,6 +10,12 @@
 
 set -e
 
+# CI: support building submodule out-of tree (CI_CUSTOM_BUILDROOT is a path to phoenix-rtos-project with submodule as a symlink)
+if [ -n "$CI_CUSTOM_BUILDROOT" ]; then
+	ln -sf "$(pwd)/$CI_CUSTOM_BUILDROOT"/phoenix-rtos-build ../phoenix-rtos-build
+	cd "$CI_CUSTOM_BUILDROOT"
+fi
+
 # Colon-separated list of dirs to overlay the default rootFS.
 # It can be overwritten by build.project scripts.
 ROOTFS_OVERLAYS=""
