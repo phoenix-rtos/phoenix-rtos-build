@@ -40,6 +40,3 @@ make -C "phoenix-rtos-posixsrv" all install
 b_log "Building hostutils"
 make -C "phoenix-rtos-hostutils" -f Makefile.old $CLEAN all
 cp "$PREFIX_BUILD_HOST/prog.stripped/phoenixd" "$PREFIX_BOOT"
-
-b_log "Building plo"
-make -C "plo" all
