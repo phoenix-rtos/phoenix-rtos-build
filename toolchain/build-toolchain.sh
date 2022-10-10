@@ -119,6 +119,7 @@ build_gcc_stage1() {
     # --enable-initfini-array -> force init/fini array support instead of .init .fini sections
     # --disable-decimal-float -> not relevant for other than i386 and PowerPC
     # --disable-libquadmath -> not using fortran and quad floats
+    # --enable-threads=posix -> enable POSIX threads
 
 
     # stage1 compiler (gcc only)
@@ -130,7 +131,8 @@ build_gcc_stage1() {
                  --enable-initfini-array \
                  --disable-decimal-float \
                  --disable-libquadmath \
-                 --disable-libssp --disable-nls
+                 --disable-libssp --disable-nls \
+                 --enable-threads=posix
 
     make all-gcc
 
