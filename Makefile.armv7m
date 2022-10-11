@@ -11,7 +11,7 @@ CROSS ?= arm-phoenix-
 CC := $(CROSS)gcc
 
 # common Cortex-M CFLAGS
-OLVL ?= -O2
+OLVL ?= -Os
 CFLAGS += $(OLVL)
 CFLAGS += -Wall -Wstrict-prototypes -g
 CFLAGS += -mthumb -fomit-frame-pointer -mno-unaligned-access
