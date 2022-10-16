@@ -5,8 +5,8 @@
 
 # checking allowed TARGETs
 
-# ARM Cortex Mx
-TARGETS_ARMCORTEXM := \
+# ARMV7 Cortex Mx
+TARGETS_ARMV7CORTEXM := \
 	armv7m3-stm32l152xd \
 	armv7m3-stm32l152xe \
 	armv7m4-stm32l4x6 \
@@ -14,12 +14,21 @@ TARGETS_ARMCORTEXM := \
 	armv7m7-imxrt106x \
 	armv7m7-imxrt117x
 
-TARGETS := $(TARGETS_ARMCORTEXM)
-ifneq (,$(filter $(TARGETS_ARMCORTEXM),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
+TARGETS := $(TARGETS_ARMV7CORTEXM)
+ifneq (,$(filter $(TARGETS_ARMV7CORTEXM),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
   TARGET_SUFF ?= armv7m
 endif
 
-# ARM Cortex Ax
+# ARMV8 Cortex Mx
+TARGETS_ARMV8CORTEXM := \
+	armv8m33-nrf9160
+
+TARGETS += $(TARGETS_ARMV8CORTEXM)
+ifneq (,$(filter $(TARGETS_ARMV8CORTEXM),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
+  TARGET_SUFF ?= armv8m
+endif
+
+# ARMV7 Cortex Ax
 TARGETS_ARMCORTEXA := \
 	armv7a7-imx6ull \
 	armv7a9-zynq7000
