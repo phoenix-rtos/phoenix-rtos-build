@@ -22,6 +22,12 @@ PREFIX_PROJECT="$(pwd)"
 # To preserve compabilitiy with project scripts, TOPDIR is set
 TOPDIR="$PREFIX_PROJECT"
 
+# Some makefiles add "$PROJECT_PATH/" to their include path so it has to be set
+if [ -z "$PROJECT_PATH" ]; then
+    echo "PROJECT_PATH is not set (or is empty)"
+    exit 1;
+fi
+
 PREFIX_BUILD="$PREFIX_PROJECT/_build/$TARGET"
 PREFIX_BUILD_HOST="$PREFIX_PROJECT/_build/host-generic-pc"
 PREFIX_FS="$PREFIX_PROJECT/_fs/$TARGET"
