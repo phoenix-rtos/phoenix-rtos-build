@@ -26,7 +26,7 @@ endif
 
 # external headers - by default "include" dir - to disable functionality set "LOCAL_HEADERS_DIR := nothing"
 LOCAL_HEADERS_DIR ?= include
-ABS_HEADERS_DIR := $(abspath $(LOCAL_DIR)/$(LOCAL_HEADERS_DIR))
+ABS_HEADERS_DIR := $(abspath ./$(LOCAL_DIR)/$(LOCAL_HEADERS_DIR))
 
 SRCS += $(addprefix $(LOCAL_DIR), $(LOCAL_SRCS))
 HEADERS += $(addprefix $(LOCAL_DIR), $(LOCAL_HEADERS))
