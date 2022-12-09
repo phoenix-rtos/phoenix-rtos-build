@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # $1 - toolchain target (e.g. arm-phoenix)
 # $2 - toolchain install absolute path (i.e. no "." or ".." in the path)
 
