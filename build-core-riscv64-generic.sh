@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Shell script for building Phoenix-RTOS firmware
 #

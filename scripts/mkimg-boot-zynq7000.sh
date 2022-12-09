@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # Shell script for building boot layout for Zynq-7000
 # Based on Bootgen User Guide - UG1283 (v2018.2) September 28, 2018
