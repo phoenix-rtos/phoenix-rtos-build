@@ -187,6 +187,12 @@ build_libstdcpp() {
     OLDPATH="$PATH"
     PATH="$TOOLCHAIN_PREFIX/bin":$PATH
 
+    # set flags for arm to guarantee PIC for libstdc++
+    WITHPIC=
+    if [ "$TARGET" = "arm-phoenix" ]; then
+        WITHPIC="--with-pic"
+    fi
+
     # create "libbuilddir" directory for libstdc++
     rm -rf "${BUILD_ROOT}/${GCC}/build/${TARGET}/libstdc++-v3"
     mkdir -p "${BUILD_ROOT}/${GCC}/build/${TARGET}/libstdc++-v3"
@@ -200,7 +206,7 @@ build_libstdcpp() {
     # --disable-nls ->  all compiler messages will be in english
     # --disable-shared -> disable building shared libraries [default=yes]
     # --srcdir -> point to the directory with source files, because the current directory is incorrect for srcdir
-    # --enable-cxx-flags -> enable passing additional flags used during libstdc++ compilation
+    # --with-pic -> build library files as PIC files
 
     # now, we use files from generic for every category in libstdc++v3/config directory
     ../../../libstdc++-v3/configure --target="${TARGET}" \
@@ -211,7 +217,7 @@ build_libstdcpp() {
                                     --disable-nls \
                                     --disable-shared \
                                     --srcdir="../../../libstdc++-v3" \
-                                    --enable-cxx-flags="-ffunction-sections -fdata-sections"
+                                    $WITHPIC
 
     make
 
