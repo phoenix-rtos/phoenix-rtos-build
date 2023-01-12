@@ -82,6 +82,12 @@ endif
 # generic CFLAGS/LDFLAGS
 LDFLAGS += -L$(PREFIX_A)
 
+# add multilib directory to library search path
+SYSROOT := $(shell $(CC) $(CFLAGS) -print-sysroot)
+MULTILIB_DIR := $(shell $(CC) $(CFLAGS) -print-multi-directory)
+LIBC_INSTALL_DIR := $(SYSROOT)/lib/$(MULTILIB_DIR)
+LDFLAGS += -L$(LIBC_INSTALL_DIR)
+
 # remove local dev path from macros
 CFLAGS += -fmacro-prefix-map=$(dir $(TOPDIR))=
 
