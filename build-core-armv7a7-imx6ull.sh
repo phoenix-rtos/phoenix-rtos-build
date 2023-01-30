@@ -49,5 +49,6 @@ make -C "phoenix-rtos-posixsrv" all install
 b_log "Building hostutils"
 make -C "phoenix-rtos-hostutils" -f Makefile.old all
 cp "$PREFIX_BUILD_HOST/prog.stripped/phoenixd" "$PREFIX_BOOT"
+cp "$PREFIX_BUILD_HOST/prog.stripped/psdisk" "$PREFIX_BOOT"
 cp "$PREFIX_BUILD_HOST/prog.stripped/psu" "$PREFIX_BOOT"
 cp "$PREFIX_BUILD_HOST/prog.stripped/syspagen" "$PREFIX_BOOT"
