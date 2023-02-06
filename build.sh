@@ -56,7 +56,7 @@ export TARGET TARGET_FAMILY TARGET_SUBFAMILY TARGET_PROJECT PROJECT_PATH TOPDIR 
 # export flags for ports - call make only after all necessary env variables are already set
 EXPORT_CFLAGS="$(make -f phoenix-rtos-build/Makefile.common export-cflags)"
 # export only generic flags: "-z xxx", "-Lxxx", "-q"
-EXPORT_LDFLAGS="$(make -f phoenix-rtos-build/Makefile.common export-ldflags | grep -E -o "(\-z [^ ]+)|(\-L[^ ]+)|(\-q)" | xargs)"
+EXPORT_LDFLAGS="$(make -f phoenix-rtos-build/Makefile.common export-ldflags | grep -E -o "(-z [^ ]+)|(-L[^ ]+)|(-q)" | xargs)"
 
 export EXPORT_CFLAGS EXPORT_LDFLAGS
 
