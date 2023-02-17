@@ -88,7 +88,7 @@ build_binutils() {
     pushd "${BINUTILS}/build" > /dev/null
 
     ../configure --target="${TARGET}" --prefix="${TOOLCHAIN_PREFIX}" \
-                 --with-sysroot="${SYSROOT}" --enable-lto
+                 --with-sysroot="${SYSROOT}" --enable-lto --enable-deterministic-archives
     make
 
     log "installing binutils"
