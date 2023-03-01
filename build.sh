@@ -131,6 +131,25 @@ for arg in "${ARGS[@]}"; do
 	esac;
 done
 
+### autogenerate compile_commands.json using bear ###
+if ! command -v bear &> /dev/null; then
+	echo "'bear' executable not found. Compilation database will not be built" 1>&2
+elif [ -z "$INTERCEPT_BUILD_TARGET_DIR" ] && [ -z "$INTERCEPT_REPORT_COMMAND" ]; then
+	b_log "Running bear wrapper"
+
+	# use per-target compile_commands.json compilation database
+	COMPILE_DB_FNAME="compile_commands.json"
+	ln -sf "_build/$TARGET/$COMPILE_DB_FNAME" "$COMPILE_DB_FNAME"
+
+	# Exec build one more time with bear on top
+	if [[ "$(bear --version 2>&1)" == "bear 2."* ]]; then
+		exec bear --append "$0" "${ARGS[@]}"
+	else
+		# versions 3.*.*
+		exec bear --append -- "$0" "${ARGS[@]}"
+	fi
+fi
+
 #
 # Clean if requested
 #
@@ -214,10 +233,6 @@ for tool in "${HOSTUTILS[@]}"; do
 	toolfile="$PREFIX_BUILD_HOST/prog.stripped/$tool"
 	[ -e "$toolfile" ] && cp -a "$toolfile" "$PREFIX_BOOT"
 done
-
-# use per-project compile_commands.json compilation database
-COMPILE_DB_FNAME="compile_commands.json"
-ln -sf "$PREFIX_BUILD/$COMPILE_DB_FNAME" "$COMPILE_DB_FNAME"
 
 #
 # Build core part
