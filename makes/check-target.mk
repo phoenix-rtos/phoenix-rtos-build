@@ -50,6 +50,15 @@ ifeq ($(TARGET_FAMILY), host)
   TARGET_SUFF ?= host
 endif
 
+# SPARCV8 LEON 3
+TARGETS_SPARC := \
+  sparcv8leon3-gr716
+
+TARGETS += $(TARGETS_SPARC)
+ifneq (,$(filter $(TARGETS_SPARC),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
+  TARGET_SUFF ?= sparcv8leon3
+endif
+
 SPACE :=
 SPACE +=
 define LF

@@ -31,7 +31,7 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
    # Will set LN_S to either 'ln -s', 'ln', or 'cp -p' (if linking isn't
    # available).  Uncomment the next line to force a particular method.
    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ln -s works" >&5
-@@ -9068,6 +9077,26 @@
+@@ -9068,6 +9077,31 @@
      lt_prog_compiler_static='-static'
  
      case $host_os in
@@ -49,6 +49,11 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
 +            fi
 +            ;;
 +
++          sparc)
++            # TODO: remove -mflat when not needed
++            lt_prog_compiler_pic="$lt_prog_compiler_pic -fPIC -fPIE -mcpu=leon3 -mflat -mno-pic-data-is-text-relative -mpic-register=g6"
++            ;;
++
 +          *)
 +            lt_prog_compiler_pic='-fPIC'
 +            ;;
@@ -58,7 +63,7 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
        aix*)
        # All AIX code is PIC.
        if test "$host_cpu" = ia64; then
-@@ -9342,6 +9371,29 @@
+@@ -9342,6 +9376,33 @@
    *djgpp*)
      lt_prog_compiler_pic=
      ;;
@@ -78,7 +83,11 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
 +        fi
 +        ;;
 +
-+      # For non-arm targets the behaviours should be default
++      sparc)
++        lt_prog_compiler_pic="$lt_prog_compiler_pic -DPIC"
++        ;;
++
++      # For other targets the behaviour should be default
 +      *)
 +        lt_prog_compiler_pic="$lt_prog_compiler_pic -DPIC"
 +        ;;
@@ -88,7 +97,7 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
    *)
      lt_prog_compiler_pic="$lt_prog_compiler_pic -DPIC"
      ;;
-@@ -11755,6 +11807,9 @@
+@@ -11755,6 +11816,9 @@
    lt_cv_dlopen_libs=
  
    case $host_os in
@@ -98,7 +107,7 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
    beos*)
      lt_cv_dlopen="load_add_on"
      lt_cv_dlopen_libs=
-@@ -13951,6 +14006,27 @@
+@@ -13951,6 +14015,32 @@
      lt_prog_compiler_static_CXX='-static'
  
      case $host_os in
@@ -117,6 +126,11 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
 +
 +        ;;
 +
++        sparc)
++          # TODO: remove -mflat when not needed
++          lt_prog_compiler_pic_CXX="$lt_prog_compiler_pic_CXX -fPIC -fPIE -mcpu=leon3 -mflat -mno-pic-data-is-text-relative -mpic-register=g6"
++          ;;
++
 +        *)
 +          lt_prog_compiler_pic_CXX='-fPIC'
 +        ;;
@@ -126,7 +140,7 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
      aix*)
        # All AIX code is PIC.
        if test "$host_cpu" = ia64; then
-@@ -14261,6 +14337,29 @@
+@@ -14261,6 +14351,34 @@
    *djgpp*)
      lt_prog_compiler_pic_CXX=
      ;;
@@ -146,7 +160,12 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
 +        fi
 +        ;;
 +
-+      # For not arm targets the behaviours should be default
++      sparc)
++
++        lt_prog_compiler_pic_CXX="$lt_prog_compiler_pic_CXX -DPIC"
++        ;;
++
++      # For other arm targets the behaviour should be default
 +      *)
 +        lt_prog_compiler_pic="$lt_prog_compiler_pic -DPIC"
 +        ;;
@@ -156,7 +175,7 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
    *)
      lt_prog_compiler_pic_CXX="$lt_prog_compiler_pic_CXX -DPIC"
      ;;
-@@ -15464,6 +15563,13 @@
+@@ -15464,6 +15582,13 @@
    glibcxx_compiler_pic_flag="$lt_prog_compiler_pic_CXX"
    glibcxx_compiler_shared_flag="-D_GLIBCXX_SHARED"
  
@@ -170,7 +189,7 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
  else
    glibcxx_lt_pic_flag=
    glibcxx_compiler_pic_flag=
-@@ -29477,7 +29583,7 @@
+@@ -29477,7 +29602,7 @@
    # Construct crosses by hand, eliminating bits that need ld...
    # GLIBCXX_CHECK_MATH_SUPPORT
  
@@ -179,7 +198,7 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
    # on a hosted environment.
    if test "x${with_newlib}" = "xyes"; then
      os_include_dir="os/newlib"
-@@ -29537,6 +29643,61 @@
+@@ -29537,6 +29662,61 @@
  
      $as_echo "#define HAVE_MEMALIGN 1" >>confdefs.h
  

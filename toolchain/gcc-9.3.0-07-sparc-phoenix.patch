@@ -1,0 +1,28 @@
+diff -Naur gcc-9.3.0-orig/gcc/config.gcc gcc-9.3.0/gcc/config.gcc
+--- gcc-9.3.0-orig/gcc/config.gcc	2020-03-12 12:07:21.000000000 +0100
++++ gcc-9.3.0/gcc/config.gcc	2020-03-18 19:25:57.937836171 +0100
+@@ -3028,6 +3028,9 @@
+ sparc-*-rtems*)
+ 	tm_file="${tm_file} dbxelf.h elfos.h sparc/sysv4.h sparc/sp-elf.h sparc/rtemself.h rtems.h newlib-stdint.h"
+ 	tmake_file="${tmake_file} sparc/t-sparc sparc/t-rtems"
+ 	;;
++sparc-*-phoenix*)
++	tm_file="${tm_file} dbxelf.h elfos.h sparc/sysv4.h sparc/sp-elf.h phoenix.h newlib-stdint.h"
++	;;
+ sparc-*-linux*)
+ 	tm_file="${tm_file} dbxelf.h elfos.h sparc/sysv4.h gnu-user.h linux.h glibc-stdint.h sparc/tso.h"
+diff -Naur gcc-9.3.0-orig/libgcc/config.host gcc-9.3.0/libgcc/config.host
+--- gcc-9.3.0-orig/libgcc/config.host	2020-03-12 12:07:23.000000000 +0100
++++ gcc-9.3.0/libgcc/config.host	2020-03-18 15:31:59.377075283 +0100
+@@ -1312,7 +1312,11 @@
+ sparc-*-rtems*)
+ 	tmake_file="$tmake_file sparc/t-elf sparc/t-softmul t-crtfm t-fdpbit"
+ 	extra_parts="$extra_parts crti.o crtn.o crtfastmath.o"
+ 	;;
++sparc-*-phoenix*)
++	tmake_file="$tmake_file sparc/t-elf sparc/t-softmul"
++	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o"
++	;;
+ sparc*-*-solaris2*)
+ 	tmake_file="$tmake_file t-crtfm"
+ 	extra_parts="$extra_parts crtfastmath.o"
