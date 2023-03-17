@@ -1,0 +1,79 @@
+diff -Naur binutils-2.34/bfd/config.bfd binutils-2.34-phoenix/bfd/config.bfd
+--- binutils-2.34/bfd/config.bfd	2020-01-18 14:55:47.000000000 +0100
++++ binutils-2.34-phoenix/bfd/config.bfd	2020-03-18 14:08:26.037301292 +0100
+@@ -1317,6 +1317,10 @@
+   sparc-*-vxworks*)
+     targ_defvec=sparc_elf32_vxworks_vec
+     targ_selvecs="sparc_elf32_vec"
+     ;;
++  sparc-*-phoenix*)
++     targ_defvec=sparc_elf32_vec
++     targ_selfvecs=
++     ;;
+   sparc*-*-*)
+     targ_defvec=sparc_elf32_vec
+diff -Naur binutils-2.34/gas/configure.tgt binutils-2.34-phoenix/gas/configure.tgt
+--- binutils-2.34/gas/configure.tgt	2020-01-18 14:55:47.000000000 +0100
++++ binutils-2.34-phoenix/gas/configure.tgt	2020-03-18 14:09:53.368838497 +0100
+@@ -396,4 +396,5 @@
+  sparc-*-freebsd*)			fmt=elf em=freebsd ;;
+  sparc-*-*bsd*)			fmt=elf em=nbsd ;;
++ sparc-*-phoenix*)			fmt=elf ;;
+
+  spu-*-elf)				fmt=elf ;;
+diff -Naur binutils-2.34/ld/configure.tgt binutils-2.34-phoenix/ld/configure.tgt
+--- binutils-2.34/ld/configure.tgt	2020-01-18 14:55:48.000000000 +0100
++++ binutils-2.34-phoenix/ld/configure.tgt	2020-03-18 14:11:13.700432001 +0100
+@@ -879,4 +879,7 @@
+ sparc*-*-vxworks*)	targ_emul=elf32_sparc_vxworks
+			;;
++sparc-*-phoenix*)	targ_emul=elf32_sparc_phoenix
++			targ_extra_emuls=elf32_sparc
++			;;
+ sparc*-*-*)		targ_emul=elf32_sparc
+			;;
+diff -Naur binutils-2.34/ld/emulparams/elf32_sparc_phoenix.sh binutils-2.34-phoenix/ld/emulparams/elf32_sparc_phoenix.sh
+--- binutils-2.34/ld/emulparams/elf32_sparc_phoenix.sh	1970-01-01 01:00:00.000000000 +0100
++++ binutils-2.34-phoenix/ld/emulparams/elf32_sparc_phoenix.sh	2020-03-18 14:12:39.096016999 +0100
+@@ -0,0 +1 @@
++. ${srcdir}/emulparams/elf32_sparc.sh
+diff -Naur binutils-2.34/ld/Makefile.am binutils-2.34-phoenix/ld/Makefile.am
+--- binutils-2.34/ld/Makefile.am	2020-01-30 08:15:56.000000000 +0100
++++ binutils-2.34-phoenix/ld/Makefile.am	2020-03-18 14:15:37.443195906 +0100
+@@ -226,3 +226,4 @@
+	eelf32_sparc_sol2.c \
+	eelf32_sparc_vxworks.c \
++	eelf32_sparc_phoenix.c \
+	eelf32_spu.c \
+@@ -714,4 +715,5 @@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_sparc.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_sparc_sol2.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_sparc_vxworks.Pc@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_sparc_phoenix.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_spu.Pc@am__quote@
+diff -Naur binutils-2.34/ld/Makefile.in binutils-2.34-phoenix/ld/Makefile.in
+--- binutils-2.34/ld/Makefile.in	2020-02-01 12:50:25.000000000 +0100
++++ binutils-2.34-phoenix/ld/Makefile.in	2020-03-18 14:16:31.746955845 +0100
+@@ -715,4 +715,5 @@
+	eelf32_sparc.c \
+	eelf32_sparc_sol2.c \
+	eelf32_sparc_vxworks.c \
++	eelf32_sparc_phoenix.c \
+	eelf32_spu.c \
+@@ -1271,6 +1272,7 @@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_sparc.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_sparc_sol2.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_sparc_vxworks.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_sparc_phoenix.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_spu.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_tic6x_be.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_tic6x_elf_be.Po@am__quote@
+@@ -2319,6 +2321,7 @@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_sparc.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_sparc_sol2.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_sparc_vxworks.Pc@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_sparc_phoenix.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_spu.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_tic6x_be.Pc@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_tic6x_le.Pc@am__quote@
+ 
