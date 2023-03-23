@@ -19,3 +19,9 @@ make -C "phoenix-rtos-filesystems" all
 
 b_log "Building phoenix-rtos-devices"
 make -C "phoenix-rtos-devices" all
+
+b_log "Building hostutils"
+make -C "phoenix-rtos-hostutils" -f Makefile.old $CLEAN all
+cp "$PREFIX_BUILD_HOST/prog.stripped/phoenixd" "$PREFIX_BOOT"
+cp "$PREFIX_BUILD_HOST/prog.stripped/psdisk" "$PREFIX_BOOT"
+cp "$PREFIX_BUILD_HOST/prog.stripped/psu" "$PREFIX_BOOT"
