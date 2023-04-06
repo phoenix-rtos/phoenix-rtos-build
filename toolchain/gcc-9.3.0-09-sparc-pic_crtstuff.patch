@@ -1,12 +1,11 @@
 diff -Naur gcc-9.3.0-orig/libgcc/config/sparc/t-phoenix gcc-9.3.0/libgcc/config/sparc/t-phoenix
 --- gcc-9.3.0-orig/libgcc/config/sparc/t-phoenix
 +++ gcc-9.3.0/libgcc/config/sparc/t-phoenix
-@@ -0,0 +1,5 @@
+@@ -0,0 +1,4 @@
 +# Phoenix-RTOS uses relocatable ELFs on NOMMU platforms
 +# On SPARC -> build crtstuff with PIC
-+# TODO: Remove -mflat when kernel supports register windows
-+CRTSTUFF_T_CFLAGS = $(PICFLAG) -mcpu=leon3 -mflat -mno-pic-data-is-text-relative -mpic-register=g6
-+HOST_LIBGCC2_CFLAGS += $(PICFLAG) -mcpu=leon3 -mflat -mno-pic-data-is-text-relative -mpic-register=g6
++CRTSTUFF_T_CFLAGS = $(PICFLAG) -mcpu=leon3 -mno-pic-data-is-text-relative -mpic-register=g6
++HOST_LIBGCC2_CFLAGS += $(PICFLAG) -mcpu=leon3 -mno-pic-data-is-text-relative -mpic-register=g6
 diff -Naur gcc-9.3.0-orig/libgcc/config.host gcc-9.3.0/libgcc/config.host
 --- gcc-9.3.0-orig/libgcc/config.host
 +++ gcc-9.3.0/libgcc/config.host
