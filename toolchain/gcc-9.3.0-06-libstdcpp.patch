@@ -50,8 +50,8 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
 +            ;;
 +
 +          sparc)
-+            # TODO: remove -mflat when not needed
-+            lt_prog_compiler_pic="$lt_prog_compiler_pic -fPIC -fPIE -mcpu=leon3 -mflat -mno-pic-data-is-text-relative -mpic-register=g6"
++
++            lt_prog_compiler_pic="$lt_prog_compiler_pic -fPIC -fPIE -mcpu=leon3 -mno-pic-data-is-text-relative -mpic-register=g6"
 +            ;;
 +
 +          *)
@@ -127,8 +127,8 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
 +        ;;
 +
 +        sparc)
-+          # TODO: remove -mflat when not needed
-+          lt_prog_compiler_pic_CXX="$lt_prog_compiler_pic_CXX -fPIC -fPIE -mcpu=leon3 -mflat -mno-pic-data-is-text-relative -mpic-register=g6"
++
++          lt_prog_compiler_pic_CXX="$lt_prog_compiler_pic_CXX -fPIC -fPIE -mcpu=leon3 -mno-pic-data-is-text-relative -mpic-register=g6"
 +          ;;
 +
 +        *)

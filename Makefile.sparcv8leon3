@@ -16,7 +16,7 @@ CXX := $(CROSS)g++
 OLVL ?= -O2
 CFLAGS += $(OLVL)
 CFLAGS += -g -Wall -Wstrict-prototypes \
-	-mcpu=leon3 -mflat \
+	-mcpu=leon3 \
 	-DNOMMU \
 	-fdata-sections -ffunction-sections
 
