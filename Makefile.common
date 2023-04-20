@@ -33,10 +33,7 @@ ifneq ($(filter-out -O%,$(OLVL)),)
   $(error OLVL set but does not provide optimisation flags)
 endif
 
-# for debug build always use -Og optimisation
-ifeq ($(DEBUG), 1)
-  OLVL := -Og
-else
+ifneq ($(DEBUG), 1)
   CFLAGS += -DNDEBUG
   CXXFLAGS += -DNDEBUG
 endif
