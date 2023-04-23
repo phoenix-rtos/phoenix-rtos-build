@@ -20,7 +20,7 @@ diff -Naur gcc-9.3.0-orig/libgcc/config.host gcc-9.3.0/libgcc/config.host
  	extra_parts="$extra_parts crti.o crtn.o crtfastmath.o"
  	;;
 +sparc-*-phoenix*)
-+	tmake_file="$tmake_file sparc/t-elf sparc/t-softmul"
++	tmake_file="$tmake_file sparc/t-elf sparc/t-softmul t-fdpbit"
 +	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o"
 +	;;
  sparc*-*-solaris2*)
