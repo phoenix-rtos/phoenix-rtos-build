@@ -26,9 +26,10 @@ ARFLAGS = -r
 LD = $(CROSS)ld
 LDFLAGS := -z max-page-size=0x200 --gc-sections
 
-VADDR_KERNEL_INIT=40000000
+VADDR_KERNEL_INIT=31000000
 
 ifeq ($(KERNEL), 1)
+	LDFLAGS += -Tbss=40001800 -Tdata=40001800 --section-start=.rodata=40000000
 	STRIP = $(CROSS)strip
 else
 	CFLAGS += -fPIC -fPIE -mno-pic-data-is-text-relative -mpic-register=g6
