@@ -29,12 +29,12 @@ LDFLAGS := -z max-page-size=0x200 --gc-sections
 VADDR_KERNEL_INIT=31000000
 
 ifeq ($(KERNEL), 1)
-	LDFLAGS += -Tbss=40001800 -Tdata=40001800 --section-start=.rodata=40000000
-	STRIP = $(CROSS)strip
+  LDFLAGS += -Tbss=40001800 -Tdata=40001800 --section-start=.rodata=40000000
+  STRIP = $(CROSS)strip
 else
-	CFLAGS += -fPIC -fPIE -mno-pic-data-is-text-relative -mpic-register=g6
-	LDFLAGS += -q
-    STRIP = $(CROSS)strip --strip-unneeded -R .rela.text
+  CFLAGS += -fPIC -fPIE -mno-pic-data-is-text-relative -mpic-register=g6
+  LDFLAGS += -q
+  STRIP = $(CROSS)strip --strip-unneeded -R .rela.text
 endif
 
 CXXFLAGS += $(filter-out -Wstrict-prototypes, $(CFLAGS))
