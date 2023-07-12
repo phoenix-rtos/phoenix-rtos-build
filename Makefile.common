@@ -81,6 +81,13 @@ $(info cleaning targets, make parallelism disabled)
 .NOTPARALLEL:
 endif
 
+# Distribute the __TARGET and __CPU defines
+CFLAGS += -D__TARGET_$(call uppercase,$(TARGET_FAMILY))
+CXXFLAGS += -D__TARGET_$(call uppercase,$(TARGET_FAMILY))
+
+CFLAGS += -D__CPU_$(call uppercase,$(TARGET_SUBFAMILY))
+CXXFLAGS += -D__CPU_$(call uppercase,$(TARGET_SUBFAMILY))
+
 # generic CFLAGS/LDFLAGS
 LDFLAGS += -L$(PREFIX_A)
 
