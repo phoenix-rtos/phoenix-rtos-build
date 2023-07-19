@@ -87,8 +87,8 @@ B_TEST="n"
 ARGS=("$@")
 [ "$#" -eq 1 ] && read -ra ARGS <<< "$1"
 
-for i in "${ARGS[@]}"; do
-	case "$i"
+for arg in "${ARGS[@]}"; do
+	case "$arg"
 	in
 		clean)
 			CLEAN="clean";;
@@ -106,6 +106,9 @@ for i in "${ARGS[@]}"; do
 			B_IMAGE="y";;
 		all)
 			B_FS="y"; B_CORE="y"; B_PORTS="y"; B_PROJECT="y"; B_IMAGE="y";;
+		*)
+			echo "Unknown build option: \"$arg\"."
+			exit 1;;
 	esac;
 done
 
