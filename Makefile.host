@@ -32,4 +32,8 @@ CFLAGS += -fsanitize=address,undefined
 LDFLAGS += -fsanitize=address,undefined
 endif
 
+# install unstripped binaries in rootfs
+# (cruicial for tests binaries with debug info for meaningful sanitizers info)
+ROOTFS_INSTALL_UNSTRIPPED := y
+
 CXXFLAGS += $(filter-out -Wstrict-prototypes, $(CFLAGS))
