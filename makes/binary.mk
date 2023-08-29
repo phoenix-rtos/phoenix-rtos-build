@@ -14,6 +14,9 @@
 # - LOCAL_LDFLAGS - additional LDFLAGS for current component linking
 # - LOCAL_INSTALL_PATH - custom rootfs dir for the binary to be installed (if not provided - DEFAULT_INSTALL_PATH)
 
+# Global variables (not reset by this script):
+# - ROOTFS_INSTALL_UNSTRIPPED - if non-empty - install binaries into rootfs from PREFIX_PROG (instead of _STRIPPED)
+
 
 # directory with current Makefile - relative to the repository root
 # filter-out all Makefiles outside of TOPDIR
@@ -89,8 +92,15 @@ $(NAME)-clean:
 # install into the root filesystem
 LOCAL_INSTALL_PATH := $(or $(LOCAL_INSTALL_PATH),$(DEFAULT_INSTALL_PATH))
 
+# add option to install unstripped binaries
+ifeq ($(ROOTFS_INSTALL_UNSTRIPPED),)
+  ROOTFS_BIN_SRC := $(PREFIX_PROG_STRIPPED)$(NAME)
+else
+  ROOTFS_BIN_SRC := $(PREFIX_PROG)$(NAME)
+endif
+
 $(NAME)-install: $(NAME) $(PREFIX_ROOTFS)$(LOCAL_INSTALL_PATH)/$(NAME)
-$(PREFIX_ROOTFS)$(LOCAL_INSTALL_PATH)/$(NAME): $(PREFIX_PROG_STRIPPED)$(NAME)
+$(PREFIX_ROOTFS)$(LOCAL_INSTALL_PATH)/$(NAME): $(ROOTFS_BIN_SRC)
 	$(INSTALL_FS)
 
 # necessary for NAME variable to be correctly set in recepies
