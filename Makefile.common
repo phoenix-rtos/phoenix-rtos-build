@@ -91,6 +91,9 @@ CXXFLAGS += -D__CPU_$(call uppercase,$(TARGET_SUBFAMILY))
 # generic CFLAGS/LDFLAGS
 LDFLAGS += -L$(PREFIX_A)
 
+# make PROJECT_PATH the first search dir to allow project customizations/monkey-patching
+CFLAGS := -I$(PROJECT_PATH) $(CFLAGS)
+
 # add multilib directory to library search path
 SYSROOT := $(shell $(CC) $(CFLAGS) -print-sysroot)
 MULTILIB_DIR := $(shell $(CC) $(CFLAGS) -print-multi-directory)
