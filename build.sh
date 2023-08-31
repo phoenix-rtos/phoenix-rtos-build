@@ -56,7 +56,7 @@ MAKEFLAGS="--no-print-directory -j 9"
 
 export TARGET TARGET_FAMILY TARGET_SUBFAMILY TARGET_PROJECT PROJECT_PATH PREFIX_PROJECT PREFIX_BUILD\
 	PREFIX_BUILD_HOST PREFIX_FS PREFIX_BOOT PREFIX_PROG PREFIX_PROG_STRIPPED PREFIX_A\
-	PREFIX_H PREFIX_ROOTFS CROSS CFLAGS CXXFLAGS LDFLAGS CC LD AR AS CLEAN MAKEFLAGS DEVICE_FLAGS PLO_SCRIPT_DIR
+	PREFIX_H PREFIX_ROOTFS CROSS CFLAGS CXXFLAGS LDFLAGS CC LD AR AS MAKEFLAGS DEVICE_FLAGS PLO_SCRIPT_DIR
 
 # export flags for ports - call make only after all necessary env variables are already set
 EXPORT_CFLAGS="$(make -f phoenix-rtos-build/Makefile.common export-cflags)"
@@ -75,6 +75,7 @@ if [ $# -lt 1 ]; then
 	exit 1;
 fi
 
+B_CLEAN="n"
 B_FS="n"
 B_CORE="n"
 B_HOST="n"
@@ -91,7 +92,7 @@ for arg in "${ARGS[@]}"; do
 	case "$arg"
 	in
 		clean)
-			CLEAN="clean";;
+			B_CLEAN="y";;
 		fs)
 			B_FS="y";;
 		core)
@@ -117,7 +118,7 @@ done
 #
 # Clean if requested
 #
-if [ -n "$CLEAN" ]; then
+if [ "$B_CLEAN" = "y" ]; then
 	b_log "Cleaning build dirs"
 	rm -rf "$PREFIX_BUILD" "$PREFIX_BUILD_HOST"
 	rm -rf "$PREFIX_FS"
