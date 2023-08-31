@@ -6,30 +6,30 @@
 # %LICENSE%
 #
 
-CROSS ?=
+CROSS :=
 
-CC = $(CROSS)gcc
-CXX = $(CROSS)g++
+CC := $(CROSS)gcc
+CXX := $(CROSS)g++
 
 OLVL ?= -O2
 CFLAGS += $(OLVL)
 CFLAGS += -Wall -Wstrict-prototypes -g -fomit-frame-pointer -ffunction-sections -fdata-sections
 
-AR = $(CROSS)ar
+AR := $(CROSS)ar
 ARFLAGS = -r
 
-LD = $(CROSS)gcc
+LD := $(CROSS)gcc
 LDFLAGS += -Wl,--gc-sections
 LDFLAGS_PREFIX := -Wl,
 
-OBJCOPY = $(CROSS)objcopy
-OBJDUMP = $(CROSS)objdump
-STRIP = $(CROSS)strip
+OBJCOPY := $(CROSS)objcopy
+OBJDUMP := $(CROSS)objdump
+STRIP := $(CROSS)strip
 
 # Sanitizers
 ifneq ($(NOSAN), 1)
-CFLAGS += -fsanitize=address,undefined
-LDFLAGS += -fsanitize=address,undefined
+  CFLAGS += -fsanitize=address,undefined
+  LDFLAGS += -fsanitize=address,undefined
 endif
 
 # install unstripped binaries in rootfs
