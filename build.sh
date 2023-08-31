@@ -9,13 +9,14 @@
 #
 
 set -e
+ORIG_ENV="$(env)"
 
 # Colon-separated list of dirs to overlay the default rootFS.
 # It can be overwritten by build.project scripts.
 ROOTFS_OVERLAYS=""
 
-. ./phoenix-rtos-build/build.subr
-. ./build.project
+source ./phoenix-rtos-build/build.subr
+source ./build.project
 
 PREFIX_PROJECT="$(pwd)"
 
@@ -25,8 +26,10 @@ if [ -z "$PROJECT_PATH" ]; then
     exit 1;
 fi
 
+_TARGET_FOR_HOST_BUILD="host-generic-pc"
+
 PREFIX_BUILD="$PREFIX_PROJECT/_build/$TARGET"
-PREFIX_BUILD_HOST="$PREFIX_PROJECT/_build/host-generic-pc"
+PREFIX_BUILD_HOST="$PREFIX_PROJECT/_build/$_TARGET_FOR_HOST_BUILD"
 PREFIX_FS="$PREFIX_PROJECT/_fs/$TARGET"
 PREFIX_BOOT="$PREFIX_PROJECT/_boot/$TARGET"
 
@@ -48,7 +51,6 @@ CC=${CROSS}gcc
 AS=${CROSS}as
 LD=${CROSS}ld
 AR=${CROSS}ar
-OBJCPY=${CROSS}objcopy
 
 MAKEFLAGS="--no-print-directory -j 9"
 
@@ -69,12 +71,13 @@ export EXPORT_CFLAGS EXPORT_LDFLAGS
 #
 if [ $# -lt 1 ]; then
 	echo "Build options should be specified!"
-	echo "Usage: build.sh [clean] [all] [fs] [core] [test] [ports] [project] [image]";
+	echo "Usage: build.sh [clean] [all] [host] [fs] [core] [test] [ports] [project] [image]";
 	exit 1;
 fi
 
 B_FS="n"
 B_CORE="n"
+B_HOST="n"
 B_PORTS="n"
 B_PROJECT="n"
 B_IMAGE="n"
@@ -93,6 +96,8 @@ for arg in "${ARGS[@]}"; do
 			B_FS="y";;
 		core)
 			B_CORE="y";;
+		host)
+			B_HOST="y";;
 		test|tests)
 			B_TEST="y";;
 		ports)
@@ -102,7 +107,7 @@ for arg in "${ARGS[@]}"; do
 		image)
 			B_IMAGE="y";;
 		all)
-			B_FS="y"; B_CORE="y"; B_PORTS="y"; B_PROJECT="y"; B_IMAGE="y";;
+			B_FS="y"; B_CORE="y"; B_HOST="y"; B_PORTS="y"; B_PROJECT="y"; B_IMAGE="y";;
 		*)
 			echo "Unknown build option: \"$arg\"."
 			exit 1;;
@@ -163,6 +168,26 @@ if [ "${B_FS}" = "y" ] && [ -d  "${PREFIX_ROOTSKEL}" ]; then
 	b_log "Saving git-version"
 	install -m 664 "${PREFIX_BUILD}/git-version" "$PREFIX_FS/root/etc"
 fi
+
+#
+# Build host tools
+#
+if [ "${B_HOST}" = "y" ]; then
+	if [ "$TARGET" != "$_TARGET_FOR_HOST_BUILD" ]; then
+		# if not already building for host - re-exec with clean env
+		(env "$ORIG_ENV" TARGET=$_TARGET_FOR_HOST_BUILD ./phoenix-rtos-build/build.sh host)
+	else
+		source ./phoenix-rtos-build/build-host-tools.sh
+	fi
+fi
+
+# always install hostutils if they are present
+b_log "Installing hostutils"
+HOSTUTILS=(metaelf phoenixd psdisk psu syspagen)
+for tool in "${HOSTUTILS[@]}"; do
+	toolfile="$PREFIX_BUILD_HOST/prog.stripped/$tool"
+	[ -e "$toolfile" ] && cp -a "$toolfile" "$PREFIX_BOOT"
+done
 
 #
 # Build core part

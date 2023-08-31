@@ -29,8 +29,3 @@ make -C "phoenix-rtos-devices" all install
 
 b_log "Building coreutils"
 make -C "phoenix-rtos-utils" all install
-
-# FIXME: compile host tools using host-generic-pc target?
-b_log "Building hostutils"
-make -C "phoenix-rtos-hostutils" -f Makefile.old $CLEAN all
-cp "$PREFIX_BUILD_HOST/prog.stripped/phoenixd" "$PREFIX_BOOT"
