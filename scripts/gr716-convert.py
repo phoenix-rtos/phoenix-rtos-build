@@ -76,7 +76,10 @@ def convert_file(inputfn: str, outputfn: str, entry: int):
         #   image section headers
         #   image header checksum
 
-        usr_id = 0xDEADBEEF
+        # workaround for early GR716 revision
+        # if we skip bootloader, this will be the first executed instruction
+        # that will jump to the entry point
+        usr_id = 0x3080002b
 
         outputfile.write(usr_id.to_bytes(4, "big"))
         outputfile.write(entry.to_bytes(4, "big"))
