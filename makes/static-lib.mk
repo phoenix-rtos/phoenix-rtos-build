@@ -26,10 +26,11 @@ endif
 
 # binary.mk clears all variables it uses so we should expect that they are not set here. Leaving them set would
 # influence next binary.mk call leading to unexpected errors
-ifneq ($(DEP_LIB)$(LIBS)$(LOCAL_LDFLAGS)$(LOCAL_INSTALL_PATH),)
+ifneq ($(DEP_LIB)$(LIBS)$(LOCAL_LDFLAGS)$(LOCAL_LDLIBS)$(LOCAL_INSTALL_PATH),)
   $(warning $(NAME): DEP_LIB=$(DEP_LIB))
   $(warning $(NAME): LIBS=$(LIBS))
   $(warning $(NAME): LOCAL_LDFLAGS=$(LOCAL_LDFLAGS))
+  $(warning $(NAME): LOCAL_LDLIBS=$(LOCAL_LDLIBS))
   $(warning $(NAME): LOCAL_INSTALL_PATH=$(LOCAL_INSTALL_PATH))
   $(error $(NAME): static-lib.mk invoked with args reserved for binary.mk)
 endif

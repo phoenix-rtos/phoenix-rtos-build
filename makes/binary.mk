@@ -12,6 +12,7 @@
 # - LOCAL_CFLAGS  - additional CFLAGS for current component compilation
 # - LOCAL_CXXFLAGS - additional CXXFLAGS for current component compilation
 # - LOCAL_LDFLAGS - additional LDFLAGS for current component linking
+# - LOCAL_LDLIBS  - additional LDLIBS for current component linking
 # - LOCAL_INSTALL_PATH - custom rootfs dir for the binary to be installed (if not provided - DEFAULT_INSTALL_PATH)
 
 # Global variables (not reset by this script):
@@ -51,6 +52,7 @@ $(OBJS.$(NAME)): | $(DEPS)
 $(OBJS.$(NAME)): CFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CFLAGS) $(LOCAL_CFLAGS)
 $(OBJS.$(NAME)): CXXFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CXXFLAGS) $(LOCAL_CXXFLAGS)
 $(PREFIX_PROG)$(NAME): LDFLAGS:=$(LDFLAGS) $(LOCAL_LDFLAGS)
+$(PREFIX_PROG)$(NAME): LDLIBS:=$(LOCAL_LDLIBS) $(LDLIBS)
 
 # dynamically generated dependencies (file-to-file dependencies)
 DEPS.$(NAME) := $(patsubst %,$(PREFIX_O)%.d,$(SRCS))
@@ -122,4 +124,5 @@ LIBS :=
 LOCAL_CFLAGS :=
 LOCAL_CXXFLAGS :=
 LOCAL_LDFLAGS :=
+LOCAL_LDLIBS :=
 LOCAL_INSTALL_PATH :=
