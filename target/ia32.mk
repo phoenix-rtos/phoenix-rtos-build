@@ -12,19 +12,16 @@ CC := $(CROSS)gcc
 CXX := $(CROSS)g++
 
 OLVL ?= -O2
-CFLAGS += $(OLVL)
-CFLAGS += -g -Wall -Wstrict-prototypes\
-	-m32 -march=i586 -mtune=generic -mno-mmx -mno-sse -fno-pic -fno-pie\
-	-fomit-frame-pointer -fno-builtin-malloc\
-	-fdata-sections -ffunction-sections
+CFLAGS += -m32 -march=i586 -mtune=generic -mno-mmx -mno-sse -fno-pic -fno-pie\
+	-fomit-frame-pointer -fno-builtin-malloc
 
-CXXFLAGS += $(filter-out -Wstrict-prototypes, $(CFLAGS))
+CXXFLAGS := $(CFLAGS)
 
 AR = $(CROSS)ar
 ARFLAGS = -r
 
 LD = $(CROSS)ld
-LDFLAGS := --gc-sections
+LDFLAGS :=
 GCCLIB := $(shell $(CC) $(CFLAGS) -print-libgcc-file-name)
 CRTBEGIN := $(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
 CRTEND := $(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)

@@ -14,12 +14,9 @@ CC = $(CROSS)gcc
 CXX := $(CROSS)g++
 
 OLVL ?= -O2
-CFLAGS += $(OLVL)
-# FIXME: -ffunction-sections and -fdata-sections are missing
-CFLAGS += -Wall -Wstrict-prototypes -g\
-	-fomit-frame-pointer -mcmodel=medany -fno-builtin -DTARGET_RISCV64
+CFLAGS += -fomit-frame-pointer -mcmodel=medany -fno-builtin
 
-CFLAGS += $(filter-out -Wstrict-prototypes, $(CFLAGS))
+CXXFLAGS := $(CFLAGS)
 
 AR = $(CROSS)ar
 ARFLAGS = -r

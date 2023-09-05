@@ -14,17 +14,14 @@ CC := $(CROSS)gcc
 CXX := $(CROSS)g++
 
 OLVL ?= -O2
-CFLAGS += $(OLVL)
-CFLAGS += -g -Wall -Wstrict-prototypes \
-	-mcpu=leon3 -msoft-float \
-	-DNOMMU \
-	-fdata-sections -ffunction-sections
+CFLAGS += -mcpu=leon3 -msoft-float
+CPPFLAGS := -DNOMMU
 
 AR = $(CROSS)ar
 ARFLAGS = -r
 
 LD = $(CROSS)ld
-LDFLAGS := -z max-page-size=0x200 --gc-sections
+LDFLAGS := -z max-page-size=0x200
 
 VADDR_KERNEL_INIT=31000000
 
@@ -37,7 +34,7 @@ else
   STRIP = $(CROSS)strip --strip-unneeded -R .rela.text
 endif
 
-CXXFLAGS += $(filter-out -Wstrict-prototypes, $(CFLAGS))
+CXXFLAGS := $(CFLAGS)
 
 GCCLIB := $(shell $(CC) $(CFLAGS) -print-libgcc-file-name)
 CRTBEGIN := $(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)

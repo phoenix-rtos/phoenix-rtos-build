@@ -12,7 +12,6 @@ CC := $(CROSS)gcc
 CXX := $(CROSS)g++
 
 OLVL ?= -O2
-CFLAGS += $(OLVL)
 
 cpu := cortex-$(subst armv7,,$(TARGET_FAMILY))
 
@@ -24,19 +23,14 @@ else
 	$(error Incorrect TARGET.)
 endif
 
-CFLAGS += -Wall -Wstrict-prototypes -g\
-		-mcpu=$(cpu) -mtune=$(cpu) -mthumb\
-		-fomit-frame-pointer -mno-unaligned-access -fdata-sections -ffunction-sections
-
-CXXFLAGS += $(filter-out -Wstrict-prototypes, $(CFLAGS))
-
-VADDR_KERNEL_INIT = 0xc0000000
+CFLAGS += -mcpu=$(cpu) -mtune=$(cpu) -mthumb -fomit-frame-pointer -mno-unaligned-access
+CXXFLAGS := $(CFLAGS)
 
 AR = $(CROSS)ar
 ARFLAGS = -r
 
 LD = $(CROSS)ld
-LDFLAGS = -z max-page-size=0x1000 --gc-sections
+LDFLAGS = -z max-page-size=0x1000
 GCCLIB := $(shell $(CC) $(CFLAGS) -print-libgcc-file-name)
 CRTBEGIN := $(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
 CRTEND := $(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
