@@ -12,14 +12,12 @@ CC := $(CROSS)gcc
 CXX := $(CROSS)g++
 
 OLVL ?= -O2
-CFLAGS += $(OLVL)
-CFLAGS += -Wall -Wstrict-prototypes -g -fomit-frame-pointer -ffunction-sections -fdata-sections
+CFLAGS += -fomit-frame-pointer
 
 AR := $(CROSS)ar
 ARFLAGS = -r
 
 LD := $(CROSS)gcc
-LDFLAGS += -Wl,--gc-sections
 LDFLAGS_PREFIX := -Wl,
 
 OBJCOPY := $(CROSS)objcopy
@@ -32,8 +30,8 @@ ifneq ($(NOSAN), 1)
   LDFLAGS += -fsanitize=address,undefined
 endif
 
+CXXFLAGS := $(CFLAGS)
+
 # install unstripped binaries in rootfs
 # (cruicial for tests binaries with debug info for meaningful sanitizers info)
 ROOTFS_INSTALL_UNSTRIPPED := y
-
-CXXFLAGS += $(filter-out -Wstrict-prototypes, $(CFLAGS))

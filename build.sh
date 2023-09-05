@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# shellcheck source-path=SCRIPTDIR/..
 #
 # Shell script for building Phoenix-RTOS based firmware
 #
@@ -60,8 +61,8 @@ export TARGET TARGET_FAMILY TARGET_SUBFAMILY TARGET_PROJECT PROJECT_PATH PREFIX_
 
 # export flags for ports - call make only after all necessary env variables are already set
 EXPORT_CFLAGS="$(make -f phoenix-rtos-build/Makefile.common export-cflags)"
-# export only generic flags: "-z xxx", "-Lxxx", "-q"
-EXPORT_LDFLAGS="$(make -f phoenix-rtos-build/Makefile.common export-ldflags | grep -E -o "(-z [^ ]+)|(-L[^ ]+)|(-q)" | xargs)"
+# Convert ldflags to format recognizable by gcc, for example -q -> -Wl,-q
+EXPORT_LDFLAGS="$(make -f phoenix-rtos-build/Makefile.common export-ldflags | sed "s/\s/,/g" | sed 's/^-\|,-/ -Wl,-/g')"
 
 export EXPORT_CFLAGS EXPORT_LDFLAGS
 

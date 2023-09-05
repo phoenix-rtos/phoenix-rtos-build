@@ -20,8 +20,9 @@ TARGET_FAMILY ?= $(firstword $(subst -, ,$(TARGET)-))
 TARGET_SUBFAMILY ?= $(word 2,$(subst -, ,$(TARGET)-))
 
 # reset env variables
-CFLAGS :=
-CXXFLAGS :=
+CFLAGS :=          # flags related to C files compilation
+CXXFLAGS :=        # flags related to C++ files compilation
+CPPFLAGS :=        # flags for C preprocessor (C & C++)
 LDFLAGS :=
 LDFLAGS_PREFIX :=
 
@@ -34,8 +35,7 @@ ifneq ($(filter-out -O%,$(OLVL)),)
 endif
 
 ifneq ($(DEBUG), 1)
-  CFLAGS += -DNDEBUG
-  CXXFLAGS += -DNDEBUG
+  CPPFLAGS += -DNDEBUG
 endif
 
 TOPDIR := $(CURDIR)
@@ -81,18 +81,19 @@ $(info cleaning targets, make parallelism disabled)
 .NOTPARALLEL:
 endif
 
-# Distribute the __TARGET and __CPU defines
-CFLAGS += -D__TARGET_$(call uppercase,$(TARGET_FAMILY))
-CXXFLAGS += -D__TARGET_$(call uppercase,$(TARGET_FAMILY))
-
-CFLAGS += -D__CPU_$(call uppercase,$(TARGET_SUBFAMILY))
-CXXFLAGS += -D__CPU_$(call uppercase,$(TARGET_SUBFAMILY))
-
-# generic CFLAGS/LDFLAGS
+#
+# generic *FLAGS options
+#
+# common include/lib paths
 LDFLAGS += -L$(PREFIX_A)
+ifneq ($(KERNEL), 1)
+  CFLAGS += -I$(PREFIX_H)
+  CXXFLAGS += -I$(PREFIX_H)
+endif
 
 # make PROJECT_PATH the first search dir to allow project customizations/monkey-patching
 CFLAGS := -I$(PROJECT_PATH) $(CFLAGS)
+CXXFLAGS := -I$(PROJECT_PATH) $(CXXFLAGS)
 
 # add multilib directory to library search path
 SYSROOT := $(shell $(CC) $(CFLAGS) -print-sysroot)
@@ -104,10 +105,31 @@ LDFLAGS += -L$(LIBC_INSTALL_DIR)
 CFLAGS += -fmacro-prefix-map=$(dir $(TOPDIR))=
 CXXFLAGS += -fmacro-prefix-map=$(dir $(TOPDIR))=
 
-ifneq ($(KERNEL), 1)
-  CFLAGS += -I$(PREFIX_H)
-  CXXFLAGS += -I$(PREFIX_H)
-endif
+# garbage-collect unused code/data
+# NOTE: exported to ports also as it reduces binaries size greatly
+CFLAGS += -ffunction-sections -fdata-sections
+LDFLAGS += $(LDFLAGS_PREFIX)--gc-sections
+
+### right now we should have only target-necessary flags, save them for exporting (for building ports) ###
+EXPORT_CFLAGS := $(CFLAGS)
+EXPORT_CXXFLAGS := $(CXXFLAGS)
+EXPORT_LDFLAGS := $(LDFLAGS)
+
+# add our coding-style related options
+CFLAGS += -Wall -Wstrict-prototypes
+CXXFLAGS += -Wall
+
+# always produce binaries with debug information
+CFLAGS += -ggdb3
+CXXFLAGS += -ggdb3
+
+# set optimization level (target/project-dependant)
+CFLAGS += $(OLVL)
+CXXFLAGS += $(OLVL)
+
+# Distribute the __TARGET and __CPU defines
+CPPFLAGS += -D__TARGET_$(call uppercase,$(TARGET_FAMILY))
+CPPFLAGS += -D__CPU_$(call uppercase,$(TARGET_SUBFAMILY))
 
 #
 # Generic rules
@@ -115,13 +137,13 @@ endif
 .PHONY: help export-cflags export-cxxflags export-ldflags
 
 export-cflags:
-	@echo $(CFLAGS)
+	@echo $(EXPORT_CFLAGS)
 
 export-cxxflags:
-	@echo $(CXXFLAGS)
+	@echo $(EXPORT_CXXFLAGS)
 
 export-ldflags:
-	@echo $(LDFLAGS)
+	@echo $(EXPORT_LDFLAGS)
 
 help:
 	$(info DEFAULT_COMPONENTS := $(DEFAULT_COMPONENTS))
@@ -168,26 +190,26 @@ INSTALL_FS = $(SIL)printf "INSTALL %s\n" "$(@:$(PREFIX_ROOTFS)%=%)"; \
 $(PREFIX_O)%.o: %.c
 	@mkdir -p $(@D)
 	@printf "CC  %-24s\n" "$<"
-	$(SIL)$(CC) -c $(CFLAGS) "$(abspath $<)" -o "$@"
-	$(SIL)$(CC) -M  -MD -MP -MF $(PREFIX_O)$*.c.d -MT "$@" $(CFLAGS) $<
+	$(SIL)$(CC) -c $(CPPFLAGS) $(CFLAGS) "$(abspath $<)" -o "$@"
+	$(SIL)$(CC) -M  -MD -MP -MF $(PREFIX_O)$*.c.d -MT "$@" $(CPPFLAGS) $(CFLAGS) $<
 
 $(PREFIX_O)%.o: %.cc
 	@mkdir -p $(@D)
 	@printf "CXX  %-24s\n" "$<"
-	$(SIL)$(CXX) -c $(CXXFLAGS) "$(abspath $<)" -o "$@"
-	$(SIL)$(CXX) -M  -MD -MP -MF $(PREFIX_O)$*.cc.d -MT "$@" $(CXXFLAGS) $<
+	$(SIL)$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) "$(abspath $<)" -o "$@"
+	$(SIL)$(CXX) -M  -MD -MP -MF $(PREFIX_O)$*.cc.d -MT "$@" $(CPPFLAGS) $(CXXFLAGS) $<
 
 $(PREFIX_O)%.o: %.cpp
 	@mkdir -p $(@D)
 	@printf "CXX  %-24s\n" "$<"
-	$(SIL)$(CXX) -c $(CXXFLAGS) "$(abspath $<)" -o "$@"
-	$(SIL)$(CXX) -M  -MD -MP -MF $(PREFIX_O)$*.cpp.d -MT "$@" $(CXXFLAGS) $<
+	$(SIL)$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) "$(abspath $<)" -o "$@"
+	$(SIL)$(CXX) -M  -MD -MP -MF $(PREFIX_O)$*.cpp.d -MT "$@" $(CPPFLAGS) $(CXXFLAGS) $<
 
 $(PREFIX_O)%.o: %.S
 	@mkdir -p $(@D)
 	@printf "ASM %-24s\n" "$<"
-	$(SIL)$(CC) -c $(CFLAGS) "$<" -o "$@"
-	$(SIL)$(CC) -M  -MD -MP -MF $(PREFIX_O)$*.S.d -MT "$@" $(CFLAGS) $<
+	$(SIL)$(CC) -c $(CPPFLAGS) $(CFLAGS) "$<" -o "$@"
+	$(SIL)$(CC) -M  -MD -MP -MF $(PREFIX_O)$*.S.d -MT "$@" $(CPPFLAGS) $(CFLAGS) $<
 
 $(PREFIX_PROG_STRIPPED)%: $(PREFIX_PROG)%
 	@mkdir -p $(@D)
