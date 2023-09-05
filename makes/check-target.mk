@@ -77,4 +77,4 @@ ifeq (,$(filter $(TARGETS),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
   $(error $(MESSAGE)$(LF)Available targets:$(LF)$(subst $(SPACE),$(LF),$(sort $(TARGETS))$(LF)))
 endif
 
-include $(MAKES_PATH)/../Makefile.$(TARGET_SUFF)
+include $(MAKES_PATH)/../target/$(TARGET_SUFF).mk
