@@ -47,7 +47,7 @@ fi
 #GCC=gcc-7.1.0
 
 BINUTILS=binutils-2.34
-GCC=gcc-9.3.0
+GCC=gcc-9.5.0
 
 TARGET="$1"
 BUILD_ROOT="$2"
