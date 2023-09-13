@@ -113,6 +113,7 @@ build_gcc_stage1() {
 
     # GCC compilation options
     # --with-sysroot -> cross-compiler sysroot
+    # --with-gxx-include-dir -> configure as a subdir of sysroot for c++ includes to work with external (out-of-toolchain) sysroot
     # --with-newlib -> do note generate standard library includes by fixincludes, do not include _eprintf in libgcc
     # --disable-libssp -> stack smashing protector library disabled
     # --disable-nls -> all compiler messages will be in english
@@ -126,6 +127,7 @@ build_gcc_stage1() {
     # stage1 compiler (gcc only)
     ../configure --target="${TARGET}" --prefix="${TOOLCHAIN_PREFIX}" \
                  --with-sysroot="${SYSROOT}" \
+                 --with-gxx-include-dir="${SYSROOT}/include/c++" \
                  --enable-languages=c,c++ --with-newlib \
                  --with-headers=yes \
                  --enable-tls \
@@ -202,6 +204,7 @@ build_libstdcpp() {
     log "building stdlibc++"
     # LIBSTDC++ compilation options
     # --host -> target is a host for libstdc++
+    # --with-gxx-include-dir -> configure as a subdir of sysroot for c++ includes to work with external (out-of-toolchain) sysroot
     # --with-libphoenix -> use libphoenix as standard C library
     # --enable-tls -> enable Thread Local Storage
     # --disable-nls ->  all compiler messages will be in english
@@ -213,6 +216,7 @@ build_libstdcpp() {
     ../../../libstdc++-v3/configure --target="${TARGET}" \
                                     --host="${TARGET}" \
                                     --prefix="${SYSROOT}" \
+                                    --with-gxx-include-dir="${SYSROOT}/include/c++" \
                                     --with-libphoenix \
                                     --enable-tls \
                                     --disable-nls \
