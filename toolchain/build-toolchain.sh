@@ -11,21 +11,21 @@ log() {
 }
 
 # targets for libphoenix and phoenix-rtos-kernel for installing headers
-declare -A TOOLCHAN_TO_PHOENIX_TARGET=(
-    [arm-phoenix]="armv7a7-imx6ull"
+declare -A TOOLCHAN_TO_PHOENIX_TARGETS=(
+    [arm-phoenix]="armv7a9-zynq7000 armv7a7-imx6ull armv7m7-imxrt106x armv7m4-stm32l4x6"
     [i386-pc-phoenix]="ia32-generic"
     [riscv64-phoenix]="riscv64-generic"
     [sparc-phoenix]="sparcv8leon3-gr716"
 )
 
-if [ -z "$1" ] || [ -z "${TOOLCHAN_TO_PHOENIX_TARGET[$1]}" ]; then
+if [ -z "$1" ] || [ -z "${TOOLCHAN_TO_PHOENIX_TARGETS[$1]}" ]; then
     echo "Missing or invalid target provided! Abort."
     echo "officially supported targets:"
-    printf "%s\n" "${!TOOLCHAN_TO_PHOENIX_TARGET[@]}"
+    printf "%s\n" "${!TOOLCHAN_TO_PHOENIX_TARGETS[@]}"
     exit 1
 fi
 
-PHOENIX_TARGET="${TOOLCHAN_TO_PHOENIX_TARGET[$1]}"
+PHOENIX_TARGETS="${TOOLCHAN_TO_PHOENIX_TARGETS[$1]}"
 
 if [ -z "$2" ]; then
     echo "No toolchain install path provided! Abort."
@@ -156,12 +156,14 @@ build_libc() {
     # FIXME: keep the symlink for now until install dir changes in libphoenix and kernel would be well-propagated
     ln -sf . "${SYSROOT}/usr"
 
-    log "installing kernel headers"
-    make -C "$SCRIPT_DIR/../../phoenix-rtos-kernel" TARGET="$PHOENIX_TARGET" install-headers
+    for phx_target in $PHOENIX_TARGETS; do
+        log "[$phx_target] installing kernel headers"
+        make -C "$SCRIPT_DIR/../../phoenix-rtos-kernel" TARGET="$phx_target" install-headers
 
-    # FIXME: libphoenix should be installed for all supported multilib target variants
-    log "installing libphoenix"
-    make -C "$SCRIPT_DIR/../../libphoenix" TARGET="$PHOENIX_TARGET" clean install
+        # FIXME: libphoenix should be installed for all supported multilib target variants
+        log "[$phx_target] installing libphoenix"
+        make -C "$SCRIPT_DIR/../../libphoenix" TARGET="$phx_target" clean install
+    done
 
     PATH="$OLDPATH"
 }
