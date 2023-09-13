@@ -62,7 +62,7 @@ export TARGET TARGET_FAMILY TARGET_SUBFAMILY TARGET_PROJECT PROJECT_PATH PREFIX_
 # export flags for ports - call make only after all necessary env variables are already set
 EXPORT_CFLAGS="$(make -f phoenix-rtos-build/Makefile.common export-cflags)"
 # Convert ldflags to format recognizable by gcc, for example -q -> -Wl,-q
-EXPORT_LDFLAGS="$(make -f phoenix-rtos-build/Makefile.common export-ldflags | sed "s/\s/,/g" | sed 's/^-\|,-/ -Wl,-/g')"
+EXPORT_LDFLAGS="$(make -f phoenix-rtos-build/Makefile.common export-ldflags)"
 
 export EXPORT_CFLAGS EXPORT_LDFLAGS
 

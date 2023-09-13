@@ -47,18 +47,18 @@ else
 endif
 
 
-LDFLAGS := -z max-page-size=0x10
+LDFLAGS := -Wl,-z,max-page-size=0x10
 
 ifeq ($(KERNEL), 1)
   CPPFLAGS += $(KERNEL_TARGET_DEFINE)
   CFLAGS += -ffixed-r9
   LDFLAGS += -Tbss=20000000 -Tdata=20000000
-  STRIP = $(CROSS)strip
+  STRIP := $(CROSS)strip
 else
   CFLAGS += -fpic -fpie -msingle-pic-base -mno-pic-data-is-text-relative
   # output .rel.* sections to make ELF position-independent
-  LDFLAGS += -q
-  STRIP = $(PREFIX_PROJECT)/phoenix-rtos-build/scripts/strip.py $(CROSS)strip --strip-unneeded -R .rel.text
+  LDFLAGS += -Wl,-q
+  STRIP := $(PREFIX_PROJECT)/phoenix-rtos-build/scripts/strip.py $(CROSS)strip --strip-unneeded -R .rel.text
 endif
 
 CXXFLAGS := $(CFLAGS)
@@ -66,17 +66,8 @@ CXXFLAGS := $(CFLAGS)
 AR = $(CROSS)ar
 ARFLAGS = -r
 
-LD = $(CROSS)ld
+LD = $(CROSS)gcc
+LDFLAGS_PREFIX := -Wl,
 
-GCCLIB := $(shell $(CC) $(CFLAGS) -print-libgcc-file-name)
-CRTBEGIN := $(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
-CRTEND := $(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
-PHOENIXLIB := $(shell $(CC) $(CFLAGS) -print-file-name=libphoenix.a)
-# The filter-out enables proper building because if libstdc++ is not available, LIBSTDCPP will be empty.
-LIBSTDCPP := $(filter-out libstdc++.a, $(shell $(CXX) $(CXXFLAGS) -print-file-name=libstdc++.a))
-# For arm, the implementation of exceptions, defined in libgcc, uses abort() from libphoenix
-LDLIBS := $(LIBSTDCPP) --start-group $(PHOENIXLIB) $(GCCLIB) --end-group $(CRTBEGIN) $(CRTEND)
-
-
-OBJCOPY = $(CROSS)objcopy
-OBJDUMP = $(CROSS)objdump
+OBJCOPY := $(CROSS)objcopy
+OBJDUMP := $(CROSS)objdump
