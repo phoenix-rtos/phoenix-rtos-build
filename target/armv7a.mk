@@ -29,17 +29,10 @@ CXXFLAGS := $(CFLAGS)
 AR = $(CROSS)ar
 ARFLAGS = -r
 
-LD = $(CROSS)ld
-LDFLAGS = -z max-page-size=0x1000
-GCCLIB := $(shell $(CC) $(CFLAGS) -print-libgcc-file-name)
-CRTBEGIN := $(shell $(CC) $(CFLAGS) -print-file-name=crtbegin.o)
-CRTEND := $(shell $(CC) $(CFLAGS) -print-file-name=crtend.o)
-PHOENIXLIB := $(shell $(CC) $(CFLAGS) -print-file-name=libphoenix.a)
-# The filter-out enables proper building because if libstdc++ is not available, LIBSTDCPP will be empty.
-LIBSTDCPP := $(filter-out libstdc++.a, $(shell $(CXX) $(CXXFLAGS) -print-file-name=libstdc++.a))
-# For arm, the implementation of exceptions, defined in libgcc, uses abort() from libphoenix
-LDLIBS := $(LIBSTDCPP) --start-group $(PHOENIXLIB) $(GCCLIB) --end-group $(CRTBEGIN) $(CRTEND)
+LD := $(CROSS)gcc
+LDFLAGS_PREFIX := -Wl,
 
+LDFLAGS = -Wl,-z,max-page-size=0x1000
 
 OBJCOPY = $(CROSS)objcopy
 OBJDUMP = $(CROSS)objdump
