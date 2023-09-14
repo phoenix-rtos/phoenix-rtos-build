@@ -92,8 +92,10 @@ ifneq ($(KERNEL), 1)
 endif
 
 # make PROJECT_PATH the first search dir to allow project customizations/monkey-patching
-CFLAGS := -I$(PROJECT_PATH) $(CFLAGS)
-CXXFLAGS := -I$(PROJECT_PATH) $(CXXFLAGS)
+ifneq ($(PROJECT_PATH),)
+  CFLAGS := -I$(PROJECT_PATH) $(CFLAGS)
+  CXXFLAGS := -I$(PROJECT_PATH) $(CXXFLAGS)
+endif
 
 # add multilib directory to library search path
 SYSROOT := $(shell $(CC) $(CFLAGS) -print-sysroot)
