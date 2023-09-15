@@ -39,11 +39,23 @@ PREFIX_PROG_STRIPPED="$PREFIX_BUILD/prog.stripped/"
 
 PREFIX_A="$PREFIX_BUILD/lib/"
 PREFIX_H="$PREFIX_BUILD/include/"
+PREFIX_SYSROOT=""  # empty by default (use toolchain sysroot)
 
 PLO_SCRIPT_DIR="$PREFIX_BUILD/plo-scripts"
 
 PREFIX_ROOTFS="$PREFIX_FS/root/"
 : "${PREFIX_ROOTSKEL:="$PREFIX_PROJECT/_fs/root-skel/"}"
+
+
+# LIBPHOENIX_DEVEL_MODE:
+#  - if enabled (y): use project-specific sysroot (PREFIX_SYSROOT) and install kernel headers + compile/install libphoenix
+#  - if disabled (n or not set): use toolchain sysroot, don't install kernel headers, don't compile libphoenix
+#TODO: change default value to 'n' when the toolchain-supplied sysroot will be stable enough
+: "${LIBPHOENIX_DEVEL_MODE:=y}"
+
+if [ "$LIBPHOENIX_DEVEL_MODE" = "y" ]; then
+	PREFIX_SYSROOT="$PREFIX_BUILD/sysroot"
+fi
 
 # Default project's overlay directory, it does not have to exist.
 ROOTFS_OVERLAYS="$PROJECT_PATH/rootfs-overlay:${ROOTFS_OVERLAYS}"
@@ -57,7 +69,8 @@ MAKEFLAGS="--no-print-directory -j 9"
 
 export TARGET TARGET_FAMILY TARGET_SUBFAMILY TARGET_PROJECT PROJECT_PATH PREFIX_PROJECT PREFIX_BUILD\
 	PREFIX_BUILD_HOST PREFIX_FS PREFIX_BOOT PREFIX_PROG PREFIX_PROG_STRIPPED PREFIX_A\
-	PREFIX_H PREFIX_ROOTFS CROSS CFLAGS CXXFLAGS LDFLAGS CC LD AR AS MAKEFLAGS DEVICE_FLAGS PLO_SCRIPT_DIR
+	PREFIX_H PREFIX_ROOTFS CROSS CFLAGS CXXFLAGS LDFLAGS CC LD AR AS MAKEFLAGS DEVICE_FLAGS PLO_SCRIPT_DIR\
+	PREFIX_SYSROOT LIBPHOENIX_DEVEL_MODE
 
 # export flags for ports - call make only after all necessary env variables are already set
 EXPORT_CFLAGS="$(make -f phoenix-rtos-build/Makefile.common export-cflags)"
@@ -133,6 +146,15 @@ mkdir -p "$PREFIX_BUILD"
 mkdir -p "$PREFIX_BUILD_HOST"
 mkdir -p "$PREFIX_BOOT"
 mkdir -p "$PREFIX_PROG" "$PREFIX_PROG_STRIPPED"
+
+if [ -n "$PREFIX_SYSROOT" ]; then
+	mkdir -p "$PREFIX_SYSROOT" "$PREFIX_SYSROOT/include" "$PREFIX_SYSROOT/usr"
+
+	# libc includes needs to be accessible by ${SYSROOT}/usr/local/include for C++ headers to work
+	(cd "$PREFIX_SYSROOT/usr" && ln -sfn . local)
+	# see sysroot-setup.mk for next steps in sysroot setup
+fi
+
 if declare -f "b_prepare" > /dev/null; then
 	b_prepare
 fi

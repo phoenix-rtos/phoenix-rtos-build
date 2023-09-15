@@ -35,3 +35,7 @@ CXXFLAGS := $(CFLAGS)
 # install unstripped binaries in rootfs
 # (cruicial for tests binaries with debug info for meaningful sanitizers info)
 ROOTFS_INSTALL_UNSTRIPPED := y
+
+# don't use sysroot on host
+LIBPHOENIX_DEVEL_MODE := n
+PREFIX_SYSROOT :=

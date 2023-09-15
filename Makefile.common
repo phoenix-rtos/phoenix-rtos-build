@@ -62,8 +62,9 @@ PREFIX_ROOTFS ?= $(PREFIX_FS)/root/
 # Check TARGET, set TARGET_SUFF and include target building options
 include $(MAKES_PATH)/include-target.mk
 
-# setup tools
+# setup tools and sysroot
 include $(MAKES_PATH)/setup-tools.mk
+include $(MAKES_PATH)/setup-sysroot.mk
 
 # add utility functions
 include $(MAKES_PATH)/funcs.mk
@@ -96,12 +97,6 @@ ifneq ($(PROJECT_PATH),)
   CFLAGS := -I$(PROJECT_PATH) $(CFLAGS)
   CXXFLAGS := -I$(PROJECT_PATH) $(CXXFLAGS)
 endif
-
-# add multilib directory to library search path
-SYSROOT := $(shell $(CC) $(CFLAGS) -print-sysroot)
-MULTILIB_DIR := $(shell $(CC) $(CFLAGS) -print-multi-directory)
-LIBC_INSTALL_DIR := $(SYSROOT)/lib/$(MULTILIB_DIR)
-LDFLAGS += -L$(LIBC_INSTALL_DIR)
 
 # remove local dev path from macros
 CFLAGS += -fmacro-prefix-map=$(dir $(TOPDIR))=
