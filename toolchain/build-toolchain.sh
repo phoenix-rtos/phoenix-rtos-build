@@ -150,11 +150,11 @@ build_libc() {
     PATH="$TOOLCHAIN_PREFIX/bin":$PATH
     export PATH
 
-    # standard library headers should be installed in $SYSROOT/include
+    # standard library headers should be installed in $SYSROOT/usr/include
     # for fixincludes to work the headers need to be in $SYSROOT/usr/include, for libgcc compilation in $SYSROOT/include
     # create symlink for this stage (arm-none-eabi-gcc does the same - see https://github.com/xpack-dev-tools/arm-gcc-original-scripts/blob/master/build-toolchain.sh)
-    # FIXME: keep the symlink for now until install dir changes in libphoenix and kernel would be well-propagated
-    ln -sf . "${SYSROOT}/usr"
+    mkdir  p "${SYSROOT}/usr/include"
+    ln -snf usr/include "${SYSROOT}/include"
 
     for phx_target in $PHOENIX_TARGETS; do
         log "[$phx_target] installing kernel headers"
@@ -182,8 +182,8 @@ build_gcc_stage2() {
     log "installing GCC (stage2)"
     make install-gcc install-target-libgcc
 
-    # FIXME: keep the symlink for now until install dir changes in libphoenix and kernel would be well-propagated
-    #rm -r "${SYSROOT:?}/usr"
+    # remove `include` symlink to install c++ headers in $SYSROOT/include/c++ as expected
+    rm -rf "${SYSROOT:?}/include"
     popd > /dev/null
 }
 
