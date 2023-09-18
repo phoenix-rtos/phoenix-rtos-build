@@ -12,11 +12,15 @@
 set -e
 
 b_log "Building phoenix-rtos-kernel"
-KERNEL_MAKECMDGOALS="install-headers"
-make -C "phoenix-rtos-kernel" $KERNEL_MAKECMDGOALS all
 
-b_log "Building libphoenix"
-make -C "libphoenix" all install
+make -C "phoenix-rtos-kernel" all
+
+if [ "$LIBPHOENIX_DEVEL_MODE" = "y" ]; then
+	make -C "phoenix-rtos-kernel" install-headers
+
+	b_log "Building libphoenix"
+	make -C "libphoenix" all install
+fi
 
 b_log "Building phoenix-rtos-corelibs"
 make -C "phoenix-rtos-corelibs" all
