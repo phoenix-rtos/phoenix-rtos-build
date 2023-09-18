@@ -153,7 +153,7 @@ build_libc() {
     # standard library headers should be installed in $SYSROOT/usr/include
     # for fixincludes to work the headers need to be in $SYSROOT/usr/include, for libgcc compilation in $SYSROOT/include
     # create symlink for this stage (arm-none-eabi-gcc does the same - see https://github.com/xpack-dev-tools/arm-gcc-original-scripts/blob/master/build-toolchain.sh)
-    mkdir  p "${SYSROOT}/usr/include"
+    mkdir -p "${SYSROOT}/usr/include"
     ln -snf usr/include "${SYSROOT}/include"
 
     for phx_target in $PHOENIX_TARGETS; do
