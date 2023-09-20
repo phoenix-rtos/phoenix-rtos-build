@@ -3,7 +3,7 @@
 #
 # SPARCv8 LEON3 options
 #
-# Copyright 2022 Phoenix Systems
+# Copyright 2022, 2023 Phoenix Systems
 #
 # %LICENSE%
 #
@@ -14,27 +14,39 @@ CC := $(CROSS)gcc
 CXX := $(CROSS)g++
 
 OLVL ?= -O2
-CFLAGS += -mcpu=leon3 -msoft-float
-CPPFLAGS := -DNOMMU
+CFLAGS += -mcpu=leon3
+
+LDFLAGS :=
+
+ifeq ($(TARGET_SUBFAMILY), gr716)
+  VADDR_KERNEL_INIT := 31000000
+  CPPFLAGS := -DNOMMU
+  CFLAGS += -msoft-float
+
+  ifeq ($(KERNEL), 1)
+    LDFLAGS += -Wl,-z,max-page-size=0x200 -Tbss=40001800 -Tdata=40001800 -Wl,--section-start=.rodata=40000000
+    STRIP := $(CROSS)strip
+  else
+    CFLAGS += -fPIC -fPIE -mno-pic-data-is-text-relative -mpic-register=g6
+    LDFLAGS += -Wl,-q
+    STRIP := $(CROSS)strip --strip-unneeded -R .rela.text
+  endif
+
+else ifeq ($(TARGET_SUBFAMILY), gr712rc)
+  STRIP := $(CROSS)strip
+  VADDR_KERNEL_INIT := 0xc0000000
+  CFLAGS += -msoft-float -mfix-gr712rc -DLEON3_TN_0018_FIX
+  LDFLAGS += -Wl,-z,max-page-size=0x1000
+
+else
+  $(error Incorrect TARGET.)
+endif
 
 AR := $(CROSS)ar
 ARFLAGS = -r
 
 LD := $(CROSS)gcc
 LDFLAGS_PREFIX := -Wl,
-
-LDFLAGS := -Wl,-z,max-page-size=0x200
-
-VADDR_KERNEL_INIT := 31000000
-
-ifeq ($(KERNEL), 1)
-  LDFLAGS += -Tbss=40001800 -Tdata=40001800 -Wl,--section-start=.rodata=40000000
-  STRIP := $(CROSS)strip
-else
-  CFLAGS += -fPIC -fPIE -mno-pic-data-is-text-relative -mpic-register=g6
-  LDFLAGS += -Wl,-q
-  STRIP := $(CROSS)strip --strip-unneeded -R .rela.text
-endif
 
 CXXFLAGS := $(CFLAGS)
 
