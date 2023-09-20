@@ -1,0 +1,13 @@
+--- gcc-9.5.0/gcc/config/phoenix.h	2023-09-20 13:34:58.528162463 +0200
++++ gcc-9.5.0.phoenix/gcc/config/phoenix.h	2023-09-20 11:15:19.083504061 +0200
+@@ -26,7 +26,9 @@
+       builtin_assert ("system=unix");      \
+     } while (0)
+ 
+-#define STD_LIB_SPEC "%{!shared:%{g*:-lg} %{!p:%{!pg:-lc}}%{p:-lc_p}%{pg:-lc_p}}"
++/* use gcc default for libc (re-define as it might have been overridden by previous imports) */
++#undef LIB_SPEC
++#define LIB_SPEC "%{!shared:%{g*:-lg} %{!p:%{!pg:-lc}}%{p:-lc_p}%{pg:-lc_p}}"
+ 
+ /* This will prevent selecting 'unsigned long int' instead of 'unsigned int' as 'uint32_t' in stdint-newlib.h. */
+ #undef STDINT_LONG32
