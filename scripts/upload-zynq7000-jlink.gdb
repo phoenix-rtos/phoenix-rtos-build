@@ -1,3 +1,4 @@
+#JlinkGdbServer with Jlink connected to zynq7000 jtag port
 target remote localhost:2331
 set verbose on
 
