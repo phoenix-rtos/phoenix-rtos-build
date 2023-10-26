@@ -42,6 +42,15 @@ if [ ! -f "$SCRIPT_DIR/../../phoenix-rtos-kernel/Makefile" ] || [ ! -f "$SCRIPT_
     exit 1
 fi
 
+# Those env variables override command line options passed to configure scripts
+# This check was added due to libstdc++ configure using host compiler instead of cross compiler
+# TODO: check if all stages are affected. If not then consider using unset in those stages
+if [[ -v CC || -v CFLAGS || -v LIBS || -v CPPFLAGS || -v CXX || -v CXXFLAGS || -v CPP || -v CXXCPP || -v CXXFILT ]]; then
+    echo "Environment contains variables that should not be set. Abort."
+    echo "Make sure to unset CC CFLAGS LIBS CPPFLAGS CXX CXXFLAGS CPP CXXCPP CXXFILT"
+    exit 1
+fi
+
 # old legacy versions of the compiler:
 #BINUTILS=binutils-2.28
 #GCC=gcc-7.1.0
