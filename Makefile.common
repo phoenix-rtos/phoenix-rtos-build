@@ -108,7 +108,10 @@ CXXFLAGS += -fmacro-prefix-map=$(dir $(TOPDIR))=
 # garbage-collect unused code/data
 # NOTE: exported to ports also as it reduces binaries size greatly
 CFLAGS += -ffunction-sections -fdata-sections
-LDFLAGS += $(LDFLAGS_PREFIX)--gc-sections
+LDFLAGS_GC_SECTIONS ?= $(LDFLAGS_PREFIX)--gc-sections
+LDFLAGS += $(LDFLAGS_GC_SECTIONS)
+LDFLAGS_WHOLE_ARCHIVE_BEGIN ?= $(LDFLAGS_PREFIX)--whole-archive
+LDFLAGS_WHOLE_ARCHIVE_END ?= $(LDFLAGS_PREFIX)--no-whole-archive
 
 ### right now we should have only target-necessary flags, save them for exporting (for building ports) ###
 EXPORT_CFLAGS := $(CFLAGS)
@@ -180,7 +183,7 @@ ARCH =  $(SIL)@mkdir -p $(@D); \
 # --whole-archive is needed for linker to always find constructors in .a files
 LINK = $(SIL)mkdir -p $(@D); \
 	printf "LD  %-24s\n" "$(@F)"; \
-	$(LD) $(CFLAGS) $(LDFLAGS) -o "$@"  $(LDFLAGS_PREFIX)--whole-archive $^ $(LDFLAGS_PREFIX)--no-whole-archive $(LDLIBS)
+	$(LD) $(CFLAGS) $(LDFLAGS) -o "$@" $(LDFLAGS_WHOLE_ARCHIVE_BEGIN) $^ $(LDFLAGS_WHOLE_ARCHIVE_END) $(LDLIBS)
 
 
 HEADER = $(SIL)mkdir -p $(@D); \
