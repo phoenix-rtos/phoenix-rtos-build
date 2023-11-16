@@ -209,7 +209,7 @@ $(PREFIX_O)%.o: %.cpp
 $(PREFIX_O)%.o: %.S
 	@mkdir -p $(@D)
 	@printf "ASM %-24s\n" "$<"
-	$(SIL)$(CC) -c $(CPPFLAGS) $(CFLAGS) "$<" -o "$@" -MD -MP -MF $(PREFIX_O)$*.S.d -MT "$@"
+	$(SIL)$(CC) -c $(CPPFLAGS) $(CFLAGS) "$(abspath $<)" -o "$@" -MD -MP -MF $(PREFIX_O)$*.S.d -MT "$@"
 
 $(PREFIX_PROG_STRIPPED)%: $(PREFIX_PROG)%
 	@mkdir -p $(@D)
