@@ -18,21 +18,24 @@ declare -A TOOLCHAN_TO_PHOENIX_TARGETS=(
     [sparc-phoenix]="sparcv8leon3-gr716 sparcv8leon3-gr712rc"
 )
 
-if [ -z "$1" ] || [ -z "${TOOLCHAN_TO_PHOENIX_TARGETS[$1]}" ]; then
+TARGET="$1"
+BUILD_ROOT="$2"
+
+if [ -z "$TARGET" ] || [ -z "${TOOLCHAN_TO_PHOENIX_TARGETS[$TARGET]}" ]; then
     echo "Missing or invalid target provided! Abort."
     echo "officially supported targets:"
     printf "%s\n" "${!TOOLCHAN_TO_PHOENIX_TARGETS[@]}"
     exit 1
 fi
 
-PHOENIX_TARGETS="${TOOLCHAN_TO_PHOENIX_TARGETS[$1]}"
+PHOENIX_TARGETS="${TOOLCHAN_TO_PHOENIX_TARGETS[$TARGET]}"
 
-if [ -z "$2" ]; then
+if [ -z "$BUILD_ROOT" ]; then
     echo "No toolchain install path provided! Abort."
     exit 1
 fi
 
-if [ "${2:0:1}" != "/" ]; then
+if [ "${BUILD_ROOT:0:1}" != "/" ]; then
     echo "Path must not be relative."
     exit 1
 fi
@@ -51,6 +54,12 @@ if [[ -v CC || -v CFLAGS || -v LIBS || -v CPPFLAGS || -v CXX || -v CXXFLAGS || -
     exit 1
 fi
 
+if command -v "${TARGET}-gcc" > /dev/null; then
+    echo "Command \"${TARGET}-gcc\" found in PATH. Abort."
+    echo "Make sure to to remove existing toolchain from PATH"
+    exit 1
+fi
+
 # old legacy versions of the compiler:
 #BINUTILS=binutils-2.28
 #GCC=gcc-7.1.0
@@ -58,8 +67,6 @@ fi
 BINUTILS=binutils-2.34
 GCC=gcc-9.5.0
 
-TARGET="$1"
-BUILD_ROOT="$2"
 TOOLCHAIN_PREFIX="${BUILD_ROOT}/${TARGET}"
 SYSROOT="${TOOLCHAIN_PREFIX}/${TARGET}"
 MAKEFLAGS="-j9 -s"
