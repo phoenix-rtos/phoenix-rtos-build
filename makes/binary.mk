@@ -47,6 +47,13 @@ RESOLVED_LIBS += $(patsubst %,$(PREFIX_A)%.a, $(LIBS))
 DEPS += $(DEP_LIBS)
 $(OBJS.$(NAME)): | $(DEPS)
 
+ifneq ($(DYNAMIC_BINARY), y)
+# FIXME: remove once hostutils use binary-dyn.mk
+ifneq ($(TARGET_FAMILY), host)
+LOCAL_LDFLAGS += -static
+endif
+endif
+
 # potentially custom CFLAGS/CXXFLAGS/LDFLAGS for compilation and linking
 # add ABS_HEADERS_DIR to CFLAGS/CXXFLAGS as a first -I path to build always using local headers instead of installed ones
 $(OBJS.$(NAME)): CFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CFLAGS) $(LOCAL_CFLAGS)
@@ -126,3 +133,4 @@ LOCAL_CXXFLAGS :=
 LOCAL_LDFLAGS :=
 LOCAL_LDLIBS :=
 LOCAL_INSTALL_PATH :=
+undefine DYNAMIC_BINARY
