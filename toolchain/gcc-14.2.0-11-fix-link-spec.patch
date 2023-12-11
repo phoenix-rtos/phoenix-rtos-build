@@ -1,0 +1,23 @@
+diff --git a/gcc/config/phoenix.h b/gcc/config/phoenix.h
+--- a/gcc/config/phoenix.h
++++ b/gcc/config/phoenix.h
+@@ -31,6 +31,18 @@ along with GCC; see the file COPYING3.  If not see
+ #undef LIB_SPEC
+ #define LIB_SPEC "%{!shared: %{!p:%{!pg:-lc}}%{p:-lc_p}%{pg:-lc_p}} %{shared:-lc}"
+ 
++#undef LINK_SPEC
++#define LINK_SPEC \
++  "%{assert*} %{R*} %{rpath*} \
++   %{shared:-shared} \
++   %{symbolic:-Bsymbolic} \
++   %{!shared: \
++     -dc -dp \
++     %{!static: \
++       %{rdynamic:-export-dynamic} \
++       -dynamic-linker /usr/libexec/ld.elf_so} \
++     %{static:-static}}"
++
+ /* This will prevent selecting 'unsigned long int' instead of 'unsigned int' as 'uint32_t' in stdint-newlib.h. */
+ #undef STDINT_LONG32
+ #define STDINT_LONG32		0
+
