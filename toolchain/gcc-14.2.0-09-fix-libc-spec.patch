@@ -1,15 +1,16 @@
 diff --git a/gcc/config/phoenix.h b/gcc/config/phoenix.h
+index 9bad22558c0..f2f254dd98d 100644
 --- a/gcc/config/phoenix.h
 +++ b/gcc/config/phoenix.h
-@@ -26,7 +26,9 @@ along with GCC; see the file COPYING3.  If not see
+@@ -26,7 +26,10 @@ along with GCC; see the file COPYING3.  If not see
        builtin_assert ("system=unix");      \
      } while (0)
  
 -#define STD_LIB_SPEC "%{!shared:%{g*:-lg} %{!p:%{!pg:-lc}}%{p:-lc_p}%{pg:-lc_p}}"
-+/* use gcc default for libc (re-define as it might have been overridden by previous imports) */
++/* do not use libg,
++ * import libc while compiling shared libs */
 +#undef LIB_SPEC
-+#define LIB_SPEC "%{!shared:%{g*:-lg} %{!p:%{!pg:-lc}}%{p:-lc_p}%{pg:-lc_p}}"
++#define LIB_SPEC "%{!shared: %{!p:%{!pg:-lc}}%{p:-lc_p}%{pg:-lc_p}} %{shared:-lc}"
  
  /* This will prevent selecting 'unsigned long int' instead of 'unsigned int' as 'uint32_t' in stdint-newlib.h. */
  #undef STDINT_LONG32
-

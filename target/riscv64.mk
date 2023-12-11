@@ -26,6 +26,9 @@ LDFLAGS_PREFIX := -Wl,
 
 LDFLAGS :=
 
+TARGET_PIC_FLAG = -fpic
+TARGET_PIE_FLAG = -fpie
+
 OBJCOPY := $(CROSS)objcopy
 OBJDUMP := $(CROSS)objdump
 

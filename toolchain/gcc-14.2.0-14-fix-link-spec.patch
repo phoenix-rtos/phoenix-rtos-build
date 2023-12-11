@@ -1,0 +1,23 @@
+diff --git a/gcc/config/phoenix.h b/gcc/config/phoenix.h
+index 9a59529c184..0d92265e889 100644
+--- a/gcc/config/phoenix.h
++++ b/gcc/config/phoenix.h
+@@ -39,6 +39,18 @@ along with GCC; see the file COPYING3.  If not see
+ #undef TARGET_FDPIC_ASM_SPEC
+ #define TARGET_FDPIC_ASM_SPEC "%{mfdpic: --fdpic}"
+ 
++#undef LINK_SPEC
++#define LINK_SPEC \
++  "%{assert*} %{R*} %{rpath*} \
++   %{shared:-shared} \
++   %{symbolic:-Bsymbolic} \
++   %{!shared: \
++     -dc -dp \
++     %{!static: \
++       %{rdynamic:-export-dynamic} \
++       -dynamic-linker /usr/libexec/ld.elf_so} \
++     %{static:-static}}"
++
+ /* This will prevent selecting 'unsigned long int' instead of 'unsigned int' as 'uint32_t' in stdint-newlib.h. */
+ #undef STDINT_LONG32
+ #define STDINT_LONG32		0

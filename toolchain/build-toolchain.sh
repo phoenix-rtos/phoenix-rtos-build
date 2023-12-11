@@ -188,7 +188,8 @@ build_libc() {
         make -C "$SCRIPT_DIR/../../phoenix-rtos-kernel" NOCHECKENV=1 TARGET="$phx_target" install-headers
 
         log "[$phx_target] installing libphoenix"
-        make -C "$SCRIPT_DIR/../../libphoenix" NOCHECKENV=1 TARGET="$phx_target" clean install
+        # LIBPHOENIX cannot be build shared as libgcc is not yet build.
+        make -C "$SCRIPT_DIR/../../libphoenix" NOCHECKENV=1 LIBPHOENIX_SHARED=n TARGET="$phx_target" clean install
     done
 
     PATH="$OLDPATH"
@@ -211,6 +212,20 @@ build_gcc_stage2() {
     # remove `include` symlink to install c++ headers in $SYSROOT/include/c++ as expected
     rm -rf "${SYSROOT:?}/include"
     popd > /dev/null
+}
+
+build_libc_shared() {
+    # use new compiler for the below builds
+    OLDPATH="$PATH"
+    PATH="$TOOLCHAIN_PREFIX/bin":$PATH
+    export PATH
+
+    for phx_target in $PHOENIX_TARGETS; do
+        log "[$phx_target] installing shared libphoenix"
+        make -C "$SCRIPT_DIR/../../libphoenix" TARGET="$phx_target" install
+    done
+
+    PATH="$OLDPATH"
 }
 
 build_libstdcpp() {
@@ -246,7 +261,7 @@ build_libstdcpp() {
                                     --with-gxx-include-dir="${SYSROOT}/include/c++" \
                                     --enable-tls \
                                     --disable-nls \
-                                    --disable-shared \
+                                    --enable-shared \
                                     --srcdir="../../../libstdc++-v3" \
                                     $WITHPIC
 
@@ -275,15 +290,17 @@ strip_binaries() {
 
 # comment out some parts if You need "incremental build" for testing
 
-download;
-build_binutils;
-build_gcc_stage1;
+download
+build_binutils
+build_gcc_stage1
 
-build_libc;
-build_gcc_stage2;
-build_libstdcpp;
+build_libc
+build_gcc_stage2
 
-strip_binaries;
+build_libc_shared
+build_libstdcpp
+
+strip_binaries
 
 echo "Toolchain for target family '$TARGET' has been installed in '$TOOLCHAIN_PREFIX'"
 echo "Please add it to PATH:"

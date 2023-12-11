@@ -20,6 +20,9 @@ CFLAGS += -mcpu=leon3
 
 LDFLAGS :=
 
+TARGET_PIC_FLAG = -fPIC
+TARGET_PIE_FLAG = -fPIE
+
 ifeq ($(TARGET_SUBFAMILY), gr716)
   VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
 
@@ -30,7 +33,7 @@ ifeq ($(TARGET_SUBFAMILY), gr716)
     LDFLAGS += -Wl,-z,max-page-size=0x200 -Tbss=40001800 -Tdata=40001800 -Wl,--section-start=.rodata=40000000
     STRIP := $(CROSS)strip
   else
-    CFLAGS += -fPIC -fPIE -mno-pic-data-is-text-relative -mpic-register=g6
+    CFLAGS += $(TARGET_PIC_FLAG) $(TARGET_PIE_FLAG) -mno-pic-data-is-text-relative -mpic-register=g6
     LDFLAGS += -Wl,-q
     STRIP := $(CROSS)strip --strip-unneeded -R .rela.text
   endif
