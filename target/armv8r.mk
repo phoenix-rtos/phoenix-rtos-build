@@ -21,6 +21,9 @@ endif
 
 VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
 
+TARGET_PIC_FLAG = -fpic
+TARGET_PIE_FLAG = -fpie
+
 LDFLAGS := -Wl,-z,max-page-size=0x10
 
 ifeq ($(KERNEL), 1)
@@ -28,7 +31,7 @@ ifeq ($(KERNEL), 1)
   LDFLAGS += -Tbss=10014000 -Tdata=10014000
   STRIP := $(CROSS)strip
 else
-  CFLAGS += -fpic -fpie -msingle-pic-base -mno-pic-data-is-text-relative
+  CFLAGS += $(TARGET_PIC_FLAG) $(TARGET_PIE_FLAG) -msingle-pic-base -mno-pic-data-is-text-relative
   # output .rel.* sections to make ELF position-independent
   LDFLAGS += -Wl,-q
   STRIP := $(PREFIX_PROJECT)/phoenix-rtos-build/scripts/strip.py $(CROSS)strip --strip-unneeded -R .rel.text

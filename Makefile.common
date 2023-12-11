@@ -53,6 +53,7 @@ PREFIX_O := $(BUILD_DIR)/$(CURR_SUFFIX)
 
 # target install paths, can be provided exterally
 PREFIX_A ?= $(PREFIX_BUILD)/lib/
+PREFIX_SO ?= $(PREFIX_A)
 PREFIX_H ?= $(PREFIX_BUILD)/include/
 PREFIX_PROG ?= $(PREFIX_BUILD)/prog/
 PREFIX_PROG_STRIPPED ?= $(PREFIX_BUILD)/prog.stripped/
@@ -74,10 +75,15 @@ include $(MAKES_PATH)/funcs.mk
 
 # provide template files' paths to external makes
 binary.mk := $(MAKES_PATH)/binary.mk
+binary-dyn.mk := $(MAKES_PATH)/binary-dyn.mk
 static-lib.mk := $(MAKES_PATH)/static-lib.mk
+shared-lib.mk := $(MAKES_PATH)/shared-lib.mk
 
 # default path for the programs to be installed in rootfs
 DEFAULT_INSTALL_PATH := /bin
+
+# default path for the shared-libraries to be installed in rootfs
+DEFAULT_INSTALL_PATH_SO := /usr/lib
 
 # do not clean and build in parallel
 ifneq ($(filter %clean,$(MAKECMDGOALS)),)
