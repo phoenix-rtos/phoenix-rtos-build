@@ -1,4 +1,4 @@
-# Makefile rules for compiling and static library
+# Makefile rules for compiling a static library
 # supported external variables:
 # - NAME - component/target binary name
 # - LOCAL_SRCS - list of source files relative to current makefile
