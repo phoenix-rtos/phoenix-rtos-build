@@ -33,9 +33,12 @@ ifeq ($(TARGET_SUBFAMILY), gr716)
   endif
 
 else ifeq ($(TARGET_SUBFAMILY), gr712rc)
+  ifeq ($(KERNEL), 1)
+    CFLAGS += -msoft-float
+  endif
   STRIP := $(CROSS)strip
   VADDR_KERNEL_INIT := 0xc0000000
-  CFLAGS += -msoft-float -mfix-gr712rc -DLEON3_TN_0018_FIX
+  CFLAGS += -mfix-gr712rc -DLEON3_TN_0018_FIX
   LDFLAGS += -Wl,-z,max-page-size=0x1000
 
 else
