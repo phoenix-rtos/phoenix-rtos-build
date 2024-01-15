@@ -20,6 +20,7 @@ declare -A TOOLCHAN_TO_PHOENIX_TARGETS=(
 
 TARGET="$1"
 BUILD_ROOT="$2"
+BUILD_DIR="${BUILD_ROOT}/_build"
 
 if [ -z "$TARGET" ] || [ -z "${TOOLCHAN_TO_PHOENIX_TARGETS[$TARGET]}" ]; then
     echo "Missing or invalid target provided! Abort."
@@ -73,8 +74,9 @@ MAKEFLAGS="-j9 -s"
 export MAKEFLAGS
 
 mkdir -p "${TOOLCHAIN_PREFIX}"
-cp ./*.patch "${BUILD_ROOT}"
-cd "${BUILD_ROOT}"
+mkdir -p "${BUILD_DIR}"
+cp ./*.patch "${BUILD_DIR}"
+cd "${BUILD_DIR}"
 
 download() {
     log "downloading packages"
@@ -185,7 +187,7 @@ build_libc() {
 }
 
 build_gcc_stage2() {
-    pushd "$BUILD_ROOT/${GCC}/build" > /dev/null
+    pushd "$BUILD_DIR/${GCC}/build" > /dev/null
 
     # (hackish) instead of reconfiguring and rebuilding whole gcc
     # just force rebuilding internal includes (and fixincludes)
@@ -215,9 +217,9 @@ build_libstdcpp() {
     fi
 
     # create "libbuilddir" directory for libstdc++
-    rm -rf "${BUILD_ROOT}/${GCC}/build/${TARGET}/libstdc++-v3"
-    mkdir -p "${BUILD_ROOT}/${GCC}/build/${TARGET}/libstdc++-v3"
-    pushd "${BUILD_ROOT}/${GCC}/build/${TARGET}/libstdc++-v3" > /dev/null
+    rm -rf "${BUILD_DIR}/${GCC}/build/${TARGET}/libstdc++-v3"
+    mkdir -p "${BUILD_DIR}/${GCC}/build/${TARGET}/libstdc++-v3"
+    pushd "${BUILD_DIR}/${GCC}/build/${TARGET}/libstdc++-v3" > /dev/null
 
     log "building stdlibc++"
     # LIBSTDC++ compilation options
