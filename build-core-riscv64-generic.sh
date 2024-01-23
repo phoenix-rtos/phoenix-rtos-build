@@ -32,3 +32,6 @@ make -C "phoenix-rtos-devices" all install
 
 b_log "Building coreutils"
 make -C "phoenix-rtos-utils" all install
+
+b_log "Building posixsrv"
+make -C "phoenix-rtos-posixsrv" all install
