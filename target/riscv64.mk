@@ -14,7 +14,7 @@ CC := $(CROSS)gcc
 CXX := $(CROSS)g++
 
 OLVL ?= -O2
-CFLAGS += -fomit-frame-pointer -mcmodel=medany -fno-builtin
+CFLAGS += -fomit-frame-pointer -mcmodel=medany
 
 CXXFLAGS := $(CFLAGS)
 
