@@ -4,7 +4,7 @@
 #
 # Builder for Phoenix-RTOS core components
 #
-# Copyright 2018, 2019 Phoenix Systems
+# Copyright 2018-2024 Phoenix Systems
 # Author: Kaja Swat, Aleksander Kaminski, Pawel Pisarczyk
 #
 
@@ -20,6 +20,12 @@ if [ "$LIBPHOENIX_DEVEL_MODE" = "y" ]; then
 	b_log "Building libphoenix"
 	make -C "libphoenix" all install
 fi
+
+b_log "Building libtty"
+make -C "phoenix-rtos-devices" libtty libtty-install
+
+b_log "Building libposixsrv"
+make -C "phoenix-rtos-posixsrv" libposixsrv libposixsrv-install
 
 b_log "Building phoenix-rtos-corelibs"
 make -C "phoenix-rtos-corelibs" all
@@ -38,6 +44,3 @@ make -C "phoenix-rtos-utils" all install
 
 b_log "phoenix-rtos-lwip"
 make -C "phoenix-rtos-lwip" all install
-
-#b_log "Building posixsrv"
-#make -C "phoenix-rtos-posixsrv" all install
