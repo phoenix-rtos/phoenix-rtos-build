@@ -1,4 +1,4 @@
-# Makefile rules for compiling a static library
+# Makefile rules for compiling a shared library
 # supported external variables:
 # - NAME - component/target binary name
 # - LOCAL_SRCS - list of source files relative to current makefile
@@ -12,6 +12,8 @@
 # - LOCAL_CFLAGS  - additional CFLAGS for current component compilation
 # - LOCAL_CXXFLAGS  - additional CXXFLAGS for current component compilation
 #
+# - LOCAL_INSTALL_PATH - custom rootfs dir for the shared library to be installed (if not provided - DEFAULT_INSTALL_PATH_SO)
+
 
 
 
@@ -26,14 +28,12 @@ endif
 
 # binary.mk clears all variables it uses so we should expect that they are not set here. Leaving them set would
 # influence next binary.mk call leading to unexpected errors
-ifneq ($(DEP_LIB)$(LIBS)$(LOCAL_LDFLAGS)$(LOCAL_LDLIBS)$(LOCAL_INSTALL_PATH),)
+ifneq ($(DEP_LIB)$(LIBS)$(LOCAL_LDFLAGS)$(LOCAL_LDLIBS),)
   $(warning $(NAME): DEP_LIB=$(DEP_LIB))
   $(warning $(NAME): LIBS=$(LIBS))
   $(warning $(NAME): LOCAL_LDFLAGS=$(LOCAL_LDFLAGS))
   $(warning $(NAME): LOCAL_LDLIBS=$(LOCAL_LDLIBS))
-  $(warning $(NAME): LOCAL_INSTALL_PATH=$(LOCAL_INSTALL_PATH))
-  $(warning $(NAME): LOCAL_INSTALL_PATH=$(LOCAL_INSTALL_PATH))
-  $(error $(NAME): static-lib.mk invoked with args reserved for binary.mk)
+  $(error $(NAME): shared-lib.mk invoked with args reserved for binary.mk)
 endif
 
 # external headers - by default "include" dir - to disable functionality set "LOCAL_HEADERS_DIR := nothing"
@@ -52,10 +52,14 @@ OBJS.$(NAME) := $(patsubst %,$(PREFIX_O)%.o,$(basename $(SRCS)))
 # compilation prerequisites - component order-only dependency
 $(OBJS.$(NAME)): | $(DEPS)
 
+# Shared lib flags
+SHARED_LIB_LD_FLAGS := $(TARGET_PIC_FLAG) -shared -nostartfiles $(LDFLAGS_PREFIX)--warn-shared-textrel
+
 # potentially custom CFLAGS/CXXFLAGS/LDFLAGS for compilation and linking
 # add ABS_HEADERS_DIR to CFLAGS/CXXFLAGS to build always using local headers instead of installed ones
-$(OBJS.$(NAME)): CFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CFLAGS) $(LOCAL_CFLAGS)
-$(OBJS.$(NAME)): CXXFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CXXFLAGS) $(LOCAL_CXXFLAGS)
+$(OBJS.$(NAME)): CFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CFLAGS) $(LOCAL_CFLAGS) $(TARGET_PIC_FLAG)
+$(OBJS.$(NAME)): CXXFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CXXFLAGS) $(LOCAL_CXXFLAGS) $(TARGET_PIC_FLAG)
+$(PREFIX_SO)$(NAME).so: LDFLAGS:=$(LDFLAGS) $(SHARED_LIB_LD_FLAGS)
 
 # dynamically generated dependencies (file-to-file dependencies)
 DEPS.$(NAME) := $(patsubst %,$(PREFIX_O)%.d,$(SRCS))
@@ -77,30 +81,27 @@ $(INSTALLED_HEADERS.$(NAME)): $(PREFIX_H)%.h: $(LOCAL_DIR)%.h
 $(INSTALLED_HEADERS_TREE.$(NAME)): $(PREFIX_H)%.h: $(ABS_HEADERS_DIR)/%.h
 	$(HEADER)
 
-# allow header-only components
-LIBNAME :=
-ifneq ($(strip $(SRCS)),)
-  LIBNAME := $(PREFIX_A)$(NAME).a
-endif
-
-# rule for linking static lib
-# NOTE: if applied globally, we could remove the $(ARCH) variable and put explicit commands here
-$(PREFIX_A)$(NAME).a: $(OBJS.$(NAME))
-	$(ARCH)
+# rule for linking shared lib
+$(PREFIX_SO)$(NAME).so: $(OBJS.$(NAME))
+	$(LINK)
 
 # create component phony targets
 .PHONY: $(NAME) $(NAME)-headers $(NAME)-clean
 
 $(NAME)-headers: $(INSTALLED_HEADERS.$(NAME)) $(INSTALLED_HEADERS_TREE.$(NAME))
 
-$(NAME): $(NAME)-headers $(LIBNAME)
+$(NAME): $(NAME)-headers $(PREFIX_SO)$(NAME).so
 
 $(NAME)-clean:
 	@echo "cleaning $(NAME)"
-	@rm -rf $(OBJS.$(NAME)) $(DEPS.$(NAME)) $(INSTALLED_HEADERS.$(NAME)) $(INSTALLED_HEADERS_TREE.$(NAME)) $(PREFIX_A)$(NAME).a
+	@rm -rf $(OBJS.$(NAME)) $(DEPS.$(NAME)) $(INSTALLED_HEADERS.$(NAME)) $(INSTALLED_HEADERS_TREE.$(NAME)) $(PREFIX_SO)$(NAME).so
 
-# no installation for static libs
-$(NAME)-install: $(NAME) ;
+# install into the root filesystem
+LOCAL_INSTALL_PATH := $(or $(LOCAL_INSTALL_PATH),$(DEFAULT_INSTALL_PATH_SO))
+
+$(NAME)-install: $(NAME) $(PREFIX_ROOTFS)$(LOCAL_INSTALL_PATH)/$(NAME).so
+$(PREFIX_ROOTFS)$(LOCAL_INSTALL_PATH)/$(NAME).so: $(PREFIX_SO)$(NAME).so
+	$(INSTALL_FS)
 
 # necessary for NAME variable to be correctly set in recepies
 $(NAME) $(NAME)-clean: NAME:=$(NAME)
@@ -118,3 +119,5 @@ SRCS :=
 HEADERS :=
 LOCAL_CFLAGS :=
 LOCAL_CXXFLAGS :=
+undefine LOCAL_INSTALL_PATH
+
