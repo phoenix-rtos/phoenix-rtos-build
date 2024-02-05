@@ -11,6 +11,8 @@
 # fail immediately if any of the commands fails
 set -e
 
+make -C "phoenix-rtos-kernel" install-headers
+
 b_log "Building libphoenix"
 make -C "libphoenix" -f Makefile.host all
 
