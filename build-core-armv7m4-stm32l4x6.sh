@@ -21,6 +21,12 @@ if [ "$LIBPHOENIX_DEVEL_MODE" = "y" ]; then
 	make -C "libphoenix" all install
 fi
 
+b_log "Building libtty"
+make -C "phoenix-rtos-devices" libtty libtty-install
+
+b_log "Building libposixsrv"
+make -C "phoenix-rtos-posixsrv" libposixsrv libposixsrv-install
+
 b_log "Building phoenix-rtos-corelibs"
 make -C "phoenix-rtos-corelibs" all install
 
