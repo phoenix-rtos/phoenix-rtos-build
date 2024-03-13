@@ -119,8 +119,8 @@ EXPORT_CXXFLAGS := $(CXXFLAGS)
 EXPORT_LDFLAGS := $(LDFLAGS)
 
 # add our coding-style related options
-CFLAGS += -Wall -Wstrict-prototypes -fno-common
-CXXFLAGS += -Wall
+CFLAGS += -Wall -Wshadow -Wstrict-prototypes -Wundef -fno-common
+CXXFLAGS += -Wall -Wshadow -Wundef
 
 # always produce binaries with debug information
 CFLAGS += -ggdb3
