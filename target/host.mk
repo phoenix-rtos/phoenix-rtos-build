@@ -15,7 +15,7 @@ OLVL ?= -O2
 CFLAGS += -fomit-frame-pointer
 
 AR := $(CROSS)ar
-ARFLAGS = -r
+ARFLAGS := -r
 
 LD := $(CROSS)gcc
 LDFLAGS_PREFIX := -Wl,
@@ -46,5 +46,5 @@ ifeq ($(findstring PROJECT:ld, $(LINKER)), PROJECT:ld)
   LDFLAGS_GC_SECTIONS := $(LDFLAGS_PREFIX)-dead_strip
   LDFLAGS_WHOLE_ARCHIVE_BEGIN := $(LDFLAGS_PREFIX)-all_load
   # (set to empty, so ?= won't assign default value)
-  LDFLAGS_WHOLE_ARCHIVE_END := 
+  LDFLAGS_WHOLE_ARCHIVE_END :=
 endif

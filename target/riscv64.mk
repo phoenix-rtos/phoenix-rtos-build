@@ -18,10 +18,10 @@ CFLAGS += -fomit-frame-pointer -mcmodel=medany
 
 CXXFLAGS := $(CFLAGS)
 
-AR = $(CROSS)ar
-ARFLAGS = -r
+AR := $(CROSS)ar
+ARFLAGS := -r
 
-LD = $(CROSS)gcc
+LD := $(CROSS)gcc
 LDFLAGS_PREFIX := -Wl,
 
 LDFLAGS :=

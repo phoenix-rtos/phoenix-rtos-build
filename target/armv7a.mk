@@ -26,16 +26,16 @@ endif
 CFLAGS += -mcpu=$(cpu) -mtune=$(cpu) -mthumb -fomit-frame-pointer -mno-unaligned-access
 CXXFLAGS := $(CFLAGS)
 
-AR = $(CROSS)ar
-ARFLAGS = -r
+AR := $(CROSS)ar
+ARFLAGS := -r
 
 LD := $(CROSS)gcc
 LDFLAGS_PREFIX := -Wl,
 
-LDFLAGS = -Wl,-z,max-page-size=0x1000
+LDFLAGS := -Wl,-z,max-page-size=0x1000
 
-OBJCOPY = $(CROSS)objcopy
-OBJDUMP = $(CROSS)objdump
-STRIP = $(CROSS)strip
+OBJCOPY := $(CROSS)objcopy
+OBJDUMP := $(CROSS)objdump
+STRIP := $(CROSS)strip
 
-VADDR_KERNEL_INIT = 0xc0000000
+VADDR_KERNEL_INIT := 0xc0000000
