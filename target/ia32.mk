@@ -17,8 +17,8 @@ CFLAGS += -m32 -march=i586 -mtune=generic -mno-mmx -mno-sse -fno-pic -fno-pie\
 
 CXXFLAGS := $(CFLAGS)
 
-AR = $(CROSS)ar
-ARFLAGS = -r
+AR := $(CROSS)ar
+ARFLAGS := -r
 
 LD := $(CROSS)gcc
 LDFLAGS_PREFIX := -Wl,
@@ -30,5 +30,5 @@ OBJDUMP := $(CROSS)objdump
 
 STRIP := $(CROSS)strip
 
-VADDR_KERNEL_BASE=0xc0000000
-VADDR_KERNEL_INIT=$(shell printf "0x%x" $$(($(VADDR_KERNEL_BASE) + 0x110000)))
+VADDR_KERNEL_BASE := 0xc0000000
+VADDR_KERNEL_INIT := $(shell printf "0x%x" $$(($(VADDR_KERNEL_BASE) + 0x110000)))
