@@ -32,3 +32,5 @@ STRIP := $(CROSS)strip
 
 VADDR_KERNEL_BASE := 0xc0000000
 VADDR_KERNEL_INIT := $(shell printf "0x%x" $$(($(VADDR_KERNEL_BASE) + 0x110000)))
+
+HAVE_MMU := y

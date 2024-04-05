@@ -101,6 +101,10 @@ ifneq ($(PROJECT_PATH),)
   CXXFLAGS := -I$(PROJECT_PATH) $(CXXFLAGS)
 endif
 
+ifeq ($(HAVE_MMU), n)
+  CPPFLAGS += -DNOMMU
+endif
+
 # remove local dev path from macros
 CFLAGS += -fmacro-prefix-map=$(dir $(TOPDIR))=
 CXXFLAGS += -fmacro-prefix-map=$(dir $(TOPDIR))=

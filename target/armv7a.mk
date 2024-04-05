@@ -39,3 +39,5 @@ OBJDUMP := $(CROSS)objdump
 STRIP := $(CROSS)strip
 
 VADDR_KERNEL_INIT := 0xc0000000
+
+HAVE_MMU := y

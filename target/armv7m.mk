@@ -14,7 +14,6 @@ CXX := $(CROSS)g++
 # common Cortex-M CFLAGS
 OLVL ?= -O2
 CFLAGS += -mthumb -fomit-frame-pointer -mno-unaligned-access
-CPPFLAGS += -DNOMMU
 
 ifeq ($(TARGET_FAMILY), armv7m7)
   CFLAGS += -mcpu=cortex-m7 -mfloat-abi=hard -mfpu=fpv5-d16
@@ -49,3 +48,5 @@ LDFLAGS_PREFIX := -Wl,
 
 OBJCOPY := $(CROSS)objcopy
 OBJDUMP := $(CROSS)objdump
+
+HAVE_MMU := n
