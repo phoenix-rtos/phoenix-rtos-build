@@ -19,7 +19,8 @@ CFLAGS += -mcpu=leon3
 LDFLAGS :=
 
 ifeq ($(TARGET_SUBFAMILY), gr716)
-  VADDR_KERNEL_INIT := 31000000
+  VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
+
   CPPFLAGS := -DNOMMU
   CFLAGS += -msoft-float
 
