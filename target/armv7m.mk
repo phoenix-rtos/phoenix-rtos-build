@@ -24,22 +24,7 @@ else ifeq ($(TARGET_FAMILY), armv7m3)
   CFLAGS += -mcpu=cortex-m3 -mfloat-abi=soft -fstack-usage
 endif
 
-ifeq ($(TARGET_SUBFAMILY), stm32l152xd)
-  VADDR_KERNEL_INIT := 0800d000
-else ifeq ($(TARGET_SUBFAMILY), stm32l152xe)
-  VADDR_KERNEL_INIT := 0800d000
-else ifeq ($(TARGET_SUBFAMILY), stm32l4x6)
-  VADDR_KERNEL_INIT := 0800d000
-else ifeq ($(TARGET_SUBFAMILY), imxrt105x)
-  VADDR_KERNEL_INIT := 0
-else ifeq ($(TARGET_SUBFAMILY), imxrt106x)
-  VADDR_KERNEL_INIT := 0
-else ifeq ($(TARGET_SUBFAMILY), imxrt117x)
-  VADDR_KERNEL_INIT := 0
-else
-  $(error Incorrect TARGET: $(TARGET))
-endif
-
+VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
 
 LDFLAGS := -Wl,-z,max-page-size=0x10
 
