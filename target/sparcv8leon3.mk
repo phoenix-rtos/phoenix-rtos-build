@@ -21,7 +21,6 @@ LDFLAGS :=
 ifeq ($(TARGET_SUBFAMILY), gr716)
   VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
 
-  CPPFLAGS := -DNOMMU
   CFLAGS += -msoft-float
 
   ifeq ($(KERNEL), 1)
@@ -33,6 +32,8 @@ ifeq ($(TARGET_SUBFAMILY), gr716)
     STRIP := $(CROSS)strip --strip-unneeded -R .rela.text
   endif
 
+  HAVE_MMU := n
+
 else ifeq ($(TARGET_SUBFAMILY), gr712rc)
   ifeq ($(KERNEL), 1)
     CFLAGS += -msoft-float
@@ -42,6 +43,7 @@ else ifeq ($(TARGET_SUBFAMILY), gr712rc)
   CFLAGS += -mfix-gr712rc -DLEON3_TN_0018_FIX
   LDFLAGS += -Wl,-z,max-page-size=0x1000
 
+  HAVE_MMU := y
 else
   $(error Incorrect TARGET.)
 endif
