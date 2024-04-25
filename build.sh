@@ -9,7 +9,9 @@
 # Author: Kaja Swat, Aleksander Kaminski, Pawel Pisarczyk
 #
 
-set -e
+set -o errexit
+set -o nounset
+
 ORIG_ENV="$(env)"
 
 # Colon-separated list of dirs to overlay the default rootFS.
@@ -47,7 +49,7 @@ export TARGET TARGET_FAMILY TARGET_SUBFAMILY TARGET_PROJECT PROJECT_PATH PREFIX_
 source ./build.project
 
 # Some makefiles add "$PROJECT_PATH/" to their include path so it has to be set
-[ -z "$PROJECT_PATH" ] && b_die "PROJECT_PATH is not set (or is empty)"
+[ -z "${PROJECT_PATH:-}" ] && b_die "PROJECT_PATH is not set (or is empty)"
 
 : "${PREFIX_ROOTSKEL:="$PREFIX_PROJECT/_fs/root-skel/"}"
 
@@ -65,10 +67,10 @@ fi
 # Default project's overlay directory, it does not have to exist.
 ROOTFS_OVERLAYS="$PROJECT_PATH/rootfs-overlay:${ROOTFS_OVERLAYS}"
 
-CC=${CROSS}gcc
-AS=${CROSS}as
-LD=${CROSS}ld
-AR=${CROSS}ar
+CC=${CROSS:-}gcc
+AS=${CROSS:-}as
+LD=${CROSS:-}ld
+AR=${CROSS:-}ar
 
 MAKEFLAGS="--no-print-directory -j 9"
 
