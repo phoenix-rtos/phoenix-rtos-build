@@ -142,6 +142,11 @@ ifneq ($(WATCHDOG), 0)
   CPPFLAGS += -DWATCHDOG
 endif
 
+# check if the final build environment is sane
+ifeq ($(NOCHECKENV),)
+  include $(MAKES_PATH)/check-env.mk
+endif
+
 #
 # Generic rules
 #
