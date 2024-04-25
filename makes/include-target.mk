@@ -79,22 +79,3 @@ ifeq (,$(filter $(TARGETS),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
 endif
 
 include $(MAKES_PATH)/../target/$(TARGET_SUFF).mk
-
-# Verify variables
-ifndef HAVE_MMU
-  ifneq ($(TARGET_FAMILY), host)
-    $(error "HAVE_MMU is not set")
-  endif
-endif
-
-ifeq ($(HAVE_MMU), y)
-  ifneq ($(KERNEL_PHADDR),)
-    $(error "KERNEL_PHADDR is set for MMU target, please check project configuration")
-  endif
-endif
-
-ifeq ($(HAVE_MMU), n)
-  ifeq ($(KERNEL_PHADDR),)
-    $(error "KERNEL_PHADDR is not set for NOMMU target, please check project configuration")
-  endif
-endif
