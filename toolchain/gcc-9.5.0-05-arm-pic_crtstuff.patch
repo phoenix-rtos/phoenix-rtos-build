@@ -1,11 +1,13 @@
 diff -Naur gcc-9.3.0-orig/libgcc/config/arm/t-phoenix gcc-9.3.0/libgcc/config/arm/t-phoenix
 --- gcc-9.3.0-orig/libgcc/config/arm/t-phoenix	1970-01-01 01:00:00.000000000 +0100
 +++ gcc-9.3.0/libgcc/config/arm/t-phoenix	2021-08-23 13:40:28.290478307 +0200
-@@ -0,0 +1,5 @@
+@@ -0,0 +1,7 @@
 +# PhoenixRTOS uses relocatable ELFs on NOMMU platforms
-+# if this is ARM Cortex-M subvariant -> build crtstuff with PIC
++# if this is ARM Cortex-M subvariant -> build libgcc/crtstuff with PIC
++# ALSO: ensure data is not intertwined with .text, otherwise running XIP programs would fail
 +ifneq ($(findstring -m,$(filter -march=arm%, $(CC)))),)
-+  CRTSTUFF_T_CFLAGS = $(PICFLAG)
++  CRTSTUFF_T_CFLAGS = $(PICFLAG) -mno-pic-data-is-text-relative
++  INTERNAL_CFLAGS += $(PICFLAG) -mno-pic-data-is-text-relative
 +endif
 diff -Naur gcc-9.3.0-orig/libgcc/config.host gcc-9.3.0/libgcc/config.host
 --- gcc-9.3.0-orig/libgcc/config.host	2020-03-12 12:07:23.000000000 +0100
