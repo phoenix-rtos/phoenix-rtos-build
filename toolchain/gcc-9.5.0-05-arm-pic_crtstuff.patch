@@ -1,12 +1,13 @@
 diff -Naur gcc-9.3.0-orig/libgcc/config/arm/t-phoenix gcc-9.3.0/libgcc/config/arm/t-phoenix
 --- gcc-9.3.0-orig/libgcc/config/arm/t-phoenix	1970-01-01 01:00:00.000000000 +0100
 +++ gcc-9.3.0/libgcc/config/arm/t-phoenix	2021-08-23 13:40:28.290478307 +0200
-@@ -0,0 +1,12 @@
+@@ -0,0 +1,13 @@
 +# PhoenixRTOS uses relocatable ELFs on NOMMU platforms
 +# if this is ARM Cortex-M/R subvariant -> build libgcc/crtstuff with PIC
 +# ALSO: ensure data is not interwined with .text, otherwise running XIP programs would fail
 +
-+PS_MARCH := $(patsubst -march=%,%,$(filter -march=arm%, $(CC)))
++# NOTE: the `-march` parameter would either be in CC or in CFLAGS depending on how the make will be called
++PS_MARCH := $(patsubst -march=%,%,$(filter -march=arm%, $(CC) $(CFLAGS)))
 +PS_IS_CORTEX_M := $(findstring -m,$(PS_MARCH))
 +PS_IS_CORTEX_R := $(findstring -r,$(PS_MARCH))
 +
