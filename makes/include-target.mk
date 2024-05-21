@@ -37,8 +37,10 @@ ifneq (,$(filter $(TARGETS_IA32),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
   TARGET_SUFF ?= ia32
 endif
 
-#RISCV64
-TARGETS_RISCV64 := riscv64-generic
+# RISCV64
+TARGETS_RISCV64 := \
+	riscv64-generic \
+	riscv64-noelv
 
 TARGETS += $(TARGETS_RISCV64)
 ifneq (,$(filter $(TARGETS_RISCV64),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
