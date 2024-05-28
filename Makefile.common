@@ -161,6 +161,9 @@ export-cxxflags:
 export-ldflags:
 	@echo $(EXPORT_LDFLAGS)
 
+export-strip:
+	@echo $(STRIP)
+
 help:
 	$(info DEFAULT_COMPONENTS := $(DEFAULT_COMPONENTS))
 	$(info ALL_COMPONENTS := $(ALL_COMPONENTS))
@@ -172,6 +175,7 @@ help:
 	@echo "  export-cflags   outputs contents of CFLAGS variable"
 	@echo "  export-cxxflags outputs contents of CXXFLAGS variable"
 	@echo "  export-ldflags  outputs contents of LDFLAGS variable"
+	@echo "  export-strip    outputs contents of STRIP variable"
 	@echo
 	@echo "available per-target make targets:"
 	@echo "  <target>          build <target>"
