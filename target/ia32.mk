@@ -1,5 +1,5 @@
 #
-# Makefile for libphoenix
+# Makefile for Phoenix-RTOS 3
 #
 # IA32 options
 #

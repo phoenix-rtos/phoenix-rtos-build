@@ -1,9 +1,9 @@
 #
 # Makefile for Phoenix-RTOS 3
 #
-# ARMv7 (Cortex-M3/M4) options
+# ARMv8 (Cortex-M33) options
 #
-# Copyright 2018, 2020 Phoenix Systems
+# Copyright 2018, 2020, 2024 Phoenix Systems
 #
 
 CROSS ?= arm-phoenix-
@@ -13,15 +13,10 @@ CXX := $(CROSS)g++
 
 # common Cortex-M CFLAGS
 OLVL ?= -O2
-CFLAGS += -mthumb -fomit-frame-pointer -mno-unaligned-access -fstack-usage
+CFLAGS += -mthumb -fomit-frame-pointer -mno-unaligned-access
 
-ifeq ($(TARGET_FAMILY), armv7m7)
-  CFLAGS += -mcpu=cortex-m7 -mfloat-abi=hard -mfpu=fpv5-d16
-else ifeq ($(TARGET_FAMILY), armv7m4)
-  CFLAGS += -mcpu=cortex-m4 -mfloat-abi=soft
-else ifeq ($(TARGET_FAMILY), armv7m3)
-  CFLAGS += -mcpu=cortex-m3 -mfloat-abi=soft
-endif
+# TODO hard float perhaps? To be decided
+CFLAGS += -mcpu=cortex-m33 -mfloat-abi=soft -fstack-usage
 
 VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
 

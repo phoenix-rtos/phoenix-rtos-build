@@ -1,5 +1,5 @@
 #
-# Makefile for libphoenix
+# Makefile for Phoenix-RTOS 3
 #
 # ARM (Cortex-A5/A7/A9) options
 #
