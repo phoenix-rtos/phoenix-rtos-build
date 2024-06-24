@@ -1,5 +1,5 @@
 #
-# Common Makefile for host
+# Makefile for Phoenix-RTOS 3
 #
 # Copyright 2018-2021 Phoenix Systems
 #
