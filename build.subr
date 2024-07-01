@@ -4,23 +4,28 @@
 #
 # Common functions
 #
-# Copyright 2018, 2019 Phoenix Systems
+# Copyright 2018, 2019, 2024 Phoenix Systems
 # Author: Kaja Swat, Aleksander Kaminski, Pawel Pisarczyk
 #
 
+# b_install(src ..., dstdir)
 b_install() {
-	bin="$1"
-	dir="$2"
+	local filelist=("${@:1:$#-1}")
+	local dstdir="${@: -1}"
 
-	if ! [ -f "$bin" ]; then
-		echo -e "\033[0;31m$bin binary does not exist \033[0m"
-		exit 1
-	fi
+	local absdir="${PREFIX_FS}/root/$dstdir"
 
-	echo -e "\033[0;35mInstalling $(basename "$bin") into $dir \033[0m"
+	mkdir -p "$absdir"
 
-	mkdir -p "$PREFIX_FS/root/$dir"
-	install -m 755 "$bin" "$PREFIX_FS/root/$dir"
+	for file in "${filelist[@]}"; do
+		if ! [ -f "$file" ]; then
+			echo -e "\033[0;31mFile $file does not exist \033[0m"
+			exit 1
+		fi
+
+		echo -e "\033[0;35mInstalling $(basename "$file") into $dstdir \033[0m"
+		install -m 755 "$file" "$absdir"
+	done
 }
 
 
