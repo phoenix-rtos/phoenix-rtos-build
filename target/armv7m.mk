@@ -13,14 +13,14 @@ CXX := $(CROSS)g++
 
 # common Cortex-M CFLAGS
 OLVL ?= -O2
-CFLAGS += -mthumb -fomit-frame-pointer -mno-unaligned-access
+CFLAGS += -mthumb -fomit-frame-pointer -mno-unaligned-access -fstack-usage
 
 ifeq ($(TARGET_FAMILY), armv7m7)
   CFLAGS += -mcpu=cortex-m7 -mfloat-abi=hard -mfpu=fpv5-d16
 else ifeq ($(TARGET_FAMILY), armv7m4)
-  CFLAGS += -mcpu=cortex-m4 -mfloat-abi=soft -fstack-usage
+  CFLAGS += -mcpu=cortex-m4 -mfloat-abi=soft
 else ifeq ($(TARGET_FAMILY), armv7m3)
-  CFLAGS += -mcpu=cortex-m3 -mfloat-abi=soft -fstack-usage
+  CFLAGS += -mcpu=cortex-m3 -mfloat-abi=soft
 endif
 
 VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
