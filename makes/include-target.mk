@@ -29,6 +29,15 @@ ifneq (,$(filter $(TARGETS_ARMCORTEXA),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
   TARGET_SUFF ?= armv7a
 endif
 
+# ARMv8 Cortex R
+TARGETS_ARM8CORTEXR := \
+  armv8r52-mps3an536
+
+TARGETS += $(TARGETS_ARM8CORTEXR)
+ifneq (,$(filter $(TARGETS_ARM8CORTEXR),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
+  TARGET_SUFF ?= armv8r
+endif
+
 # IA32
 TARGETS_IA32 := ia32-generic
 
