@@ -1,7 +1,7 @@
 #
 # Makefile for Phoenix-RTOS 3
 #
-# SPARCv8 LEON3 options
+# SPARCv8 LEON options
 #
 # Copyright 2022-2024 Phoenix Systems
 #
