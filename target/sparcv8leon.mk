@@ -1,7 +1,7 @@
 #
 # Makefile for Phoenix-RTOS 3
 #
-# SPARCv8 LEON3 options
+# SPARCv8 LEON options
 #
 # Copyright 2022-2024 Phoenix Systems
 #
@@ -22,7 +22,7 @@ ifeq ($(TARGET_SUBFAMILY), gr716)
   VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
 
   CFLAGS += -msoft-float
-  CPPFLAGS += -DLEON3_USE_PWR
+  CPPFLAGS += -DLEON_USE_PWR
 
   ifeq ($(KERNEL), 1)
     LDFLAGS += -Wl,-z,max-page-size=0x200 -Tbss=40001800 -Tdata=40001800 -Wl,--section-start=.rodata=40000000
@@ -42,7 +42,7 @@ else ifeq ($(TARGET_SUBFAMILY), gr712rc)
   STRIP := $(CROSS)strip
   VADDR_KERNEL_INIT := 0xc0000000
   CFLAGS += -mfix-gr712rc
-  CPPFLAGS += -DLEON3_TN_0018_FIX
+  CPPFLAGS += -DLEON_TN_0018_FIX
   LDFLAGS += -Wl,-z,max-page-size=0x1000
 
   HAVE_MMU := y

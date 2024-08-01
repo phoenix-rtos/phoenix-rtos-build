@@ -70,15 +70,15 @@ ifeq ($(TARGET_FAMILY), host)
   TARGET_SUFF ?= host
 endif
 
-# SPARCV8 LEON 3
+# SPARCV8 LEON
 TARGETS_SPARC := \
-  sparcv8leon3-gr716 \
-  sparcv8leon3-gr712rc \
-  sparcv8leon3-generic
+  sparcv8leon-gr716 \
+  sparcv8leon-gr712rc \
+  sparcv8leon-generic
 
 TARGETS += $(TARGETS_SPARC)
 ifneq (,$(filter $(TARGETS_SPARC),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
-  TARGET_SUFF ?= sparcv8leon3
+  TARGET_SUFF ?= sparcv8leon
 endif
 
 SPACE :=
