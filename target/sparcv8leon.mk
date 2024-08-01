@@ -14,6 +14,8 @@ CC := $(CROSS)gcc
 CXX := $(CROSS)g++
 
 OLVL ?= -O2
+
+# LEON4 CPU (GR740) still uses `-mcpu=leon3` flag
 CFLAGS += -mcpu=leon3
 
 LDFLAGS :=
@@ -48,8 +50,7 @@ else ifeq ($(TARGET_SUBFAMILY), gr712rc)
   HAVE_MMU := y
 else ifeq ($(TARGET_SUBFAMILY), generic)
   ifeq ($(KERNEL), 1)
-    CFLAGS += 
-    # `mno-user-mode flag affects only `casa` instruction
+    # `mno-user-mode` flag affects only `casa` instruction
     # funnily enough, real hw can run without it
     # but qemu will throw an exception
     CFLAGS += -msoft-float -mno-user-mode
@@ -60,6 +61,17 @@ else ifeq ($(TARGET_SUBFAMILY), generic)
   LDFLAGS += -Wl,-z,max-page-size=0x1000
 
   HAVE_MMU := y
+
+else ifeq ($(TARGET_SUBFAMILY), gr740)
+  ifeq ($(KERNEL), 1)
+    CFLAGS += -msoft-float
+  endif
+  STRIP := $(CROSS)strip
+  VADDR_KERNEL_INIT := 0xc0000000
+  LDFLAGS += -Wl,-z,max-page-size=0x1000
+
+  HAVE_MMU := y
+
 else
   $(error Incorrect TARGET.)
 endif
