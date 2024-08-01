@@ -64,7 +64,8 @@ endif
 # SPARCV8 LEON
 TARGETS_SPARC := \
   sparcv8leon-gr716 \
-  sparcv8leon-gr712rc
+  sparcv8leon-gr712rc \
+  sparcv8leon-gr740
 
 TARGETS += $(TARGETS_SPARC)
 ifneq (,$(filter $(TARGETS_SPARC),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
