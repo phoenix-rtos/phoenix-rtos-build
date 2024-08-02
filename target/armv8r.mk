@@ -16,7 +16,7 @@ OLVL ?= -O2
 CFLAGS += -mthumb -fomit-frame-pointer -mno-unaligned-access
 
 ifeq ($(TARGET_FAMILY), armv8r52)
-  CFLAGS += -mcpu=cortex-r52 -mfpu=neon-vfpv3 -mfloat-abi=hard
+  CFLAGS += -mcpu=cortex-r52 -mtune=cortex-r52 -mfpu=neon-vfpv3 -mfloat-abi=hard
 endif
 
 VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
