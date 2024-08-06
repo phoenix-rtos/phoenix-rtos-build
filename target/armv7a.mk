@@ -23,6 +23,9 @@ else
 	$(error Incorrect TARGET.)
 endif
 
+TARGET_PIC_FLAG = -fpic
+TARGET_PIE_FLAG = -fpie
+
 CFLAGS += -mcpu=$(cpu) -mtune=$(cpu) -mthumb -fomit-frame-pointer -mno-unaligned-access
 CXXFLAGS := $(CFLAGS)
 
