@@ -22,6 +22,7 @@ ifeq ($(TARGET_SUBFAMILY), gr716)
   VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
 
   CFLAGS += -msoft-float
+  CPPFLAGS += -DLEON3_USE_PWR
 
   ifeq ($(KERNEL), 1)
     LDFLAGS += -Wl,-z,max-page-size=0x200 -Tbss=40001800 -Tdata=40001800 -Wl,--section-start=.rodata=40000000
