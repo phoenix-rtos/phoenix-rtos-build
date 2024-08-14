@@ -3,7 +3,7 @@
 #
 # SPARCv8 LEON3 options
 #
-# Copyright 2022, 2023 Phoenix Systems
+# Copyright 2022-2024 Phoenix Systems
 #
 # %LICENSE%
 #
@@ -41,7 +41,22 @@ else ifeq ($(TARGET_SUBFAMILY), gr712rc)
   endif
   STRIP := $(CROSS)strip
   VADDR_KERNEL_INIT := 0xc0000000
-  CFLAGS += -mfix-gr712rc -DLEON3_TN_0018_FIX
+  CFLAGS += -mfix-gr712rc
+  CPPFLAGS += -DLEON3_TN_0018_FIX
+  LDFLAGS += -Wl,-z,max-page-size=0x1000
+
+  HAVE_MMU := y
+else ifeq ($(TARGET_SUBFAMILY), generic)
+  ifeq ($(KERNEL), 1)
+    CFLAGS += 
+    # `mno-user-mode flag affects only `casa` instruction
+    # funnily enough, real hw can run without it
+    # but qemu will throw an exception
+    CFLAGS += -msoft-float -mno-user-mode
+  endif
+
+  STRIP := $(CROSS)strip
+  VADDR_KERNEL_INIT := 0xc0000000
   LDFLAGS += -Wl,-z,max-page-size=0x1000
 
   HAVE_MMU := y
