@@ -208,7 +208,7 @@ fi
 
 # always install hostutils if they are present
 b_log "Installing hostutils"
-HOSTUTILS=(metaelf phoenixd psdisk psu syspagen mcxisp)
+HOSTUTILS=(metaelf phoenixd psdisk psu syspagen mcxisp mkrofs)
 for tool in "${HOSTUTILS[@]}"; do
 	toolfile="$PREFIX_BUILD_HOST/prog.stripped/$tool"
 	[ -e "$toolfile" ] && cp -a "$toolfile" "$PREFIX_BOOT"
