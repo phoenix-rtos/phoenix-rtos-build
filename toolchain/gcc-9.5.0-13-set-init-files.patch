@@ -1,0 +1,58 @@
+--- gcc-9.5.0-orig/gcc/config/phoenix.h
++++ gcc-9.5.0/gcc/config/phoenix.h
+@@ -48,3 +48,14 @@ along with GCC; see the file COPYING3.  If not see
+ #define STDINT_LONG32		0
+ /* libitm is not supported on Phoenix - disable it in crtstuff */
+ #define USE_TM_CLONE_REGISTRY 0
++
++/* link initialize files depending on build type
++ * modifications of definitions in i386elf.h */
++#undef ENDFILE_SPEC
++#define ENDFILE_SPEC "%{shared|pie:crtendS.o%s;:crtend.o%s}"
++
++#undef STARTFILE_SPEC
++#define STARTFILE_SPEC "%{!shared: \
++			 %{!symbolic: \
++			  %{pg:gcrt0.o%s}%{!pg:%{p:mcrt0.o%s}%{!p:crt0.o%s}}}}\
++			%{shared|pie:crtbeginS.o%s;:crtbegin.o%s}"
+--- gcc-9.5.0-orig/libgcc/config.host
++++ gcc-9.5.0/libgcc/config.host
+@@ -460,7 +460,7 @@ arm*-*-phoenix*)
+ 	tmake_file="${tmake_file} arm/t-bpabi"
+ 	tmake_file="${tmake_file} t-crtstuff-pic t-libgcc-pic"
+ 	tm_file="$tm_file arm/bpabi-lib.h"
+-	extra_parts="crtbegin.o crtend.o crti.o crtn.o"
++	extra_parts="crtbegin.o crtend.o crti.o crtn.o crtbeginS.o crtendS.o"
+ 	unwind_header=config/arm/unwind-arm.h
+ 	;;
+ arm*-*-eabi* | arm*-*-symbianelf* | arm*-*-rtems*)
+@@ -707,7 +707,7 @@ i[34567]86-pc-msdosdjgpp*)
+ i[34567]86-*-lynxos*)
+ 	;;
+ i[34567]86-*-phoenix*)
+-	extra_parts="$extra_parts crti.o crtbegin.o crtend.o crtn.o"
+-	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic"
++	extra_parts="$extra_parts crti.o crtbegin.o crtend.o crtn.o crtbeginS.o crtendS.o"
++	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic"
+ 	;;
+ i[34567]86-*-nto-qnx*)
+@@ -1202,6 +1202,10 @@ riscv*-*-freebsd*)
+ 	tmake_file="${tmake_file} riscv/t-softfp${host_address} t-softfp riscv/t-elf riscv/t-elf${host_address}"
+ 	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o crtendS.o crtbeginT.o"
+ 	;;
++riscv*-*-phoenix*)
++	tmake_file="${tmake_file} riscv/t-softfp${host_address} t-softfp riscv/t-elf riscv/t-elf${host_address}"
++	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o crtbeginS.o crtendS.o"
++	;;
+ riscv*-*-*)
+ 	tmake_file="${tmake_file} riscv/t-softfp${host_address} t-softfp riscv/t-elf riscv/t-elf${host_address}"
+ 	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o"
+@@ -1326,7 +1330,7 @@ sparc-*-rtems*)
+ sparc-*-phoenix*)
+ 	tmake_file="$tmake_file sparc/t-softmul t-fdpbit"
+ 	tmake_file="$tmake_file sparc/t-phoenix t-crtstuff-pic t-libgcc-pic"
+-	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o"
++	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o crtbeginS.o crtendS.o"
+ 	;;
+ sparc*-*-solaris2*)
+ 	tmake_file="$tmake_file t-crtfm"
