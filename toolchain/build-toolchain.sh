@@ -222,7 +222,7 @@ build_libc_shared() {
 
     for phx_target in $PHOENIX_TARGETS; do
         log "[$phx_target] installing shared libphoenix"
-        make -C "$SCRIPT_DIR/../../libphoenix" TARGET="$phx_target" install
+        make -C "$SCRIPT_DIR/../../libphoenix" TOOLCHAIN_BUILD=y TARGET="$phx_target" install
     done
 
     PATH="$OLDPATH"
