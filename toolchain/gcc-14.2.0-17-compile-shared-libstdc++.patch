@@ -1,0 +1,135 @@
+diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
+index 251d47561d1..22c781d6cf5 100755
+--- a/libstdc++-v3/configure
++++ b/libstdc++-v3/configure
+@@ -9239,16 +9239,8 @@ $as_echo_n "checking for $compiler option to produce PIC... " >&6; }
+     lt_prog_compiler_static='-static'
+ 
+     case $host_os in
+-      phoenix)
+-        case $host_cpu in
+-          sparc | arm)
+-            # Necessary flags are passed through multilib options.
+-            ;;
+-
+-          *)
+-            lt_prog_compiler_pic='-fPIC'
+-            ;;
+-        esac
++      phoenix*)
++        lt_prog_compiler_pic='-fPIC'
+         ;;
+ 
+       aix*)
+@@ -9526,25 +9518,6 @@ case $host_os in
+     lt_prog_compiler_pic=
+     ;;
+ 
+-  # Not all arm targets support PIC configuration
+-  phoenix)
+-    case $host_cpu in
+-      arm|sparc)
+-        # Phoenix system for NOMMU requires files to be compiled with some certain flags.
+-        # One of them is -fPIC which is complemented by macro PIC. In this "case" is decided whether
+-        # to add this macro or not.
+-        if [[ "$CXX" == *"mno-pic-data-is-text-relative"* ]]; then
+-          lt_prog_compiler_pic="$lt_prog_compiler_pic -DPIC"
+-        fi
+-        ;;
+-
+-      # For other targets the behaviour should be default
+-      *)
+-        lt_prog_compiler_pic="$lt_prog_compiler_pic -DPIC"
+-        ;;
+-    esac
+-    ;;
+-
+   *)
+     lt_prog_compiler_pic="$lt_prog_compiler_pic -DPIC"
+     ;;
+@@ -11653,7 +11626,7 @@ fi
+   dynamic_linker='GNU/Linux ld.so'
+   ;;
+ 
+-netbsd*)
++netbsd* | phoenix*)
+   version_type=sunos
+   need_lib_prefix=no
+   need_version=no
+@@ -14271,16 +14244,8 @@ $as_echo_n "checking for $compiler option to produce PIC... " >&6; }
+ 
+     case $host_os in
+     phoenix)
+-      case $host_cpu in
+-        arm|sparc)
+-          # Necessary flags are passed through multilib options.
+-          ;;
+-
+-        *)
+-          lt_prog_compiler_pic_CXX='-fPIC'
+-        ;;
+-      esac
+-    ;;
++      lt_prog_compiler_pic_CXX='-fPIC'
++      ;;
+ 
+     aix*)
+       # All AIX code is PIC.
+@@ -14593,24 +14558,8 @@ case $host_os in
+     lt_prog_compiler_pic_CXX=
+     ;;
+ 
+-  # Not all arm targets support PIC
+   phoenix)
+-    case $host_cpu in
+-      arm|sparc)
+-        # Phoenix system for NOMMU requires files to be compiled with some certain flags.
+-        # One of them is -fPIC which is complemented by macro PIC. In this "case" is decided whether
+-        # to add this macro or not.
+-
+-        if [[ "$CXX" == *"mno-pic-data-is-text-relative"* ]]; then
+-          lt_prog_compiler_pic_CXX="$lt_prog_compiler_pic_CXX -DPIC"
+-        fi
+-        ;;
+-
+-      # For other arm targets the behaviour should be default
+-      *)
+-        lt_prog_compiler_pic="$lt_prog_compiler_pic -DPIC"
+-        ;;
+-    esac
++    lt_prog_compiler_pic_CXX="$lt_prog_compiler_pic_CXX -DPIC"
+     ;;
+ 
+   *)
+@@ -15439,7 +15388,7 @@ fi
+   dynamic_linker='GNU/Linux ld.so'
+   ;;
+ 
+-netbsd*)
++netbsd* | phoenix*)
+   version_type=sunos
+   need_lib_prefix=no
+   need_version=no
+@@ -50704,6 +50653,9 @@ _ACEOF
+       printf "%s\n" "#define HAVE_TANHF 1" >>confdefs.h
+ 
+       printf "%s\n" "#define HAVE_STRTOLD 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE___CXA_THREAD_ATEXIT_IMPL 1" >>confdefs.h
++
+     ;;
+   *)
+     as_fn_error $? "No support for this host/target combination." "$LINENO" 5
+diff --git a/libstdc++-v3/configure.host b/libstdc++-v3/configure.host
+index 7bc43071616..297f98fecbb 100644
+--- a/libstdc++-v3/configure.host
++++ b/libstdc++-v3/configure.host
+@@ -360,7 +360,7 @@ case "${host}" in
+ 	;;
+     esac
+     ;;
+-  arm*-*-freebsd*)
++  arm*-*-freebsd* | arm*-*-phoenix*)
+      port_specific_symbol_files="\$(srcdir)/../config/os/gnu-linux/arm-eabi-extra.ver"
+      ;;
+   powerpc*-*-darwin*)
