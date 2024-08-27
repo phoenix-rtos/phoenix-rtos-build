@@ -1,0 +1,106 @@
+diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
+--- a/libstdc++-v3/configure
++++ b/libstdc++-v3/configure
+@@ -9249,12 +9249,15 @@ $as_echo_n "checking for $compiler option to produce PIC... " >&6; }
+             arch=$(echo "$CXX" | sed 's/.* -march=\([^ ]*\).*/\1/')
+ 
+             if [[ "$arch" =~ "armv7-m" ]] || [[ "$arch" =~ "armv7-r" ]] || [[ "$arch" =~ "armv7e-m" ]] || [[ "$arch" =~ "armv8-m" ]] || [[ "$arch" =~ "armv8-r" ]]; then
+-              lt_prog_compiler_pic="$lt_prog_compiler_pic -fPIC -fPIE -msingle-pic-base -mno-pic-data-is-text-relative"
++              lt_prog_compiler_pic="-fPIC -fPIE -msingle-pic-base -mno-pic-data-is-text-relative"
++            else
++              lt_prog_compiler_pic='-fPIC'
+             fi
+             ;;
+ 
+           sparc)
+             # Necessary flags are passed through multilib options.
++            lt_prog_compiler_pic='-fPIC'
+             ;;
+ 
+           *)
+@@ -9550,6 +9553,8 @@ case $host_os in
+ 
+         if [[ "$arch" =~ "armv7-m" ]] || [[ "$arch" =~ "armv7-r" ]] || [[ "$arch" =~ "armv7e-m" ]] || [[ "$arch" =~ "armv8-m" ]] || [[ "$arch" =~ "armv8-r" ]]; then
+           lt_prog_compiler_pic="$lt_prog_compiler_pic -DPIC"
++        else
++          lt_prog_compiler_pic="$lt_prog_compiler_pic -DPIC"
+         fi
+         ;;
+ 
+@@ -11675,7 +11680,7 @@ fi
+   dynamic_linker='GNU/Linux ld.so'
+   ;;
+ 
+-netbsd*)
++netbsd* | phoenix*)
+   version_type=sunos
+   need_lib_prefix=no
+   need_version=no
+@@ -14302,13 +14307,16 @@ $as_echo_n "checking for $compiler option to produce PIC... " >&6; }
+           arch=$(echo "$CXX" | sed 's/.* -march=\([^ ]*\).*/\1/')
+ 
+           if [[ "$arch" =~ "armv7-m" ]] || [[ "$arch" =~ "armv7-r" ]] || [[ "$arch" =~ "armv7e-m" ]] || [[ "$arch" =~ "armv8-m" ]] || [[ "$arch" =~ "armv8-r" ]]; then
+-            lt_prog_compiler_pic_CXX="$lt_prog_compiler_pic_CXX -fPIC -fPIE -msingle-pic-base -mno-pic-data-is-text-relative"
++            lt_prog_compiler_pic_CXX="-fPIC -fPIE -msingle-pic-base -mno-pic-data-is-text-relative"
++          else
++            lt_prog_compiler_pic_CXX='-fPIC'
+           fi
+ 
+         ;;
+ 
+         sparc)
+           # Necessary flags are passed through multilib options.
++          lt_prog_compiler_pic_CXX="-fPIC"
+           ;;
+ 
+         *)
+@@ -14640,6 +14648,8 @@ case $host_os in
+ 
+         if [[ "$arch" =~ "armv7-m" ]] || [[ "$arch" =~ "armv7-r" ]] || [[ "$arch" =~ "armv7e-m" ]] || [[ "$arch" =~ "armv8-m" ]] || [[ "$arch" =~ "armv8-r" ]]; then
+           lt_prog_compiler_pic_CXX="$lt_prog_compiler_pic_CXX -DPIC"
++        else
++          lt_prog_compiler_pic_CXX="$lt_prog_compiler_pic_CXX -DPIC"
+         fi
+         ;;
+ 
+@@ -14652,7 +14662,7 @@ case $host_os in
+ 
+       # For other arm targets the behaviour should be default
+       *)
+-        lt_prog_compiler_pic="$lt_prog_compiler_pic -DPIC"
++        lt_prog_compiler_pic_CXX="$lt_prog_compiler_pic_CXX -DPIC"
+         ;;
+     esac
+     ;;
+@@ -15483,7 +15493,7 @@ fi
+   dynamic_linker='GNU/Linux ld.so'
+   ;;
+ 
+-netbsd*)
++netbsd* | phoenix*)
+   version_type=sunos
+   need_lib_prefix=no
+   need_version=no
+@@ -50748,6 +50758,9 @@ _ACEOF
+       printf "%s\n" "#define HAVE_TANHF 1" >>confdefs.h
+ 
+       printf "%s\n" "#define HAVE_STRTOLD 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE___CXA_THREAD_ATEXIT_IMPL 1" >>confdefs.h
++
+     ;;
+   *)
+     as_fn_error $? "No support for this host/target combination." "$LINENO" 5
+diff --git a/libstdc++-v3/configure.host b/libstdc++-v3/configure.host
+--- a/libstdc++-v3/configure.host
++++ b/libstdc++-v3/configure.host
+@@ -360,7 +360,7 @@ case "${host}" in
+ 	;;
+     esac
+     ;;
+-  arm*-*-freebsd*)
++  arm*-*-freebsd* | arm*-*-phoenix*)
+      port_specific_symbol_files="\$(srcdir)/../config/os/gnu-linux/arm-eabi-extra.ver"
+      ;;
+   powerpc*-*-darwin*)
+
