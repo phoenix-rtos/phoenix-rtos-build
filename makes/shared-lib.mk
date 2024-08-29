@@ -30,15 +30,6 @@ ifeq ($(origin LOCAL_DIR), undefined)
   LOCAL_DIR := $(patsubst $(TOPDIR)/%,%,$(dir $(lastword $(CLIENT_MAKES))))
 endif
 
-# binary.mk clears all variables it uses so we should expect that they are not set here. Leaving them set would
-# influence next binary.mk call leading to unexpected errors
-# TODO: should lib support be added?
-ifneq ($(DEP_LIB)$(LIBS),)
-  $(warning $(NAME): DEP_LIB=$(DEP_LIB))
-  $(warning $(NAME): LIBS=$(LIBS))
-  $(error $(NAME): static-lib.mk invoked with args reserved for binary.mk)
-endif
-
 # external headers - by default "include" dir - to disable functionality set "LOCAL_HEADERS_DIR := nothing"
 LOCAL_HEADERS_DIR ?= include
 ABS_HEADERS_DIR := $(abspath ./$(LOCAL_DIR)/$(LOCAL_HEADERS_DIR))
