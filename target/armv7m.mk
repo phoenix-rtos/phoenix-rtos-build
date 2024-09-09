@@ -23,7 +23,7 @@ else ifeq ($(TARGET_FAMILY), armv7m3)
   CFLAGS += -mcpu=cortex-m3 -mfloat-abi=soft
 endif
 
-VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
+KERNEL_INIT_START := $(KERNEL_PHADDR)
 
 LDFLAGS := -Wl,-z,max-page-size=0x10
 

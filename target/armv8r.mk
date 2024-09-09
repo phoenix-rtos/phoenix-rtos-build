@@ -19,7 +19,7 @@ ifeq ($(TARGET_FAMILY), armv8r52)
   CFLAGS += -mcpu=cortex-r52 -mtune=cortex-r52 -mfpu=neon-vfpv3 -mfloat-abi=hard
 endif
 
-VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
+KERNEL_INIT_START := $(KERNEL_PHADDR)
 
 LDFLAGS := -Wl,-z,max-page-size=0x10
 

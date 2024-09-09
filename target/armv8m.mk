@@ -18,7 +18,7 @@ CFLAGS += -mthumb -fomit-frame-pointer -mno-unaligned-access
 # TODO hard float perhaps? To be decided
 CFLAGS += -mcpu=cortex-m33 -mfloat-abi=soft -fstack-usage
 
-VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
+KERNEL_INIT_START := $(KERNEL_PHADDR)
 
 LDFLAGS := -Wl,-z,max-page-size=0x10
 
