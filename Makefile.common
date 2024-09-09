@@ -125,6 +125,7 @@ EXPORT_LDFLAGS := $(LDFLAGS)
 # add our coding-style related options
 CFLAGS += -Wall -Wstrict-prototypes -fno-common
 CXXFLAGS += -Wall
+LDFLAGS += -z noexecstack
 
 # always produce binaries with debug information
 CFLAGS += -ggdb3
