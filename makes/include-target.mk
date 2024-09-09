@@ -100,3 +100,9 @@ ifeq (,$(filter $(TARGETS),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
 endif
 
 include $(MAKES_PATH)/../target/$(TARGET_SUFF).mk
+
+ifeq ($(HAVE_MMU),y)
+# Add headers offset.
+VADDR_KERNEL_INIT_OFFSET ?= 0x1000
+KERNEL_INIT_START := $(shell printf "0x%x" $$(($(VADDR_KERNEL) + $(VADDR_KERNEL_INIT_OFFSET))))
+endif

@@ -19,7 +19,7 @@ CFLAGS += -mcpu=leon3
 LDFLAGS :=
 
 ifeq ($(TARGET_SUBFAMILY), gr716)
-  VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
+  KERNEL_INIT_START := $(KERNEL_PHADDR)
 
   CFLAGS += -msoft-float
   CPPFLAGS += -DLEON3_USE_PWR
@@ -40,7 +40,7 @@ else ifeq ($(TARGET_SUBFAMILY), gr712rc)
     CFLAGS += -msoft-float
   endif
   STRIP := $(CROSS)strip
-  VADDR_KERNEL_INIT := 0xc0000000
+  VADDR_KERNEL := 0xc0000000
   CFLAGS += -mfix-gr712rc
   CPPFLAGS += -DLEON3_TN_0018_FIX
   LDFLAGS += -Wl,-z,max-page-size=0x1000
@@ -56,7 +56,7 @@ else ifeq ($(TARGET_SUBFAMILY), generic)
   endif
 
   STRIP := $(CROSS)strip
-  VADDR_KERNEL_INIT := 0xc0000000
+  VADDR_KERNEL := 0xc0000000
   LDFLAGS += -Wl,-z,max-page-size=0x1000
 
   HAVE_MMU := y
