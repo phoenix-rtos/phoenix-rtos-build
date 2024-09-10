@@ -1,0 +1,80 @@
+diff --git a/bfd/config.bfd b/bfd/config.bfd
+index 6553aac1e99..596867b1700 100644
+--- a/bfd/config.bfd
++++ b/bfd/config.bfd
+@@ -783,6 +783,10 @@ case "${targ}" in
+     targ_defvec=i386_elf32_vxworks_vec
+     targ_underscore=yes
+     ;;
++  i[3-7]86-*-phoenix*)
++    targ_defvec=i386_elf32_vec
++    targ_selfvecs=
++    ;;
+ 
+   ia16-*-elf)
+     targ_defvec=i386_elf32_vec
+diff --git a/gas/configure.tgt b/gas/configure.tgt
+index d58f21873a3..0ce4759efda 100644
+--- a/gas/configure.tgt
++++ b/gas/configure.tgt
+@@ -267,6 +267,7 @@ case ${generic_target} in
+   i386-*-*nt*)				fmt=coff em=pe ;;
+   i386-*-rdos*)				fmt=elf ;;
+   i386-*-darwin*)			fmt=macho ;;
++  i386-*-phoenix*)			fmt=elf ;;
+ 
+   ia16-*-elf*)				fmt=elf ;;
+ 
+diff --git a/ld/Makefile.am b/ld/Makefile.am
+index 6a9833e5775..99ec9f7af3d 100644
+--- a/ld/Makefile.am
++++ b/ld/Makefile.am
+@@ -283,6 +283,7 @@ ALL_EMULATION_SOURCES = \
+ 	eelf_i386_ldso.c \
+ 	eelf_i386_sol2.c \
+ 	eelf_i386_vxworks.c \
++	eelf_i386_phoenix.c \
+ 	eelf_iamcu.c \
+ 	eelf_s390.c \
+ 	eh8300elf.c \
+diff --git a/ld/Makefile.in b/ld/Makefile.in
+index 8639e782cdf..4425ec0b075 100644
+--- a/ld/Makefile.in
++++ b/ld/Makefile.in
+@@ -794,6 +794,7 @@ ALL_EMULATION_SOURCES = \
+ 	eelf_i386_ldso.c \
+ 	eelf_i386_sol2.c \
+ 	eelf_i386_vxworks.c \
++	eelf_i386_phoenix.c \
+ 	eelf_iamcu.c \
+ 	eelf_s390.c \
+ 	eh8300elf.c \
+@@ -1484,6 +1485,7 @@ distclean-compile:
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_ldso.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_sol2.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_vxworks.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_i386_phoenix.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_iamcu.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_mipsel_haiku.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf_s390.Po@am__quote@
+diff --git a/ld/configure.tgt b/ld/configure.tgt
+index f937f78b876..0245b92426b 100644
+--- a/ld/configure.tgt
++++ b/ld/configure.tgt
+@@ -448,6 +448,9 @@ i[3-7]86-*-haiku*)	targ_emul=elf_i386_haiku
+ 			;;
+ i[3-7]86-*-vxworks*)	targ_emul=elf_i386_vxworks
+ 			;;
++i[3-7]86-*-phoenix*)	targ_emul=elf_i386_phoenix
++			targ_extra_emuls=elf_i386
++			;;
+ i[3-7]86-*-chaos)	targ_emul=elf_i386_chaos
+ 			;;
+ ia16-*-elf*)		targ_emul=elf_i386
+diff --git a/ld/emulparams/elf_i386_phoenix.sh b/ld/emulparams/elf_i386_phoenix.sh
+new file mode 100644
+index 00000000000..db38bcb3062
+--- /dev/null
++++ b/ld/emulparams/elf_i386_phoenix.sh
+@@ -0,0 +1 @@
++. ${srcdir}/emulparams/elf_i386.sh

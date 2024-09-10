@@ -65,7 +65,7 @@ fi
 #BINUTILS=binutils-2.28
 #GCC=gcc-7.1.0
 
-BINUTILS=binutils-2.34
+BINUTILS=binutils-2.43
 GCC=gcc-9.5.0
 
 TOOLCHAIN_PREFIX="${BUILD_ROOT}/${TARGET}"
