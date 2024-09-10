@@ -1,0 +1,41 @@
+diff --git a/gcc/config/arm/t-rmprofile b/gcc/config/arm/t-rmprofile
+--- a/gcc/config/arm/t-rmprofile
++++ b/gcc/config/arm/t-rmprofile
+@@ -27,17 +27,15 @@
+ 
+ # Arch and FPU variants to build libraries with
+ 
+-MULTI_ARCH_OPTS_RM	= march=armv6s-m/march=armv7-m/march=armv7e-m/march=armv7e-m+fp/march=armv7e-m+fp.dp/march=armv8-m.base/march=armv8-m.main/march=armv8-m.main+fp/march=armv8-m.main+fp.dp/march=armv8.1-m.main+mve/march=armv8.1-m.main+pacbti/march=armv8.1-m.main+pacbti+fp/march=armv8.1-m.main+pacbti+fp.dp/march=armv8.1-m.main+pacbti+mve/march=armv7-r/march=armv7-r+fp/march=armv8-r/march=armv8-r+simd
+-MULTI_ARCH_DIRS_RM	= v6-m v7-m v7e-m v7e-m+fp v7e-m+dp v8-m.base v8-m.main v8-m.main+fp v8-m.main+dp v8.1-m.main+mve v8.1-m.main+pacbti v8.1-m.main+pacbti+fp v8.1-m.main+pacbti+dp v8.1-m.main+pacbti+mve v7-r v7-r+fp v8-r v8r+simd
++MULTI_ARCH_OPTS_RM	= march=armv7-m/march=armv7e-m/march=armv7e-m+fp/march=armv7e-m+fp.dp/march=armv8-m.base/march=armv8-m.main/march=armv8-m.main+fp/march=armv8-m.main+fp.dp/march=armv8.1-m.main+mve/march=armv8.1-m.main+pacbti/march=armv8.1-m.main+pacbti+fp/march=armv8.1-m.main+pacbti+fp.dp/march=armv8.1-m.main+pacbti+mve/march=armv7-r/march=armv7-r+fp/march=armv8-r/march=armv8-r+simd
++MULTI_ARCH_DIRS_RM	= v7-m v7e-m v7e-m+fp v7e-m+dp v8-m.base v8-m.main v8-m.main+fp v8-m.main+dp v8.1-m.main+mve v8.1-m.main+pacbti v8.1-m.main+pacbti+fp v8.1-m.main+pacbti+dp v8.1-m.main+pacbti+mve v7-r v7-r+fp v8-r v8r+simd
+ 
+ MULTI_ARCH_OPTS_RM	+= mbranch-protection=standard
+ MULTI_ARCH_DIRS_RM	+= bp
+ 
+ # Base M-profile (no fp)
+-MULTILIB_REQUIRED	+= mthumb/march=armv6s-m/mfloat-abi=soft
+ MULTILIB_REQUIRED	+= mthumb/march=armv7-m/mfloat-abi=soft
+ MULTILIB_REQUIRED	+= mthumb/march=armv7e-m/mfloat-abi=soft
+-MULTILIB_REQUIRED	+= mthumb/march=armv8-m.base/mfloat-abi=soft
+ MULTILIB_REQUIRED	+= mthumb/march=armv8-m.main/mfloat-abi=soft
+ MULTILIB_REQUIRED	+= mthumb/march=armv7-r/mfloat-abi=soft
+ MULTILIB_REQUIRED	+= mthumb/march=armv8-r/mfloat-abi=soft
+@@ -72,7 +70,6 @@ MULTILIB_REQUIRED	+= mthumb/march=armv8-r+simd/mfloat-abi=softfp
+ 
+ 
+ # Arch Matches
+-MULTILIB_MATCHES	+= march?armv6s-m=march?armv6-m
+ 
+ # For all MULITIB_MATCHES for v8-m and above add mlibarch? on the right hand side
+ # of = in the variant string instead of march?.  This is needed because all the
+@@ -88,7 +85,7 @@ MULTILIB_MATCHES	+= march?armv8-m.main=mlibarch?armv8-m.main+dsp \
+ MULTILIB_MATCHES	+= march?armv7e-m+fp=march?armv7e-m+fpv5
+ 
+ # Softfp but no FP.  Use the soft-float libraries.
+-MULTILIB_REUSE		+= $(foreach ARCH, armv6s-m armv7-m armv7e-m armv8-m\.base armv8-m\.main armv7-r armv8-r, \
++MULTILIB_REUSE		+= $(foreach ARCH, armv7-m armv7e-m armv8-m\.main armv7-r armv8-r, \
+ 			     mthumb/march.$(ARCH)/mfloat-abi.soft=mthumb/march.$(ARCH)/mfloat-abi.softfp)
+ 
+ # Map v8.1-M to v8-M.
+
