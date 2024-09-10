@@ -1,0 +1,80 @@
+diff --git a/bfd/config.bfd b/bfd/config.bfd
+index 596867b1700..bc65a681402 100644
+--- a/bfd/config.bfd
++++ b/bfd/config.bfd
+@@ -1390,6 +1390,10 @@ case "${targ}" in
+     targ_defvec=sparc_elf32_vxworks_vec
+     targ_selvecs="sparc_elf32_vec"
+     ;;
++  sparc-*-phoenix*)
++     targ_defvec=sparc_elf32_vec
++     targ_selfvecs=
++     ;;
+   sparc*-*-*)
+     targ_defvec=sparc_elf32_vec
+     ;;
+diff --git a/gas/configure.tgt b/gas/configure.tgt
+index 0ce4759efda..ba42b2c8741 100644
+--- a/gas/configure.tgt
++++ b/gas/configure.tgt
+@@ -408,6 +408,7 @@ case ${generic_target} in
+   sparc-*-solaris*)			fmt=elf em=solaris ;;
+   sparc-*-freebsd*)			fmt=elf em=freebsd ;;
+   sparc-*-*bsd*)			fmt=elf em=nbsd ;;
++ sparc-*-phoenix*)			fmt=elf ;;
+ 
+   spu-*-elf)				fmt=elf ;;
+ 
+diff --git a/ld/Makefile.am b/ld/Makefile.am
+index 99ec9f7af3d..f43588155e4 100644
+--- a/ld/Makefile.am
++++ b/ld/Makefile.am
+@@ -218,6 +218,7 @@ ALL_EMULATION_SOURCES = \
+ 	eelf32_sparc.c \
+ 	eelf32_sparc_sol2.c \
+ 	eelf32_sparc_vxworks.c \
++	eelf32_sparc_phoenix.c \
+ 	eelf32_spu.c \
+ 	eelf32_tic6x_be.c \
+ 	eelf32_tic6x_elf_be.c \
+diff --git a/ld/Makefile.in b/ld/Makefile.in
+index 4425ec0b075..fbbe93cb83f 100644
+--- a/ld/Makefile.in
++++ b/ld/Makefile.in
+@@ -729,6 +729,7 @@ ALL_EMULATION_SOURCES = \
+ 	eelf32_sparc.c \
+ 	eelf32_sparc_sol2.c \
+ 	eelf32_sparc_vxworks.c \
++	eelf32_sparc_phoenix.c \
+ 	eelf32_spu.c \
+ 	eelf32_tic6x_be.c \
+ 	eelf32_tic6x_elf_be.c \
+@@ -1354,6 +1355,7 @@ distclean-compile:
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_sparc.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_sparc_sol2.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_sparc_vxworks.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_sparc_phoenix.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_spu.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_tic6x_be.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eelf32_tic6x_elf_be.Po@am__quote@
+diff --git a/ld/configure.tgt b/ld/configure.tgt
+index 0245b92426b..0766e660e96 100644
+--- a/ld/configure.tgt
++++ b/ld/configure.tgt
+@@ -960,6 +960,9 @@ sparc-*-solaris2*)	targ_emul=elf32_sparc_sol2
+ 			;;
+ sparc*-*-vxworks*)	targ_emul=elf32_sparc_vxworks
+ 			;;
++sparc-*-phoenix*)	targ_emul=elf32_sparc_phoenix
++			targ_extra_emuls=elf32_sparc
++			;;
+ sparc*-*-*)		targ_emul=elf32_sparc
+ 			;;
+ spu-*-elf*)		targ_emul=elf32_spu
+diff --git a/ld/emulparams/elf32_sparc_phoenix.sh b/ld/emulparams/elf32_sparc_phoenix.sh
+new file mode 100644
+index 00000000000..85f034424ea
+--- /dev/null
++++ b/ld/emulparams/elf32_sparc_phoenix.sh
+@@ -0,0 +1 @@
++. ${srcdir}/emulparams/elf32_sparc.sh
