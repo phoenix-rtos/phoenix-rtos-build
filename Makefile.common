@@ -85,6 +85,13 @@ $(info cleaning targets, make parallelism disabled)
 .NOTPARALLEL:
 endif
 
+# Do not warn about RWX segments.
+# binutils >= 2.39 required
+LD_VERSION_MINOR := $(shell $(LD) $(LDFLAGS_PREFIX)--version 2> /dev/null | grep -Eo "[0-9][0-9]$$")
+ifeq ($(shell expr $(LD_VERSION_MINOR) ">=" 39), 1)
+LDFLAGS += $(LDFLAGS_PREFIX)--no-warn-rwx-segments
+endif
+
 #
 # generic *FLAGS options
 #
