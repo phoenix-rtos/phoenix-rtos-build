@@ -15,7 +15,7 @@ declare -A TOOLCHAN_TO_PHOENIX_TARGETS=(
     [arm-phoenix]="armv7a9-zynq7000 armv7a7-imx6ull armv7m7-imxrt106x armv7m4-stm32l4x6"
     [i386-pc-phoenix]="ia32-generic"
     [riscv64-phoenix]="riscv64-generic"
-    [sparc-phoenix]="sparcv8leon3-gr716 sparcv8leon3-gr712rc"
+    [sparc-phoenix]="sparcv8leon3-gr716 sparcv8leon3-gr712rc sparcv8leon3-generic"
 )
 
 TARGET="$1"
@@ -104,6 +104,7 @@ build_binutils() {
 
     ../configure --target="${TARGET}" --prefix="${TOOLCHAIN_PREFIX}" \
                  --with-sysroot="${SYSROOT}" --enable-lto --enable-deterministic-archives
+
     make
 
     log "installing binutils"
@@ -115,6 +116,7 @@ build_gcc_stage1() {
     log "patching ${GCC}"
     for patchfile in "${GCC}"-*.patch; do
         if [ ! -f "${GCC}/$patchfile.applied" ]; then
+            echo $patchfile
             patch -d "${GCC}" -p1 < "$patchfile"
             touch "${GCC}/$patchfile.applied"
         fi
@@ -142,21 +144,25 @@ build_gcc_stage1() {
     # stage1 compiler (gcc only)
     ../configure --target="${TARGET}" --prefix="${TOOLCHAIN_PREFIX}" \
                  --with-sysroot="${SYSROOT}" \
-                 --with-gxx-include-dir="${SYSROOT}/include/c++" \
-                 --enable-languages=c,c++ --with-newlib \
-                 --with-headers=yes \
+                 --enable-languages=c \
+                 --without-headers \
+                 --with-newlib \
                  --enable-tls \
                  --enable-initfini-array \
                  --disable-decimal-float \
                  --disable-libquadmath \
                  --disable-libssp --disable-nls \
-                 --enable-threads=posix \
-                 --disable-tm-clone-registry
+                 --disable-threads \
+                 --disable-shared \
+                 --disable-libatomic \
+                 --disable-libgomp \
+                 --disable-libvtv \
+                 --disable-libstdcxx
 
-    make all-gcc
+    make all
 
     log "installing GCC (stage1)"
-    make install-gcc
+    make install
     popd > /dev/null
 }
 
@@ -180,43 +186,66 @@ build_libc() {
         # FIXME: libphoenix should be installed for all supported multilib target variants
         log "[$phx_target] installing libphoenix"
         # LIBPHOENIX cannot be build shared as libgcc is not yet build.
-        make -C "$SCRIPT_DIR/../../libphoenix" NOCHECKENV=1 LIBPHOENIX_SHARED=n TARGET="$phx_target" clean install
+        make -C "$SCRIPT_DIR/../../libphoenix" NOCHECKENV=1 TOOLCHAIN_BUILD=y TARGET="$phx_target" clean install
     done
+
+    if [[ "$TARGET" = "arm-phoenix" || "$TARGET" = "sparc-phoenix" ]]; then
+        # Hack: Currently multilib only for archs supported in phoenix is created, which leads to invalid multilib on other archs.
+        #       Copy any libc to generic multilib folder to which linker fallsback if arch specific libc is not found
+        #       this probably leads to not working libgcc_s.so and libstdc++.so on targets not supported on Phoenix.
+        libc_path=$(find "$BUILD_ROOT" -name libc.so | head -n 1)
+        libc_folder=$(dirname "$libc_path")
+        generic_folder="$("$TARGET-gcc" -print-sysroot)/lib/$("$TARGET-gcc" -print-multi-directory)"
+        find "$libc_folder" -name "libc.so*" -exec cp {} "$generic_folder" \;
+    fi
 
     PATH="$OLDPATH"
 }
 
 build_gcc_stage2() {
-    pushd "$BUILD_DIR/${GCC}/build" > /dev/null
-
-    # (hackish) instead of reconfiguring and rebuilding whole gcc
-    # just force rebuilding internal includes (and fixincludes)
-    # remove stamp file for internal headers generation
-    rm gcc/stmp-int-hdrs
-
     log "building GCC (stage2)"
-    make all-gcc all-target-libgcc
+    rm -rf "${GCC}/build"
+    mkdir -p "${GCC}/build"
+    pushd "${GCC}/build" > /dev/null
+
+    # GCC compilation options
+    # --with-sysroot -> cross-compiler sysroot
+    # --with-gxx-include-dir -> configure as a subdir of sysroot for c++ includes to work with external (out-of-toolchain) sysroot
+    # --with-newlib -> do note generate standard library includes by fixincludes, do not include _eprintf in libgcc
+    # --disable-libssp -> stack smashing protector library disabled
+    # --disable-nls -> all compiler messages will be in english
+    # --enable-tls -> enable Thread Local Storage
+    # --enable-initfini-array -> force init/fini array support instead of .init .fini sections
+    # --disable-decimal-float -> not relevant for other than i386 and PowerPC
+    # --disable-libquadmath -> not using fortran and quad floats
+    # --enable-threads=posix -> enable POSIX threads
+
+
+    # stage1 compiler (gcc only)
+    ../configure --target="${TARGET}" --prefix="${TOOLCHAIN_PREFIX}" \
+                 --with-sysroot="${SYSROOT}" \
+                 --with-gxx-include-dir="${SYSROOT}/include/c++" \
+                 --enable-languages=c,c++ --with-newlib \
+                 --with-headers=yes \
+                 --enable-tls \
+                 --enable-initfini-array \
+                 --disable-decimal-float \
+                 --disable-libquadmath \
+                 --disable-libssp --disable-nls \
+                 --enable-threads=posix \
+                 --disable-tm-clone-registry \
+                 --enable-shared \
+                 --disable-libstdcxx
+
+    make
 
     log "installing GCC (stage2)"
-    make install-gcc install-target-libgcc
+    make install
 
     # remove `include` symlink to install c++ headers in $SYSROOT/include/c++ as expected
     rm -rf "${SYSROOT:?}/include"
+
     popd > /dev/null
-}
-
-build_libc_shared() {
-    # use new compiler for the below builds
-    OLDPATH="$PATH"
-    PATH="$TOOLCHAIN_PREFIX/bin":$PATH
-    export PATH
-
-    for phx_target in $PHOENIX_TARGETS; do
-        log "[$phx_target] installing shared libphoenix"
-        make -C "$SCRIPT_DIR/../../libphoenix" TOOLCHAIN_BUILD=y TARGET="$phx_target" install
-    done
-
-    PATH="$OLDPATH"
 }
 
 build_libstdcpp() {
@@ -288,7 +317,6 @@ build_gcc_stage1
 build_libc
 build_gcc_stage2
 
-build_libc_shared
 build_libstdcpp
 
 strip_binaries
