@@ -42,9 +42,9 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
 +            # lt_prog_compiler_pic is a variable which contains these flags for C files that are
 +            # involved in libstdc++.
 +
-+            architecture=$(echo "$CXX" | sed 's/.* -march=\([^ ]*\).*/\1/')
++            arch=$(echo "$CXX" | sed 's/.* -march=\([^ ]*\).*/\1/')
 +
-+            if [[ "$architecture" =~ "armv7-m" ]] || [[ "$architecture" =~ "armv7e-m" ]] || [[ "$architecture" =~ "armv8-m" ]]; then
++            if [[ "$arch" =~ "armv7-m" ]] || [[ "$arch" =~ "armv7-r" ]] || [[ "$arch" =~ "armv7e-m" ]] || [[ "$arch" =~ "armv8-m" ]] || [[ "$arch" =~ "armv8-r" ]]; then
 +              lt_prog_compiler_pic="$lt_prog_compiler_pic -fPIC -fPIE -msingle-pic-base -mno-pic-data-is-text-relative"
 +            fi
 +            ;;
@@ -76,9 +76,9 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
 +        # One of them is -fPIC which is complemented by macro -fPID. In this "case" is decided whether
 +        # to add this macro or not.
 +
-+        architecture=$(echo "$CXX" | sed 's/.* -march=\([^ ]*\).*/\1/')
++        arch=$(echo "$CXX" | sed 's/.* -march=\([^ ]*\).*/\1/')
 +
-+        if [[ "$architecture" =~ "armv7-m" ]] || [[ "$architecture" =~ "armv7e-m" ]] || [[ "$architecture" =~ "armv8-m" ]]; then
++        if [[ "$arch" =~ "armv7-m" ]] || [[ "$arch" =~ "armv7-r" ]] || [[ "$arch" =~ "armv7e-m" ]] || [[ "$arch" =~ "armv8-m" ]] || [[ "$arch" =~ "armv8-r" ]]; then
 +          lt_prog_compiler_pic="$lt_prog_compiler_pic -DPIC"
 +        fi
 +        ;;
@@ -118,9 +118,9 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
 +          # lt_prog_compiler_pic_CXX is a variable which contains these flags for C++ files that are
 +          # involved in libstdc++.
 +
-+          architecture=$(echo "$CXX" | sed 's/.* -march=\([^ ]*\).*/\1/')
++          arch=$(echo "$CXX" | sed 's/.* -march=\([^ ]*\).*/\1/')
 +
-+          if [[ "$architecture" =~ "armv7-m" ]] || [[ "$architecture" =~ "armv7e-m" ]] || [[ "$architecture" =~ "armv8-m" ]]; then
++          if [[ "$arch" =~ "armv7-m" ]] || [[ "$arch" =~ "armv7-r" ]] || [[ "$arch" =~ "armv7e-m" ]] || [[ "$arch" =~ "armv8-m" ]] || [[ "$arch" =~ "armv8-r" ]]; then
 +            lt_prog_compiler_pic_CXX="$lt_prog_compiler_pic_CXX -fPIC -fPIE -msingle-pic-base -mno-pic-data-is-text-relative"
 +          fi
 +
@@ -153,9 +153,9 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
 +        # One of them is -fPIC which is complemented by macro -fPID. In this "case" is decided whether
 +        # to add this macro or not.
 +
-+        architecture=$(echo "$CXX" | sed 's/.* -march=\([^ ]*\).*/\1/')
++        arch=$(echo "$CXX" | sed 's/.* -march=\([^ ]*\).*/\1/')
 +
-+        if [[ "$architecture" =~ "armv7-m" ]] || [[ "$architecture" =~ "armv7e-m" ]] || [[ "$architecture" =~ "armv8-m" ]]; then
++        if [[ "$arch" =~ "armv7-m" ]] || [[ "$arch" =~ "armv7-r" ]] || [[ "$arch" =~ "armv7e-m" ]] || [[ "$arch" =~ "armv8-m" ]] || [[ "$arch" =~ "armv8-r" ]]; then
 +          lt_prog_compiler_pic_CXX="$lt_prog_compiler_pic_CXX -DPIC"
 +        fi
 +        ;;
