@@ -2,17 +2,17 @@ diff -Naur gcc-9.3.0-orig/gcc/config/sparc/t-phoenix gcc-9.3.0/gcc/config/sparc/
 --- gcc-9.3.0-orig/gcc/config/sparc/t-phoenix
 +++ gcc-9.3.0/gcc/config/sparc/t-phoenix
 @@ -0,0 +1,14 @@
-+MULTILIB_OPTIONS = mcpu=leon3 msoft-float mfix-gr712rc fPIE mno-pic-data-is-text-relative mpic-register=g6
-+MULTILIB_DIRNAMES = leon3 soft gr712rc pie no-pditr pic-reg-g6
-+MULTILIB_MATCHES = msoft-float=mno-fpu fPIE=fpie
++MULTILIB_OPTIONS = mcpu=leon3 msoft-float mfix-gr712rc fPIC mno-pic-data-is-text-relative mpic-register=g6
++MULTILIB_DIRNAMES = leon3 soft gr712rc pic no-pditr pic-reg-g6
++MULTILIB_MATCHES = msoft-float=mno-fpu fPIC=fpic fPIC=fPIE fPIC=fpie
 +
 +MULTILIB_REQUIRED =
 +# GR712RC
 +MULTILIB_REQUIRED += mcpu=leon3/mfix-gr712rc
 +MULTILIB_REQUIRED += mcpu=leon3/msoft-float/mfix-gr712rc
 +# LEON3 no MMU (pic/pie) - GR716 apps
-+MULTILIB_REQUIRED += mcpu=leon3/fPIE/mno-pic-data-is-text-relative/mpic-register=g6
-+MULTILIB_REQUIRED += mcpu=leon3/msoft-float/fPIE/mno-pic-data-is-text-relative/mpic-register=g6
++MULTILIB_REQUIRED += mcpu=leon3/fPIC/mno-pic-data-is-text-relative/mpic-register=g6
++MULTILIB_REQUIRED += mcpu=leon3/msoft-float/fPIC/mno-pic-data-is-text-relative/mpic-register=g6
 +# LEON3 no pic/pie
 +MULTILIB_REQUIRED += mcpu=leon3
 +MULTILIB_REQUIRED += mcpu=leon3/msoft-float
