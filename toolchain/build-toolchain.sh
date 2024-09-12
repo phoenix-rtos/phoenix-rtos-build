@@ -191,9 +191,16 @@ build_libc() {
         log "[$phx_target] installing kernel headers"
         make -C "$SCRIPT_DIR/../../phoenix-rtos-kernel" NOCHECKENV=1 TARGET="$phx_target" install-headers
 
+        # FIXME: At least one target with shared lib is needed. Remove once sparc build as shared by default.
+        if [[ "$TARGET" = "sparc-phoenix" ]] && [[ "$phx_target" = "sparcv8leon-generic" ]]; then
+            extra_env="HAVE_SHLIB=y LIBPHOENIX_PIC=y LIBPHOENIX_SHARED=y"
+        else
+            extra_env=
+        fi
+
         log "[$phx_target] installing libphoenix"
         # LIBPHOENIX cannot be build shared as libgcc is not yet build.
-        make -C "$SCRIPT_DIR/../../libphoenix" NOCHECKENV=1 TOOLCHAIN_BUILD=y TARGET="$phx_target" clean install
+        make -C "$SCRIPT_DIR/../../libphoenix" NOCHECKENV=1 TOOLCHAIN_BUILD=y $extra_env TARGET="$phx_target" clean install
     done
 
     if [[ "$TARGET" = "sparc-phoenix" ]]; then

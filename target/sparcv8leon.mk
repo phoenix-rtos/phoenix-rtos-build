@@ -8,6 +8,8 @@
 # %LICENSE%
 #
 
+# TODO: enable shlib on sparc, the problem is because of rofs not being suitable for ldconfig.
+
 CROSS ?= sparc-phoenix-
 
 CC := $(CROSS)gcc
@@ -50,6 +52,9 @@ else ifeq ($(TARGET_SUBFAMILY), gr712rc)
   CPPFLAGS += -DLEON_TN_0018_FIX
   LDFLAGS += -Wl,-z,max-page-size=0x1000
 
+  LIBPHOENIX_PIC ?= n
+  LIBPHOENIX_SHARED ?= n
+
   HAVE_MMU := y
 else ifeq ($(TARGET_SUBFAMILY), generic)
   ifeq ($(KERNEL), 1)
@@ -63,6 +68,9 @@ else ifeq ($(TARGET_SUBFAMILY), generic)
   VADDR_KERNEL_INIT := 0xc0000000
   LDFLAGS += -Wl,-z,max-page-size=0x1000
 
+  LIBPHOENIX_PIC ?= n
+  LIBPHOENIX_SHARED ?= n
+
   HAVE_MMU := y
 
 else ifeq ($(TARGET_SUBFAMILY), gr740)
@@ -72,6 +80,9 @@ else ifeq ($(TARGET_SUBFAMILY), gr740)
   STRIP := $(CROSS)strip
   VADDR_KERNEL_INIT := 0xc0000000
   LDFLAGS += -Wl,-z,max-page-size=0x1000
+
+  LIBPHOENIX_PIC ?= n
+  LIBPHOENIX_SHARED ?= n
 
   HAVE_MMU := y
 
