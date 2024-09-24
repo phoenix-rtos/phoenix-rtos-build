@@ -17,15 +17,9 @@ ORIG_ENV="$(env)"
 ROOTFS_OVERLAYS=""
 
 source ./phoenix-rtos-build/build.subr
-source ./build.project
 
+# set all static output dirs before sourcing target/project build script
 PREFIX_PROJECT="$(pwd)"
-
-# Some makefiles add "$PROJECT_PATH/" to their include path so it has to be set
-if [ -z "$PROJECT_PATH" ]; then
-    echo "PROJECT_PATH is not set (or is empty)"
-    exit 1;
-fi
 
 _TARGET_FOR_HOST_BUILD="host-generic-pc"
 
@@ -44,6 +38,17 @@ PREFIX_SYSROOT=""  # empty by default (use toolchain sysroot)
 PLO_SCRIPT_DIR="$PREFIX_BUILD/plo-scripts"
 
 PREFIX_ROOTFS="$PREFIX_FS/root/"
+
+export TARGET TARGET_FAMILY TARGET_SUBFAMILY TARGET_PROJECT PROJECT_PATH PREFIX_PROJECT PREFIX_BUILD\
+	PREFIX_BUILD_HOST PREFIX_FS PREFIX_BOOT PREFIX_PROG PREFIX_PROG_STRIPPED PREFIX_A\
+	PREFIX_H PREFIX_ROOTFS CROSS CFLAGS CXXFLAGS LDFLAGS CC LD AR AS MAKEFLAGS DEVICE_FLAGS PLO_SCRIPT_DIR\
+	PREFIX_SYSROOT LIBPHOENIX_DEVEL_MODE
+
+source ./build.project
+
+# Some makefiles add "$PROJECT_PATH/" to their include path so it has to be set
+[ -z "$PROJECT_PATH" ] && b_die "PROJECT_PATH is not set (or is empty)"
+
 : "${PREFIX_ROOTSKEL:="$PREFIX_PROJECT/_fs/root-skel/"}"
 
 
@@ -66,11 +71,6 @@ LD=${CROSS}ld
 AR=${CROSS}ar
 
 MAKEFLAGS="--no-print-directory -j 9"
-
-export TARGET TARGET_FAMILY TARGET_SUBFAMILY TARGET_PROJECT PROJECT_PATH PREFIX_PROJECT PREFIX_BUILD\
-	PREFIX_BUILD_HOST PREFIX_FS PREFIX_BOOT PREFIX_PROG PREFIX_PROG_STRIPPED PREFIX_A\
-	PREFIX_H PREFIX_ROOTFS CROSS CFLAGS CXXFLAGS LDFLAGS CC LD AR AS MAKEFLAGS DEVICE_FLAGS PLO_SCRIPT_DIR\
-	PREFIX_SYSROOT LIBPHOENIX_DEVEL_MODE
 
 # export flags for ports - call make only after all necessary env variables are already set
 EXPORT_CFLAGS="$(make -f phoenix-rtos-build/Makefile.common export-cflags)"
