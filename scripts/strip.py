@@ -2,8 +2,8 @@
 #
 # Script to remove references to .symtab from relocation section and then run strip
 #
-# Copyright 2022 Phoenix Systems
-# Author: Andrzej Glowinski
+# Copyright 2022, 2024 Phoenix Systems
+# Author: Andrzej Glowinski, Marek Bialowas
 #
 
 import shutil
@@ -12,7 +12,7 @@ import sys
 import tempfile
 from io import BytesIO
 from dataclasses import dataclass
-from enum import IntEnum
+from enum import Flag, IntEnum
 import struct
 from typing import ClassVar, Type, List, Tuple
 
@@ -41,6 +41,63 @@ class ShType(IntEnum):
     SHT_RELA = 4
     SHT_REL = 9
 
+
+class PhType(IntEnum):
+    PT_NULL = 0            # Unused segment.
+    PT_LOAD = 1            # Loadable segment.
+    PT_DYNAMIC = 2         # Dynamic linking information.
+    PT_INTERP = 3          # Interpreter pathname.
+    PT_NOTE = 4            # Auxiliary information.
+    PT_SHLIB = 5           # Reserved.
+    PT_PHDR = 6            # The program header table itself.
+    PT_TLS = 7             # The thread-local storage template.
+    PT_LOOS = 0x60000000   # Lowest operating system-specific pt entry type.
+    PT_HIOS = 0x6fffffff   # Highest operating system-specific pt entry type.
+    PT_LOPROC = 0x70000000 # Lowest processor-specific program hdr entry type.
+    PT_HIPROC = 0x7fffffff # Highest processor-specific program hdr entry type.
+
+    # x86-64 program header types.
+    # These all contain stack unwind tables.
+    PT_GNU_EH_FRAME = 0x6474e50
+    PT_SUNW_EH_FRAME = 0x6474e50
+    PT_SUNW_UNWIND = 0x6464e50
+
+    PT_GNU_STACK = 0x6474e551    # Indicates stack executability.
+    PT_GNU_RELRO = 0x6474e552    # Read-only after relocation.
+    PT_GNU_PROPERTY = 0x6474e553 # .note.gnu.property notes sections.
+
+    PT_OPENBSD_MUTABLE = 0x65a3dbe5   # Like bss, but not immutable.
+    PT_OPENBSD_RANDOMIZE = 0x65a3dbe6 # Fill with random data.
+    PT_OPENBSD_WXNEEDED = 0x65a3dbe7  # Program does W^X violations.
+    PT_OPENBSD_NOBTCFI = 0x65a3dbe8   # Do not enforce branch target CFI.
+    PT_OPENBSD_SYSCALLS = 0x65a3dbe9  # System call sites.
+    PT_OPENBSD_BOOTDATA = 0x65a41be6  # Section for boot arguments.
+
+    # ARM program header types.
+    PT_ARM_ARCHEXT = 0x70000000 # Platform architecture compatibility info
+    # These all contain stack unwind tables.
+    PT_ARM_EXIDX = 0x70000001
+    PT_ARM_UNWIND = 0x70000001
+    # MTE memory tag segment type
+    PT_AARCH64_MEMTAG_MTE = 0x70000002
+
+    # MIPS program header types.
+    PT_MIPS_REGINFO = 0x70000000  # Register usage information.
+    PT_MIPS_RTPROC = 0x70000001   # Runtime procedure table.
+    PT_MIPS_OPTIONS = 0x70000002  # Options segment.
+    PT_MIPS_ABIFLAGS = 0x70000003 # Abiflags segment.
+
+    # RISCV program header types.
+    PT_RISCV_ATTRIBUTES = 0x70000003
+
+
+# Segment flag bits.
+class PhFlags(Flag):
+    PF_X = 1                # Execute
+    PF_W = 2                # Write
+    PF_R = 4                # Read
+    PF_MASKOS = 0x0ff00000  # Bits for operating system-specific semantics.
+    PF_MASKPROC = 0xf0000000 # Bits for processor-specific semantics.
 
 class ElfStruct:
     """Abstract for every ELF struct"""
@@ -164,6 +221,38 @@ class Elf32Shdr(ElfShdr):
 
 
 @dataclass
+class ElfPhdr(ElfStruct):
+    """"Abstraction for structs Elf32_Phdr and Elf64_Phdr"""
+    p_type: PhType
+    p_offset: int
+    p_vaddr: int
+    p_paddr: int
+    p_filesz: int
+    p_memsz: int
+    p_flags: PhFlags
+    p_align: int
+
+    def __post_init__(self):
+        self.p_type = PhType(self.p_type)
+        self.p_flags = PhFlags(self.p_flags)
+
+
+@dataclass
+class Elf32Phdr(ElfPhdr):
+    """"Struct Elf32_Phdr"""
+    FORMAT = [
+        ("I", "p_type"),
+        ("I", "p_offset"),
+        ("I", "p_vaddr"),
+        ("I", "p_paddr"),
+        ("I", "p_filesz"),
+        ("I", "p_memsz"),
+        ("I", "p_flags"),
+        ("I", "p_align")
+    ]
+
+
+@dataclass
 class ElfRelx(ElfStruct):
     """Abstraction for structs Elf32_Rel, Elf64_Rel, Elf32_Rela, Elf64_Rela"""
     r_offset: int
@@ -194,6 +283,9 @@ class ElfFixedSizeTable:
             assert self.entrySize == self.header.get_size()
             yield self.parser.read_struct(self.header, off), off
 
+    def __str__(self) -> str:
+        return "\n".join([str(s) for s, _ in self])
+
 
 class ElfSectionTable(ElfFixedSizeTable):
     header: Type[ElfShdr]
@@ -204,6 +296,17 @@ class ElfSectionTable(ElfFixedSizeTable):
         self.offset = e.e_shoff
         self.size = e.e_shnum * e.e_shentsize
         self.entrySize = e.e_shentsize
+
+
+class ElfPhdrTable(ElfFixedSizeTable):
+    header: Type[ElfPhdr]
+
+    def __init__(self, e: ElfEhdr, p: "ElfParser"):
+        super().__init__(p)
+        self.header = {EiClass.ELFCLASS32: Elf32Phdr}[p.ident.get_class()]
+        self.offset = e.e_phoff
+        self.size = e.e_phnum * e.e_phentsize
+        self.entrySize = e.e_phentsize
 
 
 class ElfRelocationTable(ElfFixedSizeTable):
@@ -244,6 +347,9 @@ class ElfParser:
 
     def get_relocations(self, s: ElfShdr) -> ElfRelocationTable:
         return ElfRelocationTable(s, self)
+
+    def get_program_headers(self) -> ElfPhdrTable:
+        return ElfPhdrTable(self.header, self)
 
 
 def remove_symtab_references(in_file, out_file):
