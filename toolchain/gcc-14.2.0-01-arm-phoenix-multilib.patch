@@ -1,6 +1,8 @@
---- gcc-9.3.0-orig/gcc/config.gcc	2020-03-12 12:07:21.000000000 +0100
-+++ gcc-9.3.0/gcc/config.gcc	2020-03-18 19:25:57.937836171 +0100
-@@ -1205,7 +1205,9 @@
+diff --git a/gcc/config.gcc b/gcc/config.gcc
+index 95c91ee02be..7ad62278cfa 100644
+--- a/gcc/config.gcc
++++ b/gcc/config.gcc
+@@ -1465,7 +1465,9 @@ arm*-*-phoenix*)
  	tm_file="elfos.h arm/unknown-elf.h arm/elf.h arm/bpabi.h"
  	tm_file="${tm_file} newlib-stdint.h phoenix.h"
  	tm_file="${tm_file} arm/aout.h arm/arm.h"
@@ -11,3 +13,4 @@
  	target_cpu_cname="arm7tdmi"
  	;;
  arm*-*-eabi* | arm*-*-symbianelf* | arm*-*-rtems* | arm*-*-fuchsia*)
+
