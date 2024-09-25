@@ -1,0 +1,22 @@
+diff --git a/gcc/config.gcc b/gcc/config.gcc
+--- a/gcc/config.gcc
++++ b/gcc/config.gcc
+@@ -2509,13 +2509,16 @@ riscv*-*-linux*)
+ 	gcc_cv_initfini_array=yes
+ 	with_tls=${with_tls:-trad}
+ 	;;
+-riscv*-*-elf* | riscv*-*-rtems*)
++riscv*-*-elf* | riscv*-*-rtems* | riscv*-*-phoenix*)
+ 	tm_file="elfos.h newlib-stdint.h ${tm_file} riscv/elf.h"
+ 	case ${target} in
+ 	*-*-rtems*)
+ 	  tm_file="${tm_file} riscv/rtems.h rtems.h"
+ 	  tmake_file="${tmake_file} riscv/t-rtems"
+ 	  ;;
++	*-*-phoenix*)
++	  tm_file="${tm_file} phoenix.h"
++	  ;;
+ 	*)
+ 	  if test "x${with_multilib_generator}" = xdefault; then
+ 		  case "x${enable_multilib}" in
+
