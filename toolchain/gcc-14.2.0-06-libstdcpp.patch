@@ -1,7 +1,7 @@
-diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configure
---- gcc-9.3.0-orig/libstdc++-v3/configure	2020-03-12 12:07:24.000000000 +0100
-+++ cc-9.3.0/libstdc++-v3/configure	2023-02-24 13:44:47.346288244 +0100
-@@ -899,6 +899,7 @@
+diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
+--- a/libstdc++-v3/configure
++++ b/libstdc++-v3/configure
+@@ -921,6 +921,7 @@ enable_largefile
  with_target_subdir
  with_cross_host
  with_newlib
@@ -9,7 +9,7 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
  enable_maintainer_mode
  enable_shared
  enable_static
-@@ -1653,6 +1654,7 @@
+@@ -1697,6 +1698,7 @@ Optional Packages:
                            configuring in a subdirectory
    --with-cross-host=HOST  configuring with a cross compiler
    --with-newlib           assume newlib as a system C library
@@ -17,7 +17,7 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
    --with-pic              try to use only PIC/non-PIC objects [default=use
                            both]
    --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
-@@ -5447,6 +5449,13 @@
+@@ -5571,6 +5573,13 @@ if test "${with_newlib+set}" = set; then :
  fi
  
  
@@ -31,7 +31,7 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
    # Will set LN_S to either 'ln -s', 'ln', or 'cp -p' (if linking isn't
    # available).  Uncomment the next line to force a particular method.
    { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ln -s works" >&5
-@@ -9070,6 +9079,30 @@
+@@ -9239,6 +9248,30 @@ $as_echo_n "checking for $compiler option to produce PIC... " >&6; }
      lt_prog_compiler_static='-static'
  
      case $host_os in
@@ -62,7 +62,7 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
        aix*)
        # All AIX code is PIC.
        if test "$host_cpu" = ia64; then
-@@ -9344,6 +9377,36 @@
+@@ -9513,6 +9546,36 @@ case $host_os in
    *djgpp*)
      lt_prog_compiler_pic=
      ;;
@@ -99,17 +99,17 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
    *)
      lt_prog_compiler_pic="$lt_prog_compiler_pic -DPIC"
      ;;
-@@ -11757,6 +11820,9 @@
+@@ -11987,6 +12050,9 @@ else
    lt_cv_dlopen_libs=
  
    case $host_os in
 +  phoenix*)
 +    ;;
-+  
++
    beos*)
      lt_cv_dlopen="load_add_on"
      lt_cv_dlopen_libs=
-@@ -13953,6 +14019,31 @@
+@@ -14235,6 +14301,31 @@ $as_echo_n "checking for $compiler option to produce PIC... " >&6; }
      lt_prog_compiler_static_CXX='-static'
  
      case $host_os in
@@ -141,7 +141,7 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
      aix*)
        # All AIX code is PIC.
        if test "$host_cpu" = ia64; then
-@@ -14263,6 +14354,36 @@
+@@ -14545,6 +14636,36 @@ case $host_os in
    *djgpp*)
      lt_prog_compiler_pic_CXX=
      ;;
@@ -178,13 +178,13 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
    *)
      lt_prog_compiler_pic_CXX="$lt_prog_compiler_pic_CXX -DPIC"
      ;;
-@@ -15466,6 +15587,13 @@
+@@ -15783,6 +15904,13 @@ if test "$enable_shared" = yes; then
    glibcxx_compiler_pic_flag="$lt_prog_compiler_pic_CXX"
    glibcxx_compiler_shared_flag="-D_GLIBCXX_SHARED"
  
 +elif test "$pic_mode" = yes; then
 +  # It was not possible to use pic without shared libraries in the default configure file
-+  # due to the above code. If the "shaded" option is not enabled, the selected 
++  # due to the above code. If the "shaded" option is not enabled, the selected
 +  # lt_prog_compiler_pic_CXX flags will not be propagated to makefiles.
 +
 +  glibcxx_lt_pic_flag="-prefer-pic"
@@ -192,7 +192,7 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
  else
    glibcxx_lt_pic_flag=
    glibcxx_compiler_pic_flag=
-@@ -28848,7 +28976,7 @@
+@@ -27336,7 +27464,7 @@ else
    # Construct crosses by hand, eliminating bits that need ld...
    # GLIBCXX_CHECK_MATH_SUPPORT
  
@@ -201,10 +201,10 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
    # on a hosted environment.
    if test "x${with_newlib}" = "xyes"; then
      os_include_dir="os/newlib"
-@@ -28908,6 +29036,61 @@
+@@ -28612,6 +28740,60 @@ _ACEOF
  
-     $as_echo "#define HAVE_MEMALIGN 1" >>confdefs.h
- 
+         ;;
+     esac
 +  elif test "x${with_libphoenix}" = "xyes"; then
 +    os_include_dir="os/generic"
 +    printf "%s\n" "#define HAVE_HYPOT 1" >>confdefs.h
@@ -257,9 +257,47 @@ diff -Naur gcc-9.3.0-orig/libstdc++-v3/configure gcc-9.3.0/libstdc++-v3/configur
 +    printf "%s\n" "#define HAVE_TANF 1" >>confdefs.h
 +
 +    printf "%s\n" "#define HAVE_TANHF 1" >>confdefs.h
-+    
-+    printf "%s\n" "#define HAVE_STRTOLD 1" >>confdefs.h
 +
-   else
++    printf "%s\n" "#define HAVE_STRTOLD 1" >>confdefs.h
+   elif test "x$with_headers" != "xno"; then
  
  # Base decisions on target environment.
+@@ -53875,6 +54057,9 @@ done
+      *) have_fcntl=yes ;;
+      esac
+   else
++    case "${host}" in
++      *-*-phoenix*) have_fcntl=yes ;;
++      *)
+     ac_fn_c_check_func "$LINENO" "fcntl" "ac_cv_func_fcntl"
+ if test "x$ac_cv_func_fcntl" = xyes; then :
+   have_fcntl=yes
+@@ -53882,6 +54067,8 @@ else
+   have_fcntl=no
+ fi
+ 
++      ;;
++    esac
+   fi
+   if test "$have_fcntl" = "yes"; then
+     BACKTRACE_CPPFLAGS="$BACKTRACE_CPPFLAGS -DHAVE_FCNTL=1"
+@@ -53906,6 +54093,9 @@ _ACEOF
+      *) have_getexecname=no ;;
+      esac
+   else
++    case "${host}" in
++      *-*-phoenix*) have_fcntl=yes ;;
++      *)
+     ac_fn_c_check_func "$LINENO" "getexecname" "ac_cv_func_getexecname"
+ if test "x$ac_cv_func_getexecname" = xyes; then :
+   have_getexecname=yes
+@@ -53913,6 +54103,8 @@ else
+   have_getexecname=no
+ fi
+ 
++      ;;
++    esac
+   fi
+   if test "$have_getexecname" = "yes"; then
+     BACKTRACE_CPPFLAGS="$BACKTRACE_CPPFLAGS -DHAVE_GETEXECNAME=1"
+

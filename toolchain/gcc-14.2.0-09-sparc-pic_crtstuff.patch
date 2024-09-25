@@ -1,0 +1,22 @@
+diff --git a/libgcc/config.host b/libgcc/config.host
+--- a/libgcc/config.host
++++ b/libgcc/config.host
+@@ -1488,6 +1488,7 @@ sparc-*-rtems*)
+ 	;;
+ sparc-*-phoenix*)
+ 	tmake_file="$tmake_file sparc/t-softmul t-fdpbit"
++	tmake_file="$tmake_file sparc/t-phoenix t-crtstuff-pic t-libgcc-pic"
+ 	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o"
+ 	;;
+ sparc*-*-solaris2*)
+diff --git a/libgcc/config/sparc/t-phoenix b/libgcc/config/sparc/t-phoenix
+new file mode 100644
+--- /dev/null
++++ b/libgcc/config/sparc/t-phoenix
+@@ -0,0 +1,5 @@
++# Phoenix-RTOS uses relocatable ELFs on NOMMU platforms
++# On SPARC without MMU -> build crtstuff with PIC
++ifneq (,$(findstring pic,$(CC)))
++	CRTSTUFF_T_CFLAGS = $(PICFLAG) -mcpu=leon3 -mno-pic-data-is-text-relative -mpic-register=g6
++endif
+
