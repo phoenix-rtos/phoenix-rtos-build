@@ -1,6 +1,7 @@
---- gcc-9.5.0/gcc/config/phoenix.h	2023-09-20 13:34:58.528162463 +0200
-+++ gcc-9.5.0.phoenix/gcc/config/phoenix.h	2023-09-20 11:15:19.083504061 +0200
-@@ -26,7 +26,9 @@
+diff --git a/gcc/config/phoenix.h b/gcc/config/phoenix.h
+--- a/gcc/config/phoenix.h
++++ b/gcc/config/phoenix.h
+@@ -26,7 +26,9 @@ along with GCC; see the file COPYING3.  If not see
        builtin_assert ("system=unix");      \
      } while (0)
  
@@ -11,3 +12,4 @@
  
  /* This will prevent selecting 'unsigned long int' instead of 'unsigned int' as 'uint32_t' in stdint-newlib.h. */
  #undef STDINT_LONG32
+
