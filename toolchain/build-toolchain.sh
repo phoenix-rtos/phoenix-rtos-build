@@ -62,10 +62,6 @@ if command -v "${TARGET}-gcc" > /dev/null; then
     exit 1
 fi
 
-# old legacy versions of the compiler:
-#BINUTILS=binutils-2.28
-#GCC=gcc-7.1.0
-
 BINUTILS=binutils-2.43
 GCC=gcc-14.2.0
 
@@ -140,6 +136,7 @@ build_gcc_stage1() {
     # --enable-initfini-array -> force init/fini array support instead of .init .fini sections
     # --disable-decimal-float -> not relevant for other than i386 and PowerPC
     # --disable-libquadmath -> not using fortran and quad floats
+    # --disable-tm-clone-registry -> no support for Transactional Memory
     # --enable-threads=posix -> enable POSIX threads
 
 
@@ -154,7 +151,8 @@ build_gcc_stage1() {
                  --disable-decimal-float \
                  --disable-libquadmath \
                  --disable-libssp --disable-nls \
-                 --enable-threads=posix
+                 --enable-threads=posix \
+                 --disable-tm-clone-registry
 
     make all-gcc
 
