@@ -224,7 +224,6 @@ build_libstdcpp() {
     # LIBSTDC++ compilation options
     # --host -> target is a host for libstdc++
     # --with-gxx-include-dir -> configure as a subdir of sysroot for c++ includes to work with external (out-of-toolchain) sysroot
-    # --with-libphoenix -> use libphoenix as standard C library
     # --enable-tls -> enable Thread Local Storage
     # --disable-nls ->  all compiler messages will be in english
     # --disable-shared -> disable building shared libraries [default=yes]
@@ -236,7 +235,6 @@ build_libstdcpp() {
                                     --host="${TARGET}" \
                                     --prefix="${SYSROOT}" \
                                     --with-gxx-include-dir="${SYSROOT}/include/c++" \
-                                    --with-libphoenix \
                                     --enable-tls \
                                     --disable-nls \
                                     --disable-shared \
