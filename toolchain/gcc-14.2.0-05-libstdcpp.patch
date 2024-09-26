@@ -1,37 +1,7 @@
 diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
 --- a/libstdc++-v3/configure
 +++ b/libstdc++-v3/configure
-@@ -921,6 +921,7 @@ enable_largefile
- with_target_subdir
- with_cross_host
- with_newlib
-+with_libphoenix
- enable_maintainer_mode
- enable_shared
- enable_static
-@@ -1697,6 +1698,7 @@ Optional Packages:
-                           configuring in a subdirectory
-   --with-cross-host=HOST  configuring with a cross compiler
-   --with-newlib           assume newlib as a system C library
-+  --with-libphoenix       assume libphoenix as a system C library
-   --with-pic              try to use only PIC/non-PIC objects [default=use
-                           both]
-   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
-@@ -5571,6 +5573,13 @@ if test "${with_newlib+set}" = set; then :
- fi
- 
- 
-+# Check whether --with-libphoenix was given.
-+if test ${with_libphoenix+y}
-+then :
-+  withval=$with_libphoenix;
-+fi
-+
-+
-   # Will set LN_S to either 'ln -s', 'ln', or 'cp -p' (if linking isn't
-   # available).  Uncomment the next line to force a particular method.
-   { $as_echo "$as_me:${as_lineno-$LINENO}: checking whether ln -s works" >&5
-@@ -9239,6 +9248,30 @@ $as_echo_n "checking for $compiler option to produce PIC... " >&6; }
+@@ -9239,6 +9239,30 @@ $as_echo_n "checking for $compiler option to produce PIC... " >&6; }
      lt_prog_compiler_static='-static'
  
      case $host_os in
@@ -62,7 +32,7 @@ diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
        aix*)
        # All AIX code is PIC.
        if test "$host_cpu" = ia64; then
-@@ -9513,6 +9546,36 @@ case $host_os in
+@@ -9513,6 +9537,36 @@ case $host_os in
    *djgpp*)
      lt_prog_compiler_pic=
      ;;
@@ -99,7 +69,7 @@ diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
    *)
      lt_prog_compiler_pic="$lt_prog_compiler_pic -DPIC"
      ;;
-@@ -11987,6 +12050,9 @@ else
+@@ -11987,6 +12041,9 @@ else
    lt_cv_dlopen_libs=
  
    case $host_os in
@@ -109,7 +79,7 @@ diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
    beos*)
      lt_cv_dlopen="load_add_on"
      lt_cv_dlopen_libs=
-@@ -14235,6 +14301,31 @@ $as_echo_n "checking for $compiler option to produce PIC... " >&6; }
+@@ -14235,6 +14292,31 @@ $as_echo_n "checking for $compiler option to produce PIC... " >&6; }
      lt_prog_compiler_static_CXX='-static'
  
      case $host_os in
@@ -141,7 +111,7 @@ diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
      aix*)
        # All AIX code is PIC.
        if test "$host_cpu" = ia64; then
-@@ -14545,6 +14636,36 @@ case $host_os in
+@@ -14545,6 +14627,36 @@ case $host_os in
    *djgpp*)
      lt_prog_compiler_pic_CXX=
      ;;
@@ -178,7 +148,7 @@ diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
    *)
      lt_prog_compiler_pic_CXX="$lt_prog_compiler_pic_CXX -DPIC"
      ;;
-@@ -15783,6 +15904,13 @@ if test "$enable_shared" = yes; then
+@@ -15783,6 +15895,13 @@ if test "$enable_shared" = yes; then
    glibcxx_compiler_pic_flag="$lt_prog_compiler_pic_CXX"
    glibcxx_compiler_shared_flag="-D_GLIBCXX_SHARED"
  
@@ -192,77 +162,69 @@ diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
  else
    glibcxx_lt_pic_flag=
    glibcxx_compiler_pic_flag=
-@@ -27336,7 +27464,7 @@ else
-   # Construct crosses by hand, eliminating bits that need ld...
-   # GLIBCXX_CHECK_MATH_SUPPORT
+@@ -50574,6 +50693,61 @@ _ACEOF
  
--  # First, test for "known" system libraries.  We may be using newlib even
-+  # First, test for "known" system libraries.  We may be using newlib or libphoenix even
-   # on a hosted environment.
-   if test "x${with_newlib}" = "xyes"; then
-     os_include_dir="os/newlib"
-@@ -28612,6 +28740,60 @@ _ACEOF
  
-         ;;
-     esac
-+  elif test "x${with_libphoenix}" = "xyes"; then
-+    os_include_dir="os/generic"
-+    printf "%s\n" "#define HAVE_HYPOT 1" >>confdefs.h
-+
-+
-+    # GLIBCXX_CHECK_STDLIB_SUPPORT
-+    printf "%s\n" "#define HAVE_STRTOF 1" >>confdefs.h
-+
-+
-+    printf "%s\n" "#define HAVE_ACOSF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_ASINF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_ATAN2F 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_ATANF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_CEILF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_COSF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_COSHF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_EXPF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_FABSF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_FLOORF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_FMODF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_FREXPF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_LDEXPF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_LOG10F 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_LOGF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_MODFF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_POWF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_SINF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_SINHF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_SQRTF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_TANF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_TANHF 1" >>confdefs.h
-+
-+    printf "%s\n" "#define HAVE_STRTOLD 1" >>confdefs.h
-   elif test "x$with_headers" != "xno"; then
  
- # Base decisions on target environment.
-@@ -53875,6 +54057,9 @@ done
++    ;;
++  *-phoenix*)
++      os_include_dir="os/generic"
++      printf "%s\n" "#define HAVE_HYPOT 1" >>confdefs.h
++
++
++      # GLIBCXX_CHECK_STDLIB_SUPPORT
++      printf "%s\n" "#define HAVE_STRTOF 1" >>confdefs.h
++
++
++      printf "%s\n" "#define HAVE_ACOSF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_ASINF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_ATAN2F 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_ATANF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_CEILF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_COSF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_COSHF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_EXPF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_FABSF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_FLOORF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_FMODF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_FREXPF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_LDEXPF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_LOG10F 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_LOGF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_MODFF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_POWF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_SINF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_SINHF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_SQRTF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_TANF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_TANHF 1" >>confdefs.h
++
++      printf "%s\n" "#define HAVE_STRTOLD 1" >>confdefs.h
+     ;;
+   *)
+     as_fn_error $? "No support for this host/target combination." "$LINENO" 5
+@@ -53875,6 +54049,9 @@ done
       *) have_fcntl=yes ;;
       esac
    else
@@ -272,7 +234,7 @@ diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
      ac_fn_c_check_func "$LINENO" "fcntl" "ac_cv_func_fcntl"
  if test "x$ac_cv_func_fcntl" = xyes; then :
    have_fcntl=yes
-@@ -53882,6 +54067,8 @@ else
+@@ -53882,6 +54059,8 @@ else
    have_fcntl=no
  fi
  
@@ -281,7 +243,7 @@ diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
    fi
    if test "$have_fcntl" = "yes"; then
      BACKTRACE_CPPFLAGS="$BACKTRACE_CPPFLAGS -DHAVE_FCNTL=1"
-@@ -53906,6 +54093,9 @@ _ACEOF
+@@ -53906,6 +54085,9 @@ _ACEOF
       *) have_getexecname=no ;;
       esac
    else
@@ -291,7 +253,7 @@ diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
      ac_fn_c_check_func "$LINENO" "getexecname" "ac_cv_func_getexecname"
  if test "x$ac_cv_func_getexecname" = xyes; then :
    have_getexecname=yes
-@@ -53913,6 +54103,8 @@ else
+@@ -53913,6 +54095,8 @@ else
    have_getexecname=no
  fi
  
