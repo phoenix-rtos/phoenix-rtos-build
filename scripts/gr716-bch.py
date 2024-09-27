@@ -21,7 +21,8 @@ def parse_args():
     )
     parser.add_argument("input", help="file to convert")
     parser.add_argument("output", help="output file")
-    parser.add_argument("-s", "--size", help="size of the flash memory (default 16 MiB)")
+    parser.add_argument("-s", "--size", type=int, default=(16*1024*1024),
+                        help="size of the flash memory in bytes (default %(default)s)")
     return parser.parse_args()
 
 
@@ -60,11 +61,6 @@ def generate_bch(data: bytearray):
 
 def main():
     args = parse_args()
-    try:
-        size = int(args.size) if args.size else 16 * 1024 * 1024
-    except:
-        print(f'Error: invalid size "{args.size}"')
-        exit(1)
 
     validate_file(args.input)
 
@@ -83,7 +79,7 @@ def main():
         f.write(bch)
 
     print(f"Generated BCH of {args.input} to {args.output}")
-    print(f"{BOLD}{GREEN}Please load the BCH file to the SPI flash at offset {hex(size - len(bch))}{NORMAL}")
+    print(f"{BOLD}{GREEN}Please load the BCH file to the SPI flash at offset {args.size - len(bch):#x}{NORMAL}")
 
 
 if __name__ == "__main__":
