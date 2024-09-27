@@ -200,7 +200,7 @@ fi
 if [ "${B_HOST}" = "y" ]; then
 	if [ "$TARGET" != "$_TARGET_FOR_HOST_BUILD" ]; then
 		# if not already building for host - re-exec with clean env
-		(env "$ORIG_ENV" TARGET=$_TARGET_FOR_HOST_BUILD ./phoenix-rtos-build/build.sh host)
+		(env "$ORIG_ENV" NOSAN=1 TARGET=$_TARGET_FOR_HOST_BUILD ./phoenix-rtos-build/build.sh host)
 	else
 		source ./phoenix-rtos-build/build-host-tools.sh
 	fi
