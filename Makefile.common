@@ -127,6 +127,11 @@ CFLAGS += -Wall -Wstrict-prototypes -fno-common
 CXXFLAGS += -Wall
 LDFLAGS += -z noexecstack
 
+# Messages are commonly type-punned - avoid GCC optimizations that might break if strict aliasing rules are not adhered to.
+# TODO: Try to minimize surface of code breaking the strict aliasing.
+CFLAGS += -fno-strict-aliasing
+CXXFLAGS += -fno-strict-aliasing
+
 # always produce binaries with debug information
 CFLAGS += -ggdb3
 CXXFLAGS += -ggdb3
