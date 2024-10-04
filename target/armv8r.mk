@@ -49,3 +49,4 @@ OBJCOPY := $(CROSS)objcopy
 OBJDUMP := $(CROSS)objdump
 
 HAVE_MMU := n
+HAVE_SHLIB := n
