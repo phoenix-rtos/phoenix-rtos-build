@@ -24,3 +24,9 @@ ifeq ($(HAVE_MMU), n)
     $(error "KERNEL_PHADDR is not set for NOMMU target, please check project configuration")
   endif
 endif
+
+ifeq ($(HAVE_SHLIB), n)
+  ifeq ($(LIBPHOENIX_SHARED), y)
+    $(error "LIBPHOENIX_SHARED is set for target without shared lib support, please check project configuration")
+  endif
+endif
