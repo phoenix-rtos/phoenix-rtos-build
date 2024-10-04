@@ -20,6 +20,9 @@
 #
 # - LOCAL_INSTALL_PATH - custom rootfs dir for the shared library to be installed (if not provided - DEFAULT_INSTALL_PATH_SO)
 
+ifeq (${HAVE_SHLIB},n)
+  $(warning "shared-lib.mk called on target not supporting shared libraries!")
+endif
 
 # directory with current Makefile - relative to the repository root
 # filter-out all Makefiles outside of TOPDIR

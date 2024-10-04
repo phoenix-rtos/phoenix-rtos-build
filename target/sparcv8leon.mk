@@ -41,6 +41,7 @@ ifeq ($(TARGET_SUBFAMILY), gr716)
   endif
 
   HAVE_MMU := n
+  HAVE_SHLIB := n
 
 else ifeq ($(TARGET_SUBFAMILY), gr712rc)
   ifeq ($(KERNEL), 1)
@@ -56,6 +57,7 @@ else ifeq ($(TARGET_SUBFAMILY), gr712rc)
   LIBPHOENIX_SHARED ?= n
 
   HAVE_MMU := y
+  HAVE_SHLIB := n
 else ifeq ($(TARGET_SUBFAMILY), generic)
   ifeq ($(KERNEL), 1)
     # `mno-user-mode` flag affects only `casa` instruction
@@ -72,6 +74,7 @@ else ifeq ($(TARGET_SUBFAMILY), generic)
   LIBPHOENIX_SHARED ?= n
 
   HAVE_MMU := y
+  HAVE_SHLIB := n
 
 else ifeq ($(TARGET_SUBFAMILY), gr740)
   ifeq ($(KERNEL), 1)
@@ -85,7 +88,7 @@ else ifeq ($(TARGET_SUBFAMILY), gr740)
   LIBPHOENIX_SHARED ?= n
 
   HAVE_MMU := y
-
+  HAVE_SHLIB := n
 else
   $(error Incorrect TARGET.)
 endif
