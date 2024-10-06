@@ -25,6 +25,9 @@ LDFLAGS_PREFIX := -Wl,
 
 LDFLAGS :=
 
+TARGET_PIC_FLAG = -fpic
+TARGET_PIE_FLAG = -fpie
+
 OBJCOPY := $(CROSS)objcopy
 OBJDUMP := $(CROSS)objdump
 
@@ -33,4 +36,9 @@ STRIP := $(CROSS)strip
 VADDR_KERNEL_BASE := 0xc0000000
 VADDR_KERNEL_INIT := $(shell printf "0x%x" $$(($(VADDR_KERNEL_BASE) + 0x110000)))
 
+
+LIBPHOENIX_PIC ?= y
+LIBPHOENIX_SHARED ?= y
+
 HAVE_MMU := y
+HAVE_SHLIB := y

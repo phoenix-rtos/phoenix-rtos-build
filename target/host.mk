@@ -20,6 +20,9 @@ ARFLAGS := -r
 LD := $(CROSS)gcc
 LDFLAGS_PREFIX := -Wl,
 
+TARGET_PIC_FLAG = -fpic
+TARGET_PIE_FLAG = -fpie
+
 OBJCOPY := $(CROSS)objcopy
 OBJDUMP := $(CROSS)objdump
 STRIP := $(CROSS)strip
