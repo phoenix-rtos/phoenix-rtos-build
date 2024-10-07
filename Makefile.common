@@ -105,6 +105,10 @@ ifeq ($(HAVE_MMU), n)
   CPPFLAGS += -DNOMMU
 endif
 
+ifeq ($(TARGET_PROJECT), qemu)
+  CPPFLAGS += -DEMULATED
+endif
+
 # remove local dev path from macros
 CFLAGS += -fmacro-prefix-map=$(dir $(TOPDIR))=
 CXXFLAGS += -fmacro-prefix-map=$(dir $(TOPDIR))=
