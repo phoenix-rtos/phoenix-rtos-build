@@ -73,7 +73,8 @@ endif
 $(OBJS.$(NAME)): CFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CFLAGS) $(LOCAL_CFLAGS) $(TARGET_PIC_FLAG)
 $(OBJS.$(NAME)): CXXFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CXXFLAGS) $(LOCAL_CXXFLAGS) $(TARGET_PIC_FLAG)
 
-$(PREFIX_SO)$(NAME).so: LDFLAGS:=$(LDFLAGS) $(SHARED_LIB_LD_FLAGS) $(LOCAL_LDFLAGS)
+_LDFLAGS := $(filter-out $(LDFLAGS_PREFIX)--version-script="$(hide.map)" , $(LDFLAGS))
+$(PREFIX_SO)$(NAME).so: LDFLAGS:=$(_LDFLAGS) $(SHARED_LIB_LD_FLAGS) $(LOCAL_LDFLAGS)
 $(PREFIX_SO)$(NAME).so: LDLIBS:=$(LDLIBS) $(LOCAL_LDLIBS)
 
 # dynamically generated dependencies (file-to-file dependencies)

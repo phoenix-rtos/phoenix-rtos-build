@@ -31,10 +31,14 @@ ifeq ($(KERNEL), 1)
   LDFLAGS += -Tbss=10014000 -Tdata=10014000
   STRIP := $(CROSS)strip
 else
-  CFLAGS += $(TARGET_PIC_FLAG) $(TARGET_PIE_FLAG) -msingle-pic-base -mno-pic-data-is-text-relative
-  # output .rel.* sections to make ELF position-independent
-  LDFLAGS += -Wl,-q
-  STRIP := $(PREFIX_PROJECT)/phoenix-rtos-build/scripts/strip.py $(CROSS)strip --strip-unneeded -R .rel.text
+  CFLAGS += $(TARGET_PIE_FLAG) -fpic -mfdpic -Wa,--fdpic
+  # NOTE: without -static-pie a .rofixup section is generated and text relocations are required.
+  TARGET_STATIC_FLAG := -static-pie
+  # NOTE: version script needed as without it GCC generates FUNCTION_DESCRIPTOR relocations in static binaries which are nonsense
+  # FIXME: -static-libgcc neeeded due to bad compilation of shared libgcc
+  #        bad compilation stems from the fact that we do not have real multilib on ARM.
+  LDFLAGS += -Wl,--version-script="$(hide.map)" -pie -Wl,-marmelf_phoenix_fdpiceabi
+  STRIP := $(CROSS)strip
 endif
 
 CXXFLAGS := $(CFLAGS)
@@ -49,4 +53,6 @@ OBJCOPY := $(CROSS)objcopy
 OBJDUMP := $(CROSS)objdump
 
 HAVE_MMU := n
-HAVE_SHLIB := n
+HAVE_SHLIB := y
+LIBPHOENIX_PIC := y
+LIBPHOENIX_SHARED := y

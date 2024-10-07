@@ -50,7 +50,8 @@ $(OBJS.$(NAME)): | $(DEPS)
 ifneq ($(DYNAMIC_BINARY), y)
 # FIXME: remove once hostutils use binary-dyn.mk
 ifneq ($(TARGET_FAMILY), host)
-LOCAL_LDFLAGS += -static
+TARGET_STATIC_FLAG ?= -static
+LOCAL_LDFLAGS += $(TARGET_STATIC_FLAG)
 endif
 endif
 
