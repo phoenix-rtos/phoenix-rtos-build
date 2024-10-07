@@ -63,6 +63,8 @@ ALL_COMPONENTS :=
 PREFIX_FS ?= $(abspath $(CURDIR)/../_fs/$(TARGET))
 PREFIX_ROOTFS ?= $(PREFIX_FS)/root/
 
+hide.map := $(MAKES_PATH)/hide.map
+
 # Check TARGET, set TARGET_SUFF and include target building options
 include $(MAKES_PATH)/include-target.mk
 

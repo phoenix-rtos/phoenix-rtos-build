@@ -35,10 +35,11 @@ ifeq ($(KERNEL), 1)
   LDFLAGS += -Tbss=20000000 -Tdata=20000000
   STRIP := $(CROSS)strip
 else
-  CFLAGS += $(TARGET_PIC_FLAG) $(TARGET_PIE_FLAG) -msingle-pic-base -mno-pic-data-is-text-relative
-  # output .rel.* sections to make ELF position-independent
-  LDFLAGS += -Wl,-q
-  STRIP := $(PREFIX_PROJECT)/phoenix-rtos-build/scripts/strip.py $(CROSS)strip --strip-unneeded -R .rel.text
+  # NOTE: More information about this flags can be found in armv8r.mk
+  CFLAGS += $(TARGET_PIE_FLAG) -fpic -mfdpic -Wa,--fdpic
+  TARGET_STATIC_FLAG := -static-pie
+  LDFLAGS += -Wl,--version-script="$(hide.map)" -pie -Wl,-marmelf_phoenix_fdpiceabi
+  STRIP := $(CROSS)strip
 endif
 
 CXXFLAGS := $(CFLAGS)
