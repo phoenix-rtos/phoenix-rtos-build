@@ -1,0 +1,30 @@
+diff --git a/libgcc/config.host b/libgcc/config.host
+--- a/libgcc/config.host
++++ b/libgcc/config.host
+@@ -556,6 +556,7 @@ arm*-*-uclinux*)		# ARM ucLinux
+ arm*-*-phoenix*)
+ 	tmake_file="t-hardfp t-softfp arm/t-arm arm/t-elf arm/t-softfp arm/t-phoenix"
+ 	tmake_file="${tmake_file} arm/t-bpabi"
++	tmake_file="${tmake_file} t-crtstuff-pic t-libgcc-pic"
+ 	tm_file="$tm_file arm/bpabi-lib.h"
+ 	extra_parts="crtbegin.o crtend.o crti.o crtn.o"
+ 	unwind_header=config/arm/unwind-arm.h
+diff --git a/libgcc/config/arm/t-phoenix b/libgcc/config/arm/t-phoenix
+new file mode 100644
+--- /dev/null
++++ b/libgcc/config/arm/t-phoenix
+@@ -0,0 +1,13 @@
++# PhoenixRTOS uses relocatable ELFs on NOMMU platforms
++# if this is ARM Cortex-M/R subvariant -> build libgcc/crtstuff with PIC
++# ALSO: ensure data is not interwined with .text, otherwise running XIP programs would fail
++
++# NOTE: the `-march` parameter would either be in CC or in CFLAGS depending on how the make will be called
++PS_MARCH := $(patsubst -march=%,%,$(filter -march=arm%, $(CC) $(CFLAGS)))
++PS_IS_CORTEX_M := $(findstring -m,$(PS_MARCH))
++PS_IS_CORTEX_R := $(findstring -r,$(PS_MARCH))
++
++ifneq ($(PS_IS_CORTEX_M)$(PS_IS_CORTEX_R),)
++  CRTSTUFF_T_CFLAGS = $(PICFLAG) -mno-pic-data-is-text-relative
++  INTERNAL_CFLAGS += $(PICFLAG) -mno-pic-data-is-text-relative
++endif
+
