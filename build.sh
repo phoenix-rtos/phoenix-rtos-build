@@ -214,6 +214,10 @@ for tool in "${HOSTUTILS[@]}"; do
 	[ -e "$toolfile" ] && cp -a "$toolfile" "$PREFIX_BOOT"
 done
 
+# use per-project compile_commands.json compilation database
+COMPILE_DB_FNAME="compile_commands.json"
+ln -sf "$PREFIX_BUILD/$COMPILE_DB_FNAME" "$COMPILE_DB_FNAME"
+
 #
 # Build core part
 #
