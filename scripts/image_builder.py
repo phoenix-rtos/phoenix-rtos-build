@@ -40,9 +40,19 @@ class ProgInfo:
     path: Path
     offs: int
     size: int
+    max_size: int = 0  # if != 0 -> we have dest restriction about size, check/report it!
+
+    def __post_init__(self):
+        if self.max_size != 0:
+            if self.size > self.max_size:
+                raise ValueError(f"{str(self.path)} size: {self.size} exceeds max_size {self.max_size}")
 
     def __str__(self) -> str:
-        return f"{str(self.path.name):30s} (offs={self.offs:#10x}, size={self.size:#8x})"
+        if self.max_size != 0:
+            size_str = f"size={self.size:#8x} / {self.max_size:#8x} {100 * self.size // self.max_size}%"
+        else:
+            size_str = f"size={self.size:#8x}"
+        return f"{str(self.path.name):30s} (offs={self.offs:#10x}, {size_str})"
 
 
 def round_up(size: int, size_page: int) -> int:
@@ -475,25 +485,28 @@ def parse_plo_script(nvm: List[FlashMemory], script_name: str) -> PloScript:
 
         tpl_context = {'nvm': nvm_dict, 'script': script}
         for cmd in script_dict['contents']:
-            if isinstance(cmd, str):
-                cmd_rendered = render_val(cmd, **tpl_context)
-                cmddef = PloCmdFactory.build(cmd_rendered)
-            else:
-                # render all values
-                args = {k: render_val(v, **tpl_context) for k, v in cmd.items()}
-                enabled = args.pop('if', True)
-                if not str2bool(enabled):
-                    logging.debug("PLO command disabled (if: '%s'): %s", enabled, str(args))
-                    continue
-
-                if 'str' in args:
-                    # command still as string, just conditional
-                    cmddef = PloCmdFactory.build(args["str"])
+            try:
+                if isinstance(cmd, str):
+                    cmd_rendered = render_val(cmd, **tpl_context)
+                    cmddef = PloCmdFactory.build(cmd_rendered)
                 else:
-                    # treat all dict elements as keyword arguments
-                    cmddef = PloCmdFactory.build(**args)
+                    # render all values
+                    args = {k: render_val(v, **tpl_context) for k, v in cmd.items()}
+                    enabled = args.pop('if', True)
+                    if not str2bool(enabled):
+                        logging.debug("PLO command disabled (if: '%s'): %s", enabled, str(args))
+                        continue
 
-            script.contents.append(cmddef)
+                    if 'str' in args:
+                        # command still as string, just conditional
+                        cmddef = PloCmdFactory.build(args["str"])
+                    else:
+                        # treat all dict elements as keyword arguments
+                        cmddef = PloCmdFactory.build(**args)
+
+                script.contents.append(cmddef)
+            except Exception as ex:
+                raise ValueError(f"Failed to parse PLO CMD: {cmd}") from ex
 
         return script
 
@@ -517,8 +530,7 @@ def write_plo_script(nvm: List[FlashMemory],
     with open(path, "w", encoding="ascii") as f:
         progs = plo_script.write(f, enc)
 
-    # TODO: what about plo_script.size?
-    progs = [ProgInfo(path, plo_script.offs, os.path.getsize(path))] + progs
+    progs = [ProgInfo(path, plo_script.offs, os.path.getsize(path), max_size=plo_script.size)] + progs
     return progs
 
 
@@ -786,7 +798,7 @@ def main() -> int:
                 if part.virtual and not os.path.exists(part_img):
                     continue
 
-                progs.append(ProgInfo(part_img, part.offs, os.path.getsize(part_img)))
+                progs.append(ProgInfo(part_img, part.offs, os.path.getsize(part_img), max_size=part.size))
 
             disk_path = PREFIX_BOOT / f"{flash.name}.disk"
             if args.out_name:

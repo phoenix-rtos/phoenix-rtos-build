@@ -154,7 +154,6 @@ def read_nvm(fname: str) -> List[FlashMemory]:
 
             logging.debug(f)
             f.validate()
-            logging.debug(f)
             nvm.append(f)
 
     return nvm
