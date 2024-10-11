@@ -35,9 +35,9 @@ ifeq ($(KERNEL), 1)
   LDFLAGS += -Tbss=20000000 -Tdata=20000000
   STRIP := $(CROSS)strip
 else
-  CFLAGS += $(TARGET_PIC_FLAG) $(TARGET_PIE_FLAG) -mfdpic -Wa,--fdpic -Wl,-marmelf_phoenix_fdpiceabi
+  CFLAGS += $(TARGET_PIE_FLAG) -mfdpic -Wa,--fdpic -Wl,-marmelf_phoenix_fdpiceabi
   # output .rel.* sections to make ELF position-independent
-  LDFLAGS += -Wl,-q
+  LDFLAGS += -Wl,-q -static-pie
   STRIP := $(PREFIX_PROJECT)/phoenix-rtos-build/scripts/strip.py $(CROSS)strip --strip-unneeded -R .rel.text
 endif
 

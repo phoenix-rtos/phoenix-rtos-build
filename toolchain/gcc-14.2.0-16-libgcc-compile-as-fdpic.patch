@@ -7,8 +7,8 @@ diff --git a/libgcc/config/arm/t-phoenix b/libgcc/config/arm/t-phoenix
  ifneq ($(PS_IS_CORTEX_M)$(PS_IS_CORTEX_R),)
 -  CRTSTUFF_T_CFLAGS = $(PICFLAG) -mno-pic-data-is-text-relative
 -  INTERNAL_CFLAGS += $(PICFLAG) -mno-pic-data-is-text-relative
-+  CRTSTUFF_T_CFLAGS = $(PICFLAG) -mfdpic -Wa,--fdpic -Wl,-marmelf_phoenix_fdpiceabi
-+  INTERNAL_CFLAGS += $(PICFLAG) -mfdpic -Wa,--fdpic -Wl,-marmelf_phoenix_fdpiceabi
++  CRTSTUFF_T_CFLAGS = $(PICFLAG) -fPIE -mfdpic -Wa,--fdpic -Wl,-marmelf_phoenix_fdpiceabi
++  INTERNAL_CFLAGS += $(PICFLAG) -fPIE -mfdpic -Wa,--fdpic -Wl,-marmelf_phoenix_fdpiceabi
  endif
 diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
 --- a/libstdc++-v3/configure
