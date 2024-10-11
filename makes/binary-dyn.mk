@@ -19,7 +19,10 @@ LOCAL_LDLIBS += $(RESOLVED_LIBS_SHARED)
 
 DYNAMIC_BINARY := y
 
+LDFLAGS_SHARED := $(LDFLAGS)
+LDFLAGS := $(filter-out $(LDFLAGS_PREFIX)--version-script="$(hide.map)" , $(LDFLAGS))
 include $(binary.mk)
+LDFLAGS := $(LDFLAGS_SHARED)
 
 DEP_LIBS_SHARED :=
 LIBS_SHARED :=

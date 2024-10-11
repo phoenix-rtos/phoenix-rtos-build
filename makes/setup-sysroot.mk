@@ -28,7 +28,7 @@ ifneq ($(PREFIX_SYSROOT),)
 # WARN: assuming there are no multilib c++ headers
 $(_SYSROOT_STAMPFILE):
 	@mkdir -p $(PREFIX_SYSROOT)/include
-	$(SIL)cp -a "$$($(CC) -print-sysroot)/include/c++" "$(PREFIX_SYSROOT)/include/"
+	# $(SIL)cp -a "$$($(CC) -print-sysroot)/include/c++" "$(PREFIX_SYSROOT)/include/"
 	$(SIL)cp -a $(shell $(CC) -E -Wp,-v -x c /dev/null 2>&1 | awk '!/ignoring/ && /include-fixed/ {print $0}') "$(PREFIX_SYSROOT)"
 	@touch $@
 

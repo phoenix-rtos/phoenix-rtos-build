@@ -55,11 +55,11 @@ if [[ -v CC || -v CFLAGS || -v LIBS || -v CPPFLAGS || -v CXX || -v CXXFLAGS || -
     exit 1
 fi
 
-if command -v "${TARGET}-gcc" > /dev/null; then
-    echo "Command \"${TARGET}-gcc\" found in PATH. Abort."
-    echo "Make sure to to remove existing toolchain from PATH"
-    exit 1
-fi
+# if command -v "${TARGET}-gcc" > /dev/null; then
+#     echo "Command \"${TARGET}-gcc\" found in PATH. Abort."
+#     echo "Make sure to to remove existing toolchain from PATH"
+#     exit 1
+# fi
 
 BINUTILS=binutils-2.43
 GCC=gcc-14.2.0
@@ -310,12 +310,12 @@ strip_binaries() {
 
 # comment out some parts if You need "incremental build" for testing
 
-download
-build_binutils
-build_gcc_stage1
+# download
+# build_binutils
+# build_gcc_stage1
 
-build_libc
-build_gcc_stage2
+# build_libc
+# build_gcc_stage2
 
 build_libstdcpp
 
