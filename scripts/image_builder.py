@@ -279,7 +279,7 @@ class CmdAppFlags(IntEnum):
 class PloCmdApp(PloCmdBase):
     """Support for app/blob command:
         app <device> [-x|-xn] <filename[;args]> <text_map> <data_map[;extra_maps]>
-        blob <device> </rootfs/path> <text_map> <data_map>
+        blob <device> </rootfs/path> <data_map>
         app flash0 -x psh;-i;/etc/rc.psh ddr ddr
     """
     NAME: ClassVar = "app"
@@ -333,20 +333,30 @@ class PloCmdApp(PloCmdBase):
 
         self.size = os.path.getsize(self.abspath)
 
-        # TODO: add parsing maps?
-        for req_val_name in ("filename", "text_map", "data_maps"):
+        # HACKISH: blob cmd - treat 'text_map' as data map to support specifying by string
+        if self.name == "blob" and not self.data_maps and self.text_map:
+            self.data_maps = self.text_map
+            self.text_map = ""
+
+        required_attrs = ["filename", "data_maps"]
+        if self.name == "app":
+            required_attrs.append("text_map")
+
+        for req_val_name in required_attrs:
             if not asdict(self).get(req_val_name):
                 raise TypeError(f"Required attribute '{req_val_name}' not present/empty")
 
     def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
         alias = PloCmdAlias(self.filename, self.size)
         new_offs, prog_info = alias.emit(file, enc, payload_offs, is_relative)
+        prog_info.path = self.abspath
 
         if enc == PloScriptEncoding.DEBUG_ASDICT:
             file.write(str(asdict(self)) + "\n")
         elif enc == PloScriptEncoding.STRING_MAGIC_V1:
+            maps_str = f"{self.text_map} {self.data_maps}".strip()  # remove extra spaces if `text_map` is not used (blob cmd)
             file.write(f"{self.name} {self.device}{self.flags.emit_as_string()} "
-                       f"{';'.join([self.filename, *self.args])} {self.text_map} {self.data_maps}\n")
+                       f"{';'.join([self.filename, *self.args])} {maps_str}\n")
         else:
             raise NotImplementedError(f"PloScriptEncoding {enc.value} not implemented")
 
