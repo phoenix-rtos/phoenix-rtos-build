@@ -114,8 +114,8 @@ def round_up(size: int, size_page: int) -> int:
 def read_nvm(fname: str) -> List[FlashMemory]:
     """reads full Non-Volatile Memory layout from a file {fname}"""
     nvm = []
-    with open(fname, "r", encoding="utf-8") as f:
-        nvm_dict = yaml.safe_load(f)
+    with open(fname, "r", encoding="utf-8") as fin:
+        nvm_dict = yaml.safe_load(fin)
         # TODO: validate against JSON template?
 
         for (name, attrs) in nvm_dict.items():

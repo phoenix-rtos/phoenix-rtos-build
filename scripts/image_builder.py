@@ -187,7 +187,7 @@ class PloCmdAlias(PloCmdBase):
     size: int                   # target alias size
     set_base: bool = False      # should we set new base before aliasing?
 
-    def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
+    def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, ProgInfo]:
         if enc == PloScriptEncoding.DEBUG_ASDICT:
             file.write(str(asdict(self)) + "\n")
         elif enc == PloScriptEncoding.STRING_MAGIC_V1:
@@ -324,6 +324,9 @@ class PloCmdApp(PloCmdBase):
 
         if isinstance(self.args, str):
             self.args = self.args.split(";")
+
+        # remove empty strings from self.args (easier handling of jinja2 conditional params)
+        self.args = list(filter(None, self.args))
 
         # filename can be either relative to PROG_STRIPPED or absolute (in ROOTFS)
         self.filename, self.abspath = self._resolve_filename(self.filename)
@@ -563,9 +566,9 @@ def add_to_image(fout: BinaryIO, offset: int, fpath: Union[str, Path], padding_b
 
     CHUNK_SIZE = 512
     written = 0
-    with open(fpath, "rb") as fIn:
+    with open(fpath, "rb") as fin:
         while True:
-            data = fIn.read(CHUNK_SIZE)
+            data = fin.read(CHUNK_SIZE)
             written += fout.write(data)
             if len(data) != CHUNK_SIZE:
                 break
@@ -765,7 +768,7 @@ def main() -> int:
 
     if args.cmd == "disk":
         # support `--part` overrides in format: `[flash_name:]part_name=img_path`
-        overrides = defaultdict(dict)
+        overrides: Dict[str, Dict[str, str]] = defaultdict(dict)
         if args.part:
             for pdef in args.part:
                 part_name, img_path = pdef.split("=")
