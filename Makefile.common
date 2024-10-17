@@ -133,6 +133,7 @@ EXPORT_LDFLAGS := $(LDFLAGS)
 CFLAGS += -Wall -Wstrict-prototypes -fno-common
 CXXFLAGS += -Wall
 LDFLAGS += -z noexecstack
+CFLAGS += -Wa,--noexecstack
 
 # Messages are commonly type-punned - avoid GCC optimizations that might break if strict aliasing rules are not adhered to.
 # TODO: Try to minimize surface of code breaking the strict aliasing.
