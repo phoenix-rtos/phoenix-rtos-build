@@ -133,6 +133,10 @@ class PloCmdFactory:
 
         # TODO: add compile-time checks for scripts validity (eg. memory regions cross-check)?
 
+        # allow passing commands directly without parsing them by using `%` prefix
+        if cmd.startswith("%"):
+            return PloCmdGeneric(cmd[1:].strip())
+
         # generic PLO command - treated for now as string
         return PloCmdGeneric(cmd)
 
