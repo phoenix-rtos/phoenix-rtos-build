@@ -393,7 +393,8 @@ class PloCmdCall(PloCmdBase):
             self.absolute = True
 
         # change str->desired type TODO: use decorators?
-        self.offset = int(self.offset, 0)
+        if isinstance(self.offset, str):
+            self.offset = int(self.offset, 0)
 
         self.size = 0x1000  # FIXME: get real defined script size
 
