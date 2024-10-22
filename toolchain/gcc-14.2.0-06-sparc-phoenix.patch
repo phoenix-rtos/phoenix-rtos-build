@@ -1,0 +1,49 @@
+diff --git a/gcc/config.gcc b/gcc/config.gcc
+--- a/gcc/config.gcc
++++ b/gcc/config.gcc
+@@ -3446,6 +3446,10 @@ sparc-*-rtems*)
+ 	tm_file="${tm_file} elfos.h sparc/sysv4.h sparc/sp-elf.h sparc/rtemself.h rtems.h newlib-stdint.h"
+ 	tmake_file="${tmake_file} sparc/t-sparc sparc/t-rtems"
+ 	;;
++sparc-*-phoenix*)
++	tm_file="${tm_file} elfos.h sparc/sysv4.h sparc/sp-elf.h phoenix.h newlib-stdint.h"
++	tmake_file="${tmake_file} sparc/t-sparc sparc/t-phoenix"
++	;;
+ sparc-*-linux*)
+ 	tm_file="${tm_file} elfos.h sparc/sysv4.h gnu-user.h linux.h glibc-stdint.h sparc/tso.h"
+ 	extra_options="${extra_options} sparc/long-double-switch.opt"
+diff --git a/gcc/config/sparc/t-phoenix b/gcc/config/sparc/t-phoenix
+new file mode 100644
+--- /dev/null
++++ b/gcc/config/sparc/t-phoenix
+@@ -0,0 +1,14 @@
++MULTILIB_OPTIONS = mcpu=leon3 msoft-float mfix-gr712rc fPIC mno-pic-data-is-text-relative mpic-register=g6
++MULTILIB_DIRNAMES = leon3 soft gr712rc pic no-pditr pic-reg-g6
++MULTILIB_MATCHES = msoft-float=mno-fpu fPIC=fpic fPIC=fPIE fPIC=fpie
++
++MULTILIB_REQUIRED =
++# GR712RC
++MULTILIB_REQUIRED += mcpu=leon3/mfix-gr712rc
++MULTILIB_REQUIRED += mcpu=leon3/msoft-float/mfix-gr712rc
++# LEON3 no MMU (pic/pie) - GR716 apps
++MULTILIB_REQUIRED += mcpu=leon3/fPIC/mno-pic-data-is-text-relative/mpic-register=g6
++MULTILIB_REQUIRED += mcpu=leon3/msoft-float/fPIC/mno-pic-data-is-text-relative/mpic-register=g6
++# LEON3 no pic/pie
++MULTILIB_REQUIRED += mcpu=leon3
++MULTILIB_REQUIRED += mcpu=leon3/msoft-float
+diff --git a/libgcc/config.host b/libgcc/config.host
+index 213c07f106a..d4e893d918e 100644
+--- a/libgcc/config.host
++++ b/libgcc/config.host
+@@ -1486,6 +1486,10 @@ sparc-*-rtems*)
+ 	tmake_file="$tmake_file sparc/t-elf sparc/t-softmul t-crtfm t-fdpbit"
+ 	extra_parts="$extra_parts crti.o crtn.o crtfastmath.o"
+ 	;;
++sparc-*-phoenix*)
++	tmake_file="$tmake_file sparc/t-softmul t-fdpbit"
++	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o"
++	;;
+ sparc*-*-solaris2*)
+ 	tmake_file="$tmake_file t-crtfm"
+ 	extra_parts="$extra_parts crtfastmath.o"
+
