@@ -87,8 +87,10 @@ endif
 
 # Do not warn about RWX segments.
 # binutils >= 2.39 required
-LD_VERSION_MINOR := $(shell $(LD) $(LDFLAGS_PREFIX)--version 2> /dev/null | grep -Eo "[0-9][0-9]$$")
-ifeq ($(shell expr $(LD_VERSION_MINOR) ">=" 39), 1)
+LD_VERSION_MINOR := $(shell $(LD) $(LDFLAGS_PREFIX)--version 2> /dev/null | grep -Eo "\b2\.[0-9]*" | cut -d . -f 2)
+ifeq ($(LD_VERSION_MINOR),)
+$(error Can't parse LD version!)
+else ifeq ($(shell expr $(LD_VERSION_MINOR) ">=" 39), 1)
 LDFLAGS += $(LDFLAGS_PREFIX)--no-warn-rwx-segments
 endif
 
