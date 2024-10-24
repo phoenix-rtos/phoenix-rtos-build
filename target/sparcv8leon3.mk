@@ -18,6 +18,9 @@ CFLAGS += -mcpu=leon3
 
 LDFLAGS :=
 
+TARGET_PIC_FLAG = -fPIC
+TARGET_PIE_FLAG = -fPIE
+
 ifeq ($(TARGET_SUBFAMILY), gr716)
   VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
 
@@ -28,12 +31,13 @@ ifeq ($(TARGET_SUBFAMILY), gr716)
     LDFLAGS += -Wl,-z,max-page-size=0x200 -Tbss=40001800 -Tdata=40001800 -Wl,--section-start=.rodata=40000000
     STRIP := $(CROSS)strip
   else
-    CFLAGS += -fPIC -fPIE -mno-pic-data-is-text-relative -mpic-register=g6
+    CFLAGS += $(TARGET_PIC_FLAG) $(TARGET_PIE_FLAG) -mno-pic-data-is-text-relative -mpic-register=g6
     LDFLAGS += -Wl,-q
     STRIP := $(CROSS)strip --strip-unneeded -R .rela.text
   endif
 
   HAVE_MMU := n
+  HAVE_SHLIB := n
 
 else ifeq ($(TARGET_SUBFAMILY), gr712rc)
   ifeq ($(KERNEL), 1)
@@ -45,7 +49,11 @@ else ifeq ($(TARGET_SUBFAMILY), gr712rc)
   CPPFLAGS += -DLEON3_TN_0018_FIX
   LDFLAGS += -Wl,-z,max-page-size=0x1000
 
+  LIBPHOENIX_PIC ?= n
+  LIBPHOENIX_SHARED ?= n
+
   HAVE_MMU := y
+  HAVE_SHLIB := n
 else ifeq ($(TARGET_SUBFAMILY), generic)
   ifeq ($(KERNEL), 1)
     CFLAGS += 
@@ -59,7 +67,11 @@ else ifeq ($(TARGET_SUBFAMILY), generic)
   VADDR_KERNEL_INIT := 0xc0000000
   LDFLAGS += -Wl,-z,max-page-size=0x1000
 
+  LIBPHOENIX_PIC ?= n
+  LIBPHOENIX_SHARED ?= n
+
   HAVE_MMU := y
+  HAVE_SHLIB := n
 else
   $(error Incorrect TARGET.)
 endif

@@ -23,6 +23,9 @@ else
 	$(error Incorrect TARGET.)
 endif
 
+TARGET_PIC_FLAG = -fpic
+TARGET_PIE_FLAG = -fpie
+
 CFLAGS += -mcpu=$(cpu) -mtune=$(cpu) -mthumb -fomit-frame-pointer -mno-unaligned-access
 CXXFLAGS := $(CFLAGS)
 
@@ -40,4 +43,9 @@ STRIP := $(CROSS)strip
 
 VADDR_KERNEL_INIT := 0xc0000000
 
+
+LIBPHOENIX_PIC ?= y
+LIBPHOENIX_SHARED ?= y
+
 HAVE_MMU := y
+HAVE_SHLIB := y
