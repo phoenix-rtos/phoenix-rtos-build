@@ -16,6 +16,7 @@ declare -A TOOLCHAN_TO_PHOENIX_TARGETS=(
     [i386-pc-phoenix]="ia32-generic"
     [riscv64-phoenix]="riscv64-generic"
     [sparc-phoenix]="sparcv8leon-gr716 sparcv8leon-gr712rc sparcv8leon-gr740 sparcv8leon-generic"
+    [aarch64-phoenix]="aarch64a53-zynqmp"
 )
 
 TARGET="$1"

@@ -38,6 +38,15 @@ ifneq (,$(filter $(TARGETS_ARMCORTEXA),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
   TARGET_SUFF ?= armv7a
 endif
 
+# ARMv8 Cortex A
+TARGETS_ARMCORTEX8A := \
+	aarch64a53-zynqmp
+
+TARGETS += $(TARGETS_ARMCORTEX8A)
+ifneq (,$(filter $(TARGETS_ARMCORTEX8A),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
+  TARGET_SUFF ?= aarch64
+endif
+
 # ARMv8 Cortex R
 TARGETS_ARM8CORTEXR := \
   armv8r52-mps3an536
