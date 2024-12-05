@@ -19,6 +19,9 @@ if [ "$LIBPHOENIX_DEVEL_MODE" = "y" ]; then
 
 	b_log "Building libphoenix"
 	make -C "libphoenix" all install
+
+	b_log "Building dynamic linker"
+	make -C "phoenix-rtos-utils" rtld rtld-install
 fi
 
 b_log "Building phoenix-rtos-corelibs"
