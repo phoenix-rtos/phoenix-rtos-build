@@ -17,6 +17,7 @@ class PartitionType(Enum):
     RAW = 0x51
     JFFS2 = 0x72
     METERFS = 0x75
+    FUTUREFS = 0x78
 
     @classmethod
     def _missing_(cls, value):
