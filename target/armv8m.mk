@@ -15,8 +15,16 @@ CXX := $(CROSS)g++
 OLVL ?= -O2
 CFLAGS += -mthumb -fomit-frame-pointer -mno-unaligned-access
 
-# TODO hard float perhaps? To be decided
-CFLAGS += -mcpu=cortex-m33 -mfloat-abi=soft -fstack-usage
+# soft FPU for now, no support in kernel for hard FPU
+CFLAGS += -mfloat-abi=soft -fstack-usage
+
+MCX_USE_CPU1 ?= n
+
+ifeq ($(MCX_USE_CPU1), y)
+  CFLAGS += -mcpu=cortex-m33+nodsp
+else
+  CFLAGS += -mcpu=cortex-m33
+endif
 
 VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
 
@@ -26,6 +34,10 @@ ifeq ($(KERNEL), 1)
   CFLAGS += -ffixed-r9
   LDFLAGS += -Tbss=20000000 -Tdata=20000000
   STRIP := $(CROSS)strip
+
+  ifeq ($(MCX_USE_CPU1), y)
+    CFLAGS += -DMCX_USE_CPU1
+  endif
 else
   CFLAGS += -fpic -fpie -msingle-pic-base -mno-pic-data-is-text-relative
   # output .rel.* sections to make ELF position-independent
