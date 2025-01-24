@@ -128,6 +128,7 @@ LDFLAGS_WHOLE_ARCHIVE_END ?= $(LDFLAGS_PREFIX)--no-whole-archive
 
 ### right now we should have only target-necessary flags, save them for exporting (for building ports) ###
 EXPORT_CFLAGS := $(CFLAGS)
+EXPORT_CPPFLAGS := $(CPPFLAGS)
 EXPORT_CXXFLAGS := $(CXXFLAGS)
 EXPORT_LDFLAGS := $(LDFLAGS)
 
@@ -172,6 +173,9 @@ export-cflags:
 
 export-cxxflags:
 	@echo $(EXPORT_CXXFLAGS)
+
+export-cppflags:
+	@echo $(EXPORT_CPPFLAGS)
 
 export-ldflags:
 	@echo $(EXPORT_LDFLAGS)
