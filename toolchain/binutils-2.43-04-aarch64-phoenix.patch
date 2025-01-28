@@ -1,0 +1,54 @@
+diff --git a/bfd/config.bfd b/bfd/config.bfd
+index bc65a681..121302fe 100644
+--- a/bfd/config.bfd
++++ b/bfd/config.bfd
+@@ -294,6 +294,11 @@ case "${targ}" in
+     targ_selvecs="aarch64_elf64_le_vec aarch64_elf32_le_vec aarch64_elf32_be_vec arm_elf32_be_vec arm_elf32_le_vec"
+     want64=true
+     ;;
++  aarch64-*-phoenix*)
++    targ_defvec=aarch64_elf64_le_vec
++    targ_selvecs="aarch64_elf64_be_vec arm_elf32_le_vec arm_elf32_be_vec"
++    want64=true
++    ;;
+   alpha*-*-freebsd* | alpha*-*-kfreebsd*-gnu)
+     targ_defvec=alpha_elf64_fbsd_vec
+     targ_selvecs="alpha_elf64_vec alpha_ecoff_le_vec"
+diff --git a/gas/configure.tgt b/gas/configure.tgt
+index ba42b2c8..37764241 100644
+--- a/gas/configure.tgt
++++ b/gas/configure.tgt
+@@ -139,6 +139,7 @@ case ${generic_target} in
+   aarch64*-*-nto*)			fmt=elf;;
+   aarch64*-*-openbsd*)			fmt=elf;;
+   aarch64*-*-pe* | aarch64*-*-mingw*)	fmt=coff em=pepaarch64 ;;
++  aarch64*-*-phoenix*)			fmt=elf;;
+   alpha-*-*vms*)			fmt=evax ;;
+   alpha-*-osf*)				fmt=ecoff ;;
+   alpha-*-linux*ecoff*)			fmt=ecoff ;;
+diff --git a/ld/Makefile.in b/ld/Makefile.in
+index fbbe93cb..3f44b9dc 100644
+--- a/ld/Makefile.in
++++ b/ld/Makefile.in
+@@ -1288,6 +1289,7 @@ distclean-compile:
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64linuxb.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64nto.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64pe.Po@am__quote@
++@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaarch64phoenix.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaix5ppc.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaix5rs6.Po@am__quote@
+ @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/eaixppc.Po@am__quote@
+diff --git a/ld/configure.tgt b/ld/configure.tgt
+index 82e940cb..fe0cac15 100644
+--- a/ld/configure.tgt
++++ b/ld/configure.tgt
+@@ -116,6 +116,9 @@ aarch64-*-linux*)	targ_emul=aarch64linux
+ 			targ_extra_libpath="aarch64linuxb aarch64linux32 aarch64linux32b armelfb_linux_eabi armelf_linux_eabi"
+ 			targ_extra_emuls="aarch64elf aarch64elf32 aarch64elf32b aarch64elfb armelf armelfb $targ_extra_libpath"
+ 			;;
++aarch64-*-phoenix*)	targ_emul=aarch64elf
++			targ_extra_emuls="aarch64elfb armelf armelfb"
++			;;
+ # This has to come after aarch64-*-linux* for aarch64-*-linux-gnu to hit the Linux branch.
+ aarch64-*-gnu*)
+ 			targ_emul=aarch64gnu
