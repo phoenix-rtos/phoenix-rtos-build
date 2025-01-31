@@ -74,11 +74,12 @@ MAKEFLAGS="--no-print-directory -j 9"
 
 # export flags for ports - call make only after all necessary env variables are already set
 EXPORT_CFLAGS="$(make -f phoenix-rtos-build/Makefile.common export-cflags)"
+EXPORT_CPPFLAGS="$(make -f phoenix-rtos-build/Makefile.common export-cppflags)"
 EXPORT_LDFLAGS="$(make -f phoenix-rtos-build/Makefile.common export-ldflags)"
 # export STRIP path & args for stripping binaries
 EXPORT_STRIP="$(make -f phoenix-rtos-build/Makefile.common export-strip)"
 
-export EXPORT_CFLAGS EXPORT_LDFLAGS EXPORT_STRIP
+export EXPORT_CFLAGS EXPORT_CPPFLAGS EXPORT_LDFLAGS EXPORT_STRIP
 
 
 #
