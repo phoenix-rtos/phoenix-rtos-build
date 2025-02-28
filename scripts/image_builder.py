@@ -130,6 +130,8 @@ class PloCmdFactory:
             return PloCmdApp(*cmd_args, **kwargs)
         if cmd_name in ("call"):
             return PloCmdCall(*cmd_args, **kwargs)
+        if cmd_name in ("bitstream"):
+            return PloCmdBitstream(*cmd_args, **kwargs)
 
         # TODO: add compile-time checks for scripts validity (eg. memory regions cross-check)?
 
@@ -413,6 +415,47 @@ class PloCmdCall(PloCmdBase):
             raise NotImplementedError(f"PloScriptEncoding {enc.value} not implemented")
 
         # call doesn't change the payload offset nor write anything to the target partition
+        return payload_offs, None
+
+
+@dataclass
+class PloCmdBitstream(PloCmdBase):
+    """Support for bitstream command:
+        bitstream <filename> <device> <offs>
+        bitstream part_bitstr.img flash0 0x2c00000
+    """
+    NAME: ClassVar = "bitstream"
+    filename: str               # Bitstream partition filename
+    device: str                 # PLO device name
+    offset: int                 # target partition offset
+    name: str = field(default=NAME, kw_only=True)
+
+    # internal fields
+    size: int = field(init=False)
+    abspath: Path = field(init=False)
+
+    @staticmethod
+    def _resolve_filename(filename: str) -> Tuple[str, Path]:
+        return filename, PREFIX_BOOT / filename
+
+    def __post_init__(self, extra_flags: str = ''):
+        # change str->desired type TODO: use decorators?
+        if isinstance(self.offset, str):
+            self.offset = int(self.offset, 0)
+
+    def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
+        self.filename, self.abspath = self._resolve_filename(self.filename)
+        self.size = os.path.getsize(self.abspath)
+        PloCmdAlias(self.filename, self.size).emit(file, enc, self.offset, False)
+
+        if enc == PloScriptEncoding.DEBUG_ASDICT:
+            file.write(str(asdict(self)) + "\n")
+        elif enc == PloScriptEncoding.STRING_MAGIC_V1:
+            file.write(f"bitstream {self.device} {self.filename}\n")
+        else:
+            raise NotImplementedError(f"PloScriptEncoding {enc.value} not implemented")
+
+        # Bitstream doesn't change the payload offset nor write anything to the target partition
         return payload_offs, None
 
 
