@@ -19,6 +19,7 @@ CFLAGS += -mthumb -fomit-frame-pointer -mno-unaligned-access
 CFLAGS += -mfloat-abi=soft -fstack-usage
 
 MCX_USE_CPU1 ?= n
+MCX_CPU0_RST_ADDR ?= n
 
 ifeq ($(MCX_USE_CPU1), y)
   CFLAGS += -mcpu=cortex-m33+nodsp
@@ -37,6 +38,10 @@ ifeq ($(KERNEL), 1)
 
   ifeq ($(MCX_USE_CPU1), y)
     CFLAGS += -DMCX_USE_CPU1
+  endif
+
+  ifneq ($(MCX_CPU0_RST_ADDR),n)
+    CFLAGS += -DMCX_CPU0_RST_ADDR=$(MCX_CPU0_RST_ADDR) -DMCX_CHECK_ADDR=$(MCX_CHECK_ADDR)
   endif
 else
   CFLAGS += -fpic -fpie -msingle-pic-base -mno-pic-data-is-text-relative
