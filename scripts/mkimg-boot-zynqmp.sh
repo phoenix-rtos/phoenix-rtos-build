@@ -28,9 +28,10 @@ set -e
 PATH_IMG=$1
 PATH_OUTPUT=$2
 ADDR_ENTRY=$3
+TARGET_CPU=${4:-"a53"}
 
-if [ "$1" == "-h" ] || [ $# -lt 3 ]; then
-    echo "usage: $0 <input img file> <output file> <entry address>"
+if [[ "$1" == "-h" ]] || [[ $# -lt 3 ]]; then
+    echo "usage: $0 <input img file> <output file> <entry address> [a53/r5]"
     exit 1
 fi
 
@@ -42,22 +43,48 @@ OFFS_IMGH=0x00000900  # Image header offset
 OFFS_PARTH=0x00000c80 # Partition header offset
 OFFS_IMG=0x00001000   # Bootloader or app image offset in the final image
 # Image attributes:
-# bits[7:6] == 0x0 -> PUF helper data is in eFuse
-# bits[9:8] == 0x0 -> No integrity check
-# bits[11:10] == 0x2 -> Run on single A53 CPU in 64-bit mode
-# bits[15:14] == 0x0 -> RSA authentication decided by eFuse bits
-IMG_ATTRS=0x00000800
+if [[ "$TARGET_CPU" == "a53" ]]; then
+    # bits[7:6] == 0x0 -> PUF helper data is in eFuse
+    # bits[9:8] == 0x0 -> No integrity check
+    # bits[15:14] == 0x0 -> RSA authentication decided by eFuse bits
+    # bits[11:10] == 0x2 -> Run on single A53 CPU in 64-bit mode
+    IMG_ATTRS=0x00000800
+elif [[ "$TARGET_CPU" == "r5" ]]; then
+    # bits[7:6] == 0x0 -> PUF helper data is in eFuse
+    # bits[9:8] == 0x0 -> No integrity check
+    # bits[15:14] == 0x0 -> RSA authentication decided by eFuse bits
+    # bits[11:10] == 0x3 -> Run on R5 cores in lockstep mode
+    IMG_ATTRS=0x00000c00
+else
+    echo "Target CPU must be a53 or r5"
+    exit 1
+fi
+
 PUF_SHUT=0x01000020 # 32-bit PUF_SHUT register value
-# Partition attributes:
-# bit[0] == 0x1 -> TrustZone Secure
-# bits[2:1] == 3 -> Start in EL3
-# bit[3] == 0 -> Start in AArch64
-# bits[4:6] == 1 -> Destination PS
-# bit[7] == 0 -> Not encrypted
-# bits[8:11] == 1 -> A53 core 0
-# bit[18] == 0 -> little-endian
-# bit[23] doesn't matter in AArch64
-PART_ATTRS=0x00000117
+if [[ "$TARGET_CPU" == "a53" ]]; then
+    # Partition attributes:
+    # bit[0] == 0x1 -> TrustZone Secure
+    # bits[2:1] == 3 -> Start in EL3
+    # bit[3] == 0 -> Start in AArch64
+    # bits[4:6] == 1 -> Destination PS
+    # bit[7] == 0 -> Not encrypted
+    # bits[8:11] == 1 -> A53 core 0
+    # bit[18] == 0 -> little-endian
+    # bit[23] doesn't matter in AArch64
+    PART_ATTRS=0x00000117
+elif [[ "$TARGET_CPU" == "r5" ]]; then
+    # Partition attributes:
+    # bit[0] == 0x1 -> TrustZone Secure
+    # bits[2:1] == 3 -> Start in EL1
+    # bit[3] doesn't matter in Arm
+    # bits[4:6] == 1 -> Destination PS
+    # bit[7] == 0 -> Not encrypted
+    # bits[8:11] == 1 -> R5-lockstep
+    # bit[18] == 0 -> little-endian
+    # bit[23] == 0 -> LOVEC
+    PART_ATTRS=0x00000713
+fi
+
 
 
 #
@@ -169,7 +196,12 @@ make_boot_layout() {
     # Save layout to the hex file. Empty spaces between headers should be filled with 0xff.
     {
         # Boot Header
-        repeat "$(reverse 0x14000000)" 8 # Dummy ARM Vector Table for A53 CPU in 64-bit mode
+        if [[ "$TARGET_CPU" == "a53" ]]; then
+            repeat "$(reverse 0x14000000)" 8 # Dummy ARM Vector Table for A53 CPU in 64-bit mode
+        elif [[ "$TARGET_CPU" == "r5" ]]; then
+            repeat "$(reverse 0xeafffffe)" 8 # Dummy ARM Vector Table for R5 CPU
+        fi
+
         reverse "${BOOT_HEADER[@]}"
         checksum "${BOOT_HEADER[@]}"
         repeat "$z8" 8                   # Obfuscated key or Black key - unused
