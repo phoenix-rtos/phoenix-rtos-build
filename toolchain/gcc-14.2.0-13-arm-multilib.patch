@@ -1,0 +1,215 @@
+diff --git a/gcc/config.gcc b/gcc/config.gcc
+--- a/gcc/config.gcc
++++ b/gcc/config.gcc
+@@ -1475,7 +1475,7 @@ arm*-*-phoenix*)
+ 	tm_file="elfos.h arm/unknown-elf.h arm/elf.h arm/bpabi.h"
+ 	tm_file="${tm_file} newlib-stdint.h phoenix.h"
+ 	tm_file="${tm_file} arm/aout.h arm/arm.h"
+-	tmake_file="${tmake_file} arm/t-arm arm/t-bpabi arm/t-aprofile arm/t-rmprofile arm/t-multilib"
++	tmake_file="${tmake_file} arm/t-arm arm/t-bpabi arm/t-multilib arm/t-phoenix"
+ 	with_float="soft" # "auto" fpu
+ 	TM_MULTILIB_CONFIG="aprofile,rmprofile"
+ 	target_cpu_cname="arm7tdmi"
+diff --git a/gcc/config/arm/t-phoenix b/gcc/config/arm/t-phoenix
+--- a/gcc/config/arm/t-phoenix
++++ b/gcc/config/arm/t-phoenix
+@@ -16,16 +16,45 @@
+ # along with GCC; see the file COPYING3.  If not see
+ # <http://www.gnu.org/licenses/>.
+ 
+-MULTILIB_OPTIONS	= marm/mthumb
+-MULTILIB_DIRNAMES	= arm thumb
+-MULTILIB_EXCEPTIONS	=
+-MULTILIB_MATCHES	=
+-MULTILIB_REUSE		=
+-MULTILIB_REQUIRED	=
+-
+-MULTILIB_OPTIONS	+= mfloat-abi=hard
+-MULTILIB_DIRNAMES	+= fpu
+-MULTILIB_MATCHES	+= mfloat-abi?hard=mhard-float
+-
+-MULTILIB_OPTIONS	+= mno-thumb-interwork/mthumb-interwork
+-MULTILIB_DIRNAMES	+= normal interwork
++# Add phoenix options to reuses and requires.
++
++s-mlib: $(srcdir)/config/arm/t-phoenix
++
++# Find all RM archs.
++RM_ARCHS			:= $(subst /, ,march=armv7-r+fp.sp/$(MULTI_ARCH_OPTS_RM))
++# Create matches for requires and reuses.
++RM_MATCHES_REQ		:= $(foreach ARCH, $(RM_ARCHS), mthumb/$(ARCH)% marm/$(ARCH)%)
++RM_MATCHES_REUSE		:= $(foreach TARGET, $(RM_MATCHES_REQ), $(subst =,.,$(subst .,\.,$(RM_MATCHES_REQ))))
++
++# NOTE: Multilib options in MULTILIB_REQUIRED must be in the same order as they were added to the MULTILIB_OPTIONS variable.
++# So to easily add custom options at the end of REQUIRE we have to add them at the end of OPTIONS and DIRS.
++MULTILIB_OPTIONS		+= fPIC mno-pic-data-is-text-relative/mfdpic
++MULTILIB_DIRNAMES		+= pic no-pditr fdpic
++
++MULTILIB_MATCHES		+= fPIC=fpic fPIC=fPIE fPIC=fpie
++
++PHOENIX_OPTS		:= /fPIC/mno-pic-data-is-text-relative
++PHOENIX_OPTS		+= /fPIC/mfdpic
++
++# Finally, add Phoenix options to RM multilibs.
++# Keep the original requires because of kernel and plo.
++
++RM_REQUIRED			:= $(filter $(RM_MATCHES_REQ),$(MULTILIB_REQUIRED))
++
++RM_REUSE			:= $(filter $(RM_MATCHES_REUSE),$(MULTILIB_REUSE))
++
++MULTILIB_REQUIRED		+= $(foreach REQ, $(RM_REQUIRED), \
++				     $(foreach OPT, $(PHOENIX_OPTS), $(REQ)$(OPT)))
++
++MULTILIB_REUSE		+= $(foreach REUSE, $(RM_REUSE), \
++				     $(foreach OPT, $(PHOENIX_OPTS), $(subst =,$(OPT)=,$(REUSE))$(OPT)))
++
++# FIXME: Disable FDPIC Thumb-1 targets as binutils do not support PLT generation for Thumb-1.
++# https://github.com/bminor/binutils-gdb/blob/67bffda3bff903a78874c303a3d7823899bd555e/bfd/elf32-arm.c#L9838
++THUMB1_ARCHS		:= march=armv6s-m march=armv8-m.base
++
++THUMB1_REUSE_MATCHES	+= $(foreach ARCH, $(THUMB1_ARCHS), $(subst =,.,$(subst .,\.,mthumb/$(ARCH)%fdpic marm/$(ARCH)%fdpic)))
++
++MULTILIB_EXCEPTIONS	+= $(foreach ARCH, $(THUMB1_ARCHS), *$(ARCH)*/*mfdpic*)
++
++MULTILIB_REUSE		:= $(filter-out $(THUMB1_REUSE_MATCHES), $(MULTILIB_REUSE))
+diff --git a/gcc/config/phoenix.h b/gcc/config/phoenix.h
+--- a/gcc/config/phoenix.h
++++ b/gcc/config/phoenix.h
+@@ -30,6 +30,14 @@ along with GCC; see the file COPYING3.  If not see
+ #undef LIB_SPEC
+ #define LIB_SPEC "%{!shared:%{g*:-lg} %{!p:%{!pg:-lc}}%{p:-lc_p}%{pg:-lc_p}}"
+ 
++/* ARM FDPIC */
++/* Pass fdpic flags to AS and LD when using FDPIC. */
++#undef SUBTARGET_EXTRA_LINK_SPEC
++#define SUBTARGET_EXTRA_LINK_SPEC "%{mfdpic: -marmelf_phoenix_fdpiceabi}"
++
++#undef TARGET_FDPIC_ASM_SPEC
++#define TARGET_FDPIC_ASM_SPEC "%{mfdpic: --fdpic}"
++
+ /* This will prevent selecting 'unsigned long int' instead of 'unsigned int' as 'uint32_t' in stdint-newlib.h. */
+ #undef STDINT_LONG32
+ #define STDINT_LONG32		0
+diff --git a/libgcc/config.host b/libgcc/config.host
+--- a/libgcc/config.host
++++ b/libgcc/config.host
+@@ -563,7 +563,7 @@ arm*-*-uclinux*)		# ARM ucLinux
+ 	extra_parts="$extra_parts crti.o crtn.o"
+ 	;;
+ arm*-*-phoenix*)
+-	tmake_file="t-hardfp t-softfp arm/t-arm arm/t-elf arm/t-softfp arm/t-phoenix"
++	tmake_file="t-hardfp t-softfp arm/t-arm arm/t-elf arm/t-softfp"
+ 	tmake_file="${tmake_file} arm/t-bpabi"
+ 	tmake_file="${tmake_file} t-crtstuff-pic t-libgcc-pic"
+ 	tm_file="$tm_file arm/bpabi-lib.h"
+diff --git a/libgcc/config/arm/t-phoenix b/libgcc/config/arm/t-phoenix
+--- a/libgcc/config/arm/t-phoenix
++++ /dev/null
+@@ -1,13 +0,0 @@
+-# PhoenixRTOS uses relocatable ELFs on NOMMU platforms
+-# if this is ARM Cortex-M/R subvariant -> build libgcc/crtstuff with PIC
+-# ALSO: ensure data is not interwined with .text, otherwise running XIP programs would fail
+-
+-# NOTE: the `-march` parameter would either be in CC or in CFLAGS depending on how the make will be called
+-PS_MARCH := $(patsubst -march=%,%,$(filter -march=arm%, $(CC) $(CFLAGS)))
+-PS_IS_CORTEX_M := $(findstring -m,$(PS_MARCH))
+-PS_IS_CORTEX_R := $(findstring -r,$(PS_MARCH))
+-
+-ifneq ($(PS_IS_CORTEX_M)$(PS_IS_CORTEX_R),)
+-  CRTSTUFF_T_CFLAGS = $(PICFLAG) -mno-pic-data-is-text-relative
+-  INTERNAL_CFLAGS += $(PICFLAG) -mno-pic-data-is-text-relative
+-endif
+diff --git a/libstdc++-v3/configure b/libstdc++-v3/configure
+--- a/libstdc++-v3/configure
++++ b/libstdc++-v3/configure
+@@ -9241,19 +9241,7 @@ $as_echo_n "checking for $compiler option to produce PIC... " >&6; }
+     case $host_os in
+       phoenix)
+         case $host_cpu in
+-          arm)
+-            # Phoenix system for arms without MMU requires files to be compiled with some certain flags.
+-            # lt_prog_compiler_pic is a variable which contains these flags for C files that are
+-            # involved in libstdc++.
+-
+-            arch=$(echo "$CXX" | sed 's/.* -march=\([^ ]*\).*/\1/')
+-
+-            if [[ "$arch" =~ "armv7-m" ]] || [[ "$arch" =~ "armv7-r" ]] || [[ "$arch" =~ "armv7e-m" ]] || [[ "$arch" =~ "armv8-m" ]] || [[ "$arch" =~ "armv8-r" ]]; then
+-              lt_prog_compiler_pic="$lt_prog_compiler_pic -fPIC -fPIE -msingle-pic-base -mno-pic-data-is-text-relative"
+-            fi
+-            ;;
+-
+-          sparc)
++          sparc | arm)
+             # Necessary flags are passed through multilib options.
+             ;;
+ 
+@@ -9541,20 +9529,10 @@ case $host_os in
+   # Not all arm targets support PIC configuration
+   phoenix)
+     case $host_cpu in
+-      arm)
+-        # Phoenix system for arms without MMU requires files to be compiled with some certain flags.
+-        # One of them is -fPIC which is complemented by macro -fPID. In this "case" is decided whether
++      arm|sparc)
++        # Phoenix system for NOMMU requires files to be compiled with some certain flags.
++        # One of them is -fPIC which is complemented by macro PIC. In this "case" is decided whether
+         # to add this macro or not.
+-
+-        arch=$(echo "$CXX" | sed 's/.* -march=\([^ ]*\).*/\1/')
+-
+-        if [[ "$arch" =~ "armv7-m" ]] || [[ "$arch" =~ "armv7-r" ]] || [[ "$arch" =~ "armv7e-m" ]] || [[ "$arch" =~ "armv8-m" ]] || [[ "$arch" =~ "armv8-r" ]]; then
+-          lt_prog_compiler_pic="$lt_prog_compiler_pic -DPIC"
+-        fi
+-        ;;
+-
+-      sparc)
+-
+         if [[ "$CXX" == *"mno-pic-data-is-text-relative"* ]]; then
+           lt_prog_compiler_pic="$lt_prog_compiler_pic -DPIC"
+         fi
+@@ -14294,20 +14272,7 @@ $as_echo_n "checking for $compiler option to produce PIC... " >&6; }
+     case $host_os in
+     phoenix)
+       case $host_cpu in
+-        arm)
+-          # Phoenix system for arms without MMU requires files to be compiled with some certain flags.
+-          # lt_prog_compiler_pic_CXX is a variable which contains these flags for C++ files that are
+-          # involved in libstdc++.
+-
+-          arch=$(echo "$CXX" | sed 's/.* -march=\([^ ]*\).*/\1/')
+-
+-          if [[ "$arch" =~ "armv7-m" ]] || [[ "$arch" =~ "armv7-r" ]] || [[ "$arch" =~ "armv7e-m" ]] || [[ "$arch" =~ "armv8-m" ]] || [[ "$arch" =~ "armv8-r" ]]; then
+-            lt_prog_compiler_pic_CXX="$lt_prog_compiler_pic_CXX -fPIC -fPIE -msingle-pic-base -mno-pic-data-is-text-relative"
+-          fi
+-
+-        ;;
+-
+-        sparc)
++        arm|sparc)
+           # Necessary flags are passed through multilib options.
+           ;;
+ 
+@@ -14631,20 +14596,11 @@ case $host_os in
+   # Not all arm targets support PIC
+   phoenix)
+     case $host_cpu in
+-      arm)
+-        # Phoenix system for arms without MMU requires files to be compiled with some certain flags.
+-        # One of them is -fPIC which is complemented by macro -fPID. In this "case" is decided whether
++      arm|sparc)
++        # Phoenix system for NOMMU requires files to be compiled with some certain flags.
++        # One of them is -fPIC which is complemented by macro PIC. In this "case" is decided whether
+         # to add this macro or not.
+ 
+-        arch=$(echo "$CXX" | sed 's/.* -march=\([^ ]*\).*/\1/')
+-
+-        if [[ "$arch" =~ "armv7-m" ]] || [[ "$arch" =~ "armv7-r" ]] || [[ "$arch" =~ "armv7e-m" ]] || [[ "$arch" =~ "armv8-m" ]] || [[ "$arch" =~ "armv8-r" ]]; then
+-          lt_prog_compiler_pic_CXX="$lt_prog_compiler_pic_CXX -DPIC"
+-        fi
+-        ;;
+-
+-      sparc)
+-
+         if [[ "$CXX" == *"mno-pic-data-is-text-relative"* ]]; then
+           lt_prog_compiler_pic_CXX="$lt_prog_compiler_pic_CXX -DPIC"
+         fi

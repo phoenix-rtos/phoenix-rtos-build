@@ -173,12 +173,20 @@ build_libc() {
     mkdir -p "${SYSROOT}/usr/include"
     ln -snf usr/include "${SYSROOT}/include"
 
+    if [ "$TARGET" = "arm-phoenix" ]; then
+        for multilib_target in $("$TARGET-gcc" -print-multi-lib); do
+            multilib_flags=${multilib_target/*;/}
+            phx_targets="$phx_targets arm-multilib-$multilib_flags"
+        done
+    fi
+    # Overwrite multilibs with Phoenix targets when available.
+    phx_targets="$phx_targets $PHOENIX_TARGETS"
+
     # NOCHECKENV: don't check if build env is sane - we're building only necessary components by hand
-    for phx_target in $PHOENIX_TARGETS; do
+    for phx_target in $phx_targets; do
         log "[$phx_target] installing kernel headers"
         make -C "$SCRIPT_DIR/../../phoenix-rtos-kernel" NOCHECKENV=1 TARGET="$phx_target" install-headers
 
-        # FIXME: libphoenix should be installed for all supported multilib target variants
         log "[$phx_target] installing libphoenix"
         make -C "$SCRIPT_DIR/../../libphoenix" NOCHECKENV=1 TARGET="$phx_target" clean install
     done
