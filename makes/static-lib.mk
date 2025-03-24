@@ -11,6 +11,7 @@
 #
 # - LOCAL_CFLAGS  - additional CFLAGS for current component compilation
 # - LOCAL_CXXFLAGS  - additional CXXFLAGS for current component compilation
+# - LOCAL_PORTS_VERSIONS - additional ports configuration for current component compilation
 #
 
 
@@ -53,8 +54,8 @@ $(OBJS.$(NAME)): | $(DEPS)
 
 # potentially custom CFLAGS/CXXFLAGS/LDFLAGS for compilation and linking
 # add ABS_HEADERS_DIR to CFLAGS/CXXFLAGS to build always using local headers instead of installed ones
-$(OBJS.$(NAME)): CFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CFLAGS) $(LOCAL_CFLAGS)
-$(OBJS.$(NAME)): CXXFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CXXFLAGS) $(LOCAL_CXXFLAGS)
+$(OBJS.$(NAME)): CFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CFLAGS) $(LOCAL_CFLAGS) $(call ports_iflags)
+$(OBJS.$(NAME)): CXXFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CXXFLAGS) $(LOCAL_CXXFLAGS) $(call ports_iflags)
 
 # dynamically generated dependencies (file-to-file dependencies)
 DEPS.$(NAME) := $(patsubst %,$(PREFIX_O)%.d,$(SRCS))
@@ -117,3 +118,4 @@ SRCS :=
 HEADERS :=
 LOCAL_CFLAGS :=
 LOCAL_CXXFLAGS :=
+LOCAL_PORTS_VERSIONS :=
