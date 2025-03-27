@@ -56,6 +56,15 @@ ifneq (,$(filter $(TARGETS_ARM8CORTEXR),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
   TARGET_SUFF ?= armv8r
 endif
 
+# ARM multilib
+TARGETS_ARMMULTILIB := \
+  arm-multilib
+
+TARGETS += $(TARGETS_ARMMULTILIB)
+ifneq (,$(filter $(TARGETS_ARMMULTILIB),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
+  TARGET_SUFF ?= arm-multilib
+endif
+
 # IA32
 TARGETS_IA32 := ia32-generic
 

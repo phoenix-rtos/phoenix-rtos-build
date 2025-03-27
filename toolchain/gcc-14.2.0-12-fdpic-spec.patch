@@ -1,0 +1,18 @@
+diff --git a/gcc/config/phoenix.h b/gcc/config/phoenix.h
+--- a/gcc/config/phoenix.h
++++ b/gcc/config/phoenix.h
+@@ -30,6 +30,14 @@ along with GCC; see the file COPYING3.  If not see
+ #undef LIB_SPEC
+ #define LIB_SPEC "%{!shared:%{g*:-lg} %{!p:%{!pg:-lc}}%{p:-lc_p}%{pg:-lc_p}}"
+ 
++/* ARM FDPIC */
++/* Pass fdpic flags to AS and LD when using FDPIC. */
++#undef SUBTARGET_EXTRA_LINK_SPEC
++#define SUBTARGET_EXTRA_LINK_SPEC "%{mfdpic: -marmelf_phoenix_fdpiceabi}"
++
++#undef TARGET_FDPIC_ASM_SPEC
++#define TARGET_FDPIC_ASM_SPEC "%{mfdpic: --fdpic}"
++
+ /* This will prevent selecting 'unsigned long int' instead of 'unsigned int' as 'uint32_t' in stdint-newlib.h. */
+ #undef STDINT_LONG32
+ #define STDINT_LONG32		0
