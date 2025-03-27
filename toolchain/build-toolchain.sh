@@ -192,7 +192,7 @@ build_libc() {
         make -C "$SCRIPT_DIR/../../phoenix-rtos-kernel" NOCHECKENV=1 TARGET="$phx_target" install-headers
 
         # FIXME: At least one target with shared lib is needed. Remove once sparc build as shared by default.
-        if [[ "$TARGET" = "sparc-phoenix" ]] && [[ "$phx_target" = "sparcv8leon-generic" ]]; then
+        if [[ "$TARGET" = "sparc-phoenix" ]]; then
             extra_env="HAVE_SHLIB=y LIBPHOENIX_PIC=y LIBPHOENIX_SHARED=y"
         else
             extra_env=
