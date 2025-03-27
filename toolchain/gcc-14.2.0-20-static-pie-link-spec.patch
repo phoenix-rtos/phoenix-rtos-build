@@ -1,0 +1,18 @@
+diff --git a/gcc/config/phoenix.h b/gcc/config/phoenix.h
+index 32cdf558a2b..08f481c783d 100644
+--- a/gcc/config/phoenix.h
++++ b/gcc/config/phoenix.h
+@@ -47,9 +47,11 @@ along with GCC; see the file COPYING3.  If not see
+    %{!shared: \
+      -dc -dp \
+      %{!static: \
++     %{!static-pie: \
+        %{rdynamic:-export-dynamic} \
+-       -dynamic-linker /usr/libexec/ld.elf_so} \
+-     %{static:-static}}"
++       -dynamic-linker /usr/libexec/ld.elf_so}} \
++     %{static:-static} \
++     %{static-pie:-static -pie --no-dynamic-linker -z text}}"
+ 
+ /* This will prevent selecting 'unsigned long int' instead of 'unsigned int' as 'uint32_t' in stdint-newlib.h. */
+ #undef STDINT_LONG32
