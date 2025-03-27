@@ -1,0 +1,45 @@
+diff --git a/gcc/config/arm/t-phoenix b/gcc/config/arm/t-phoenix
+index 751ac2cf226..e6f435b354c 100644
+--- a/gcc/config/arm/t-phoenix
++++ b/gcc/config/arm/t-phoenix
+@@ -28,13 +28,11 @@ RM_MATCHES_REUSE		:= $(foreach TARGET, $(RM_MATCHES_REQ), $(subst =,.,$(subst .,
+ 
+ # NOTE: Multilib options in MULTILIB_REQUIRED must be in the same order as they were added to the MULTILIB_OPTIONS variable.
+ # So to easily add custom options at the end of REQUIRE we have to add them at the end of OPTIONS and DIRS.
+-MULTILIB_OPTIONS		+= fPIC mno-pic-data-is-text-relative/mfdpic
+-MULTILIB_DIRNAMES		+= pic no-pditr fdpic
++MULTILIB_OPTIONS		+= mno-pic-data-is-text-relative/mfdpic
++MULTILIB_DIRNAMES		+= no-pditr fdpic
+ 
+-MULTILIB_MATCHES		+= fPIC=fpic fPIC=fPIE fPIC=fpie
+-
+-PHOENIX_OPTS		:= /fPIC/mno-pic-data-is-text-relative
+-PHOENIX_OPTS		+= /fPIC/mfdpic
++PHOENIX_OPTS		:= /mno-pic-data-is-text-relative
++PHOENIX_OPTS		+= /mfdpic
+ 
+ # Finally, add Phoenix options to RM multilibs.
+ # Keep the orignal requires because of kernel and plo.
+diff --git a/gcc/config/sparc/t-phoenix b/gcc/config/sparc/t-phoenix
+index 6a533463c0f..bc0a7e962eb 100644
+--- a/gcc/config/sparc/t-phoenix
++++ b/gcc/config/sparc/t-phoenix
+@@ -1,14 +1,14 @@
+-MULTILIB_OPTIONS = mcpu=leon3 msoft-float mfix-gr712rc fPIC mno-pic-data-is-text-relative mpic-register=g6
++MULTILIB_OPTIONS = mcpu=leon3 msoft-float mfix-gr712rc mno-pic-data-is-text-relative mpic-register=g6
+ MULTILIB_DIRNAMES = leon3 soft gr712rc pic no-pditr pic-reg-g6
+-MULTILIB_MATCHES = msoft-float=mno-fpu fPIC=fpic fPIC=fPIE fPIC=fpie
++MULTILIB_MATCHES = msoft-float=mno-fpu
+ 
+ MULTILIB_REQUIRED =
+ # GR712RC
+ MULTILIB_REQUIRED += mcpu=leon3/mfix-gr712rc
+ MULTILIB_REQUIRED += mcpu=leon3/msoft-float/mfix-gr712rc
+ # LEON3 no MMU (pic/pie) - GR716 apps
+-MULTILIB_REQUIRED += mcpu=leon3/fPIC/mno-pic-data-is-text-relative/mpic-register=g6
+-MULTILIB_REQUIRED += mcpu=leon3/msoft-float/fPIC/mno-pic-data-is-text-relative/mpic-register=g6
++MULTILIB_REQUIRED += mcpu=leon3/mno-pic-data-is-text-relative/mpic-register=g6
++MULTILIB_REQUIRED += mcpu=leon3/msoft-float/mno-pic-data-is-text-relative/mpic-register=g6
+ # LEON3 no pic/pie
+ MULTILIB_REQUIRED += mcpu=leon3
+ MULTILIB_REQUIRED += mcpu=leon3/msoft-float

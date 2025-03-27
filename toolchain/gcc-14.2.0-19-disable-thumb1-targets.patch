@@ -1,0 +1,20 @@
+diff --git a/gcc/config/arm/t-phoenix b/gcc/config/arm/t-phoenix
+index 317a519bd6b..d9a6f2f4d88 100644
+--- a/gcc/config/arm/t-phoenix
++++ b/gcc/config/arm/t-phoenix
+@@ -47,12 +47,12 @@ MULTILIB_REQUIRED		+= $(foreach REQ, $(RM_REQUIRED), \
+ MULTILIB_REUSE		+= $(foreach REUSE, $(RM_REUSE), \
+ 				     $(foreach OPT, $(PHOENIX_OPTS), $(subst =,$(OPT)=,$(REUSE))$(OPT)))
+ 
+-# FIXME: Disable FDPIC Thumb-1 targets as binutils do not support PLT generation for Thumb-1.
++# FIXME: Disable all Thumb-1 targets as binutils do not support PLT generation for them.
+ # https://github.com/bminor/binutils-gdb/blob/67bffda3bff903a78874c303a3d7823899bd555e/bfd/elf32-arm.c#L9838
+ THUMB1_ARCHS		:= march=armv6s-m march=armv8-m.base
+ 
+-THUMB1_REUSE_MATCHES	+= $(foreach ARCH, $(THUMB1_ARCHS), $(subst =,.,$(subst .,\.,mthumb/$(ARCH)%fdpic marm/$(ARCH)%fdpic)))
++THUMB1_REUSE_MATCHES	+= $(foreach ARCH, $(THUMB1_ARCHS), $(subst =,.,$(subst .,\.,mthumb/$(ARCH)% marm/$(ARCH)%)))
+ 
+-MULTILIB_EXCEPTIONS	+= $(foreach ARCH, $(THUMB1_ARCHS), *$(ARCH)*/*mfdpic*)
++MULTILIB_EXCEPTIONS	+= $(foreach ARCH, $(THUMB1_ARCHS), *$(ARCH)*)
+ 
+ MULTILIB_REUSE		:= $(filter-out $(THUMB1_REUSE_MATCHES), $(MULTILIB_REUSE))

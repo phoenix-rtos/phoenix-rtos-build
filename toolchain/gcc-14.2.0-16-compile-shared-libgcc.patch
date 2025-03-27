@@ -1,0 +1,52 @@
+diff --git a/gcc/config.gcc b/gcc/config.gcc
+index 7f3c6edd020..5449ac8f67a 100644
+--- a/gcc/config.gcc
++++ b/gcc/config.gcc
+@@ -1013,6 +1013,7 @@ case ${target} in
+   gas=yes
+   gnu_ld=yes
+   default_use_cxa_atexit=yes
++  tmake_file="t-slibgcc"
+   ;;
+ *-*-rtems*)
+   case ${enable_threads} in
+diff --git a/libgcc/config.host b/libgcc/config.host
+index 5fc9de0f3d4..22eefcfb221 100644
+--- a/libgcc/config.host
++++ b/libgcc/config.host
+@@ -565,7 +565,7 @@ arm*-*-uclinux*)		# ARM ucLinux
+ arm*-*-phoenix*)
+ 	tmake_file="t-hardfp t-softfp arm/t-arm arm/t-elf arm/t-softfp"
+ 	tmake_file="${tmake_file} arm/t-bpabi"
+-	tmake_file="${tmake_file} t-crtstuff-pic t-libgcc-pic"
++	tmake_file="${tmake_file} t-crtstuff-pic t-libgcc-pic t-slibgcc"
+ 	tm_file="$tm_file arm/bpabi-lib.h"
+ 	extra_parts="crtbegin.o crtend.o crti.o crtn.o crtbeginS.o crtendS.o"
+ 	unwind_header=config/arm/unwind-arm.h
+@@ -830,7 +830,7 @@ i[34567]86-*-lynxos*)
+ 	;;
+ i[34567]86-*-phoenix*)
+ 	extra_parts="$extra_parts crti.o crtbegin.o crtend.o crtn.o crtbeginS.o crtendS.o"
+-	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic"
++	tmake_file="$tmake_file i386/t-crtstuff t-crtstuff-pic t-libgcc-pic t-slibgcc"
+ 	;;
+ i[34567]86-*-nto-qnx*)
+ 	tmake_file="$tmake_file i386/t-nto t-libgcc-pic"
+@@ -1371,7 +1371,7 @@ riscv*-*-freebsd*)
+ 	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o crtendS.o crtbeginT.o"
+ 	;;
+ riscv*-*-phoenix*)
+-	tmake_file="${tmake_file} riscv/t-softfp${host_address} t-softfp riscv/t-elf riscv/t-elf${host_address}"
++	tmake_file="${tmake_file} riscv/t-softfp${host_address} t-softfp riscv/t-elf riscv/t-elf${host_address} t-crtstuff-pic t-libgcc-pic t-slibgcc"
+ 	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o crtbeginS.o crtendS.o"
+ 	;;
+ riscv*-*-*)
+@@ -1501,7 +1501,7 @@ sparc-*-rtems*)
+ 	;;
+ sparc-*-phoenix*)
+ 	tmake_file="$tmake_file sparc/t-softmul t-fdpbit"
+-	tmake_file="$tmake_file sparc/t-phoenix t-crtstuff-pic t-libgcc-pic"
++	tmake_file="$tmake_file sparc/t-phoenix t-crtstuff-pic t-libgcc-pic t-slibgcc"
+ 	extra_parts="$extra_parts crtbegin.o crtend.o crti.o crtn.o crtbeginS.o crtendS.o"
+ 	;;
+ sparc*-*-solaris2*)

@@ -35,9 +35,23 @@ OBJDUMP := $(CROSS)objdump
 
 STRIP := $(CROSS)strip
 
-# Choose if target has MMU based on fPIC flag from multilib.
-ifeq ($(subst fPIC,,$(CFLAGS)), $(CFLAGS))
+TARGET_PIC_FLAG := -fpic
+TARGET_PIE_FLAG := -fpie
+
+# Always build as PIC for coherence.
+LIBPHOENIX_PIC ?= y
+
+# Choose if target has MMU based on -mno-pic-data-is-text-relative or -mfdpic flag from multilib.
+ifeq ($(subst pic,,$(CFLAGS)), $(CFLAGS))
 HAVE_MMU := y
 else
 HAVE_MMU := n
+endif
+
+ifeq ($(subst -mno-pic-data-is-text-relative,,$(CFLAGS)), $(CFLAGS))
+HAVE_SHLIB := y
+LIBPHOENIX_SHARED ?= y
+else
+HAVE_SHLIB := n
+LIBPHOENIX_SHARED ?= n
 endif
