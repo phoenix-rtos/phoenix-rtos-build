@@ -24,11 +24,11 @@ ifeq ($(TARGET_SUBFAMILY), gr716)
   VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
 
   CFLAGS += -msoft-float
-  CPPFLAGS += -DLEON_USE_PWR
 
   ifeq ($(KERNEL), 1)
     LDFLAGS += -Wl,-z,max-page-size=0x200 -Tbss=40001800 -Tdata=40001800 -Wl,--section-start=.rodata=40000000
     STRIP := $(CROSS)strip
+    CPPFLAGS += -DLEON_USE_PWR
   else
     CFLAGS += -fPIC -fPIE -mno-pic-data-is-text-relative -mpic-register=g6
     LDFLAGS += -Wl,-q
@@ -65,6 +65,7 @@ else ifeq ($(TARGET_SUBFAMILY), generic)
 else ifeq ($(TARGET_SUBFAMILY), gr740)
   ifeq ($(KERNEL), 1)
     CFLAGS += -msoft-float
+    CPPFLAGS += -DLEON_USE_PWR
   endif
   STRIP := $(CROSS)strip
   VADDR_KERNEL_INIT := 0xc0000000
