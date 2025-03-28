@@ -72,6 +72,12 @@ include $(MAKES_PATH)/setup-sysroot.mk
 # add utility functions
 include $(MAKES_PATH)/funcs.mk
 
+# add ports.mk if exists
+ports.mk := $(MAKES_PATH)/../../phoenix-rtos-ports/ports.mk
+ifneq ($(wildcard $(ports.mk)),)
+  include $(ports.mk)
+endif
+
 # provide template files' paths to external makes
 binary.mk := $(MAKES_PATH)/binary.mk
 static-lib.mk := $(MAKES_PATH)/static-lib.mk
@@ -168,13 +174,13 @@ endif
 .PHONY: help export-cflags export-cxxflags export-ldflags
 
 export-cflags:
-	@echo $(EXPORT_CFLAGS)
+	@echo $(EXPORT_CFLAGS) $(call ports_iflags)
 
 export-cxxflags:
-	@echo $(EXPORT_CXXFLAGS)
+	@echo $(EXPORT_CXXFLAGS) $(call ports_iflags)
 
 export-ldflags:
-	@echo $(EXPORT_LDFLAGS)
+	@echo $(EXPORT_LDFLAGS) $(call ports_lflags)
 
 export-strip:
 	@echo $(STRIP)
