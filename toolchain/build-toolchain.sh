@@ -72,7 +72,7 @@ export MAKEFLAGS
 
 mkdir -p "${TOOLCHAIN_PREFIX}"
 mkdir -p "${BUILD_DIR}"
-cp ./*.patch "${BUILD_DIR}"
+cp "$SCRIPT_DIR"/*.patch "${BUILD_DIR}"
 cd "${BUILD_DIR}"
 
 download() {
