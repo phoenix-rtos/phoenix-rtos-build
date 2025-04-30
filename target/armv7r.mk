@@ -19,6 +19,10 @@ ifeq ($(TARGET_FAMILY), armv7r5f)
   CFLAGS += -mcpu=cortex-r5 -mtune=cortex-r5 -mfpu=vfpv3-d16 -mfloat-abi=hard
 endif
 
+ifeq ($(VADDR_KERNEL_DATA), )
+  VADDR_KERNEL_DATA := 0x100000
+endif
+
 VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
 KERNEL_DATA_PHADDR ?= 0x100000
 
