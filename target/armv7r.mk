@@ -20,12 +20,13 @@ ifeq ($(TARGET_FAMILY), armv7r5f)
 endif
 
 VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
+KERNEL_DATA_PHADDR ?= 0x100000
 
 LDFLAGS := -Wl,-z,max-page-size=0x10
 
 ifeq ($(KERNEL), 1)
   CFLAGS += -ffixed-r9
-  LDFLAGS += -Tbss=100000 -Tdata=100000
+  LDFLAGS += -Tbss=$(KERNEL_DATA_PHADDR) -Tdata=$(KERNEL_DATA_PHADDR)
   STRIP := $(CROSS)strip
 else
   CFLAGS += -fpic -fpie -msingle-pic-base -mno-pic-data-is-text-relative
