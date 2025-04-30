@@ -19,13 +19,17 @@ ifeq ($(TARGET_FAMILY), armv7r5f)
   CFLAGS += -mcpu=cortex-r5 -mtune=cortex-r5 -mfpu=vfpv3-d16 -mfloat-abi=hard
 endif
 
+ifeq ($(VADDR_KERNEL_DATA), )
+  VADDR_KERNEL_DATA := 0x100000
+endif
+
 VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
 
 LDFLAGS := -Wl,-z,max-page-size=0x10
 
 ifeq ($(KERNEL), 1)
   CFLAGS += -ffixed-r9
-  LDFLAGS += -Tbss=100000 -Tdata=100000
+  LDFLAGS += -Tbss=$(VADDR_KERNEL_DATA) -Tdata=$(VADDR_KERNEL_DATA)
   STRIP := $(CROSS)strip
 else
   CFLAGS += -fpic -fpie -msingle-pic-base -mno-pic-data-is-text-relative
