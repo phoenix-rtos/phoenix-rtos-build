@@ -68,7 +68,7 @@ GCC=gcc-14.2.0
 TOOLCHAIN_PREFIX="${BUILD_ROOT}/${TARGET}"
 SYSROOT="${TOOLCHAIN_PREFIX}/${TARGET}"
 MAKEFLAGS="-j9 -s"
-export MAKEFLAGS
+export MAKEFLAGS PATH
 
 mkdir -p "${TOOLCHAIN_PREFIX}"
 mkdir -p "${BUILD_DIR}"
@@ -165,7 +165,6 @@ build_libc() {
     # use new compiler for the below builds
     OLDPATH="$PATH"
     PATH="$TOOLCHAIN_PREFIX/bin":$PATH
-    export PATH
 
     # standard library headers should be installed in $SYSROOT/usr/include
     # for fixincludes to work the headers need to be in $SYSROOT/usr/include, for libgcc compilation in $SYSROOT/include
@@ -252,14 +251,22 @@ build_libstdcpp() {
 }
 
 strip_binaries() {
-    log "stripping binaries"
+    # use new binutils for stripping
+    OLDPATH="$PATH"
+    PATH="$TOOLCHAIN_PREFIX/bin":$PATH
+
+    log "stripping host binaries"
     if [ "$(uname)" = "Darwin" ]; then
         find "$TOOLCHAIN_PREFIX" -type f -perm +111 -exec strip {} + || true
     else
         find "$TOOLCHAIN_PREFIX" -type f -perm /111 -exec strip {} + || true
     fi
 
-    # NOTE: we could also strip target libraries, but let's leave debug sections for ease of development
+    # strip target libraries, it greatly reduces the total size size of the toolchain - especially in case of multilib
+    log "stripping target libraries/objects"
+    find "$TOOLCHAIN_PREFIX" -type f \( -name \*.a -or -name \*.o \) -exec "$TARGET-strip" --strip-unneeded {} \;
+
+    PATH="$OLDPATH"
 }
 
 
