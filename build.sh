@@ -9,7 +9,9 @@
 # Author: Kaja Swat, Aleksander Kaminski, Pawel Pisarczyk
 #
 
-set -e
+set -o errexit
+set -o nounset
+
 ORIG_ENV="$(env)"
 
 # Colon-separated list of dirs to overlay the default rootFS.
@@ -64,6 +66,8 @@ fi
 
 # Default project's overlay directory, it does not have to exist.
 ROOTFS_OVERLAYS="$PROJECT_PATH/rootfs-overlay:${ROOTFS_OVERLAYS}"
+
+CROSS="${CROSS:-}"
 
 CC=${CROSS}gcc
 AS=${CROSS}as
