@@ -15,7 +15,7 @@ OLVL ?= -O2
 
 cpu := cortex-$(subst aarch64,,$(TARGET_FAMILY))
 
-CFLAGS += -mcpu=$(cpu) -mtune=$(cpu) -fomit-frame-pointer -mstrict-align
+CFLAGS += -mcpu=$(cpu) -mtune=$(cpu) -fomit-frame-pointer -mstrict-align -mno-outline-atomics
 CXXFLAGS := $(CFLAGS)
 
 AR := $(CROSS)ar
