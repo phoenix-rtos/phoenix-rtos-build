@@ -15,7 +15,9 @@ OLVL ?= -O2
 
 cpu := cortex-$(subst aarch64,,$(TARGET_FAMILY))
 
-CFLAGS += -mcpu=$(cpu) -mtune=$(cpu) -fomit-frame-pointer -mstrict-align
+# -mno-outline-atomics disables compiler feature that relies on runtime detection of LSE instruction set extension.
+# We currently don't support this feature and may not need it, as target CPU is known at compile time.
+CFLAGS += -mcpu=$(cpu) -mtune=$(cpu) -fomit-frame-pointer -mstrict-align -mno-outline-atomics
 CXXFLAGS := $(CFLAGS)
 
 AR := $(CROSS)ar
