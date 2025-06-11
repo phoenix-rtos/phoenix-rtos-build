@@ -26,7 +26,7 @@ ifeq ($(TARGET_SUBFAMILY), gr716)
   CFLAGS += -msoft-float
 
   ifeq ($(KERNEL), 1)
-    LDFLAGS += -Wl,-z,max-page-size=0x200 -Tbss=40001800 -Tdata=40001800 -Wl,--section-start=.rodata=40000000
+    LDFLAGS += -Wl,-z,max-page-size=0x200 -Tbss=40001a00 -Tdata=40001a00 -Wl,--section-start=.rodata=40000000
     STRIP := $(CROSS)strip
     CPPFLAGS += -DLEON_USE_PWR
   else
