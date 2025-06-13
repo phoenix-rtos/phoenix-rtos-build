@@ -20,11 +20,16 @@ CFLAGS += -mfloat-abi=soft -fstack-usage
 
 MCX_USE_CPU1 ?= n
 MCX_CPU0_RST_ADDR ?= n
+KERNEL_DATA_PHADDR ?= 0x20000000
 
-ifeq ($(MCX_USE_CPU1), y)
-  CFLAGS += -mcpu=cortex-m33+nodsp
-else
-  CFLAGS += -mcpu=cortex-m33
+ifeq ($(TARGET_FAMILY), armv8m55)
+  CFLAGS += -mcpu=cortex-m55
+else ifeq ($(TARGET_FAMILY), armv8m33)
+  ifeq ($(MCX_USE_CPU1), y)
+    CFLAGS += -mcpu=cortex-m33+nodsp
+  else
+    CFLAGS += -mcpu=cortex-m33
+  endif
 endif
 
 VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
@@ -33,7 +38,7 @@ LDFLAGS := -Wl,-z,max-page-size=0x10
 
 ifeq ($(KERNEL), 1)
   CFLAGS += -ffixed-r9
-  LDFLAGS += -Tbss=20000000 -Tdata=20000000
+  LDFLAGS += -Tbss=$(KERNEL_DATA_PHADDR) -Tdata=$(KERNEL_DATA_PHADDR)
   STRIP := $(CROSS)strip
 
   ifeq ($(MCX_USE_CPU1), y)
