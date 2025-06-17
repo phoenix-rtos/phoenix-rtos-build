@@ -149,6 +149,10 @@ CXXFLAGS += -ggdb3
 CFLAGS += $(OLVL)
 CXXFLAGS += $(OLVL)
 
+# allow appending custom project CFLAGS/CXXFLAGS by env
+CFLAGS += $(USER_CFLAGS)
+CXXFLAGS += $(USER_CXXFLAGS)
+
 # Distribute the __TARGET and __CPU defines
 CPPFLAGS += -D__TARGET_$(call uppercase,$(TARGET_FAMILY))
 CPPFLAGS += -D__CPU_$(call uppercase,$(TARGET_SUBFAMILY))
