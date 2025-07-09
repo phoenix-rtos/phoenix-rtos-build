@@ -14,7 +14,12 @@ CC := $(CROSS)gcc
 CXX := $(CROSS)g++
 
 OLVL ?= -O2
-CFLAGS += -fomit-frame-pointer -mcmodel=medany
+
+ifeq ($(RISCV_ISA_STRING),)
+  $(error RISCV_ISA_STRING is not set.)
+endif
+
+CFLAGS += -fomit-frame-pointer -mcmodel=medany -march=$(RISCV_ISA_STRING)
 
 CXXFLAGS := $(CFLAGS)
 
