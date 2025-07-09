@@ -76,7 +76,8 @@ endif
 # RISCV64
 TARGETS_RISCV64 := \
 	riscv64-generic \
-	riscv64-noelv
+	riscv64-grfpga \
+	riscv64-gr765
 
 TARGETS += $(TARGETS_RISCV64)
 ifneq (,$(filter $(TARGETS_RISCV64),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
