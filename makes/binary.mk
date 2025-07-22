@@ -111,6 +111,8 @@ $(NAME) $(NAME)-clean: NAME:=$(NAME)
 
 ALL_COMPONENTS += $(NAME)
 
+include $(MAKES_PATH)/check-ports.mk
+
 # cleaning vars to avoid strange errors
 NAME :=
 LOCAL_SRCS :=
