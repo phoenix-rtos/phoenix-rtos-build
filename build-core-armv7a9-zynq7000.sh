@@ -21,11 +21,11 @@ if [ "$LIBPHOENIX_DEVEL_MODE" = "y" ]; then
 	make -C "libphoenix" all install
 fi
 
-b_log "Building unity"
-make -C "phoenix-rtos-tests" unity
-
 b_log "Building phoenix-rtos-corelibs"
 make -C "phoenix-rtos-corelibs" all install
+
+b_log "Building unity"
+make -C "phoenix-rtos-tests" unity
 
 b_log "Building phoenix-rtos-filesystems"
 make -C "phoenix-rtos-filesystems" all install
