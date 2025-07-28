@@ -72,11 +72,8 @@ include $(MAKES_PATH)/setup-sysroot.mk
 # add utility functions
 include $(MAKES_PATH)/funcs.mk
 
-# add ports.mk if exists
-ports.mk := $(MAKES_PATH)/../../phoenix-rtos-ports/ports.mk
-ifneq ($(wildcard $(ports.mk)),)
-  include $(ports.mk)
-endif
+# add ports.mk
+include $(MAKES_PATH)/ports.mk
 
 # provide template files' paths to external makes
 binary.mk := $(MAKES_PATH)/binary.mk
