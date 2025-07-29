@@ -39,10 +39,26 @@ HEADERS += $(addprefix $(LOCAL_DIR), $(LOCAL_HEADERS))
 # removing all files with unsupported extensions
 SRCS := $(filter $(LANGUAGE_EXTENSIONS), $(SRCS))
 
+# find all installed default ported libraries
+ALL_RESOLVED_DEFAULT_PORT_LIBS := $(foreach PORT_LIB_DIR, $(call ports_ldir), $(shell find $(PORT_LIB_DIR) -type f -name "*.a" 2>/dev/null))
+
+# filter out unneeded default ported libraries (not listed in LIBS)
+RESOLVED_PORT_LIBS := $(foreach PORT_LIB, \
+	$(ALL_RESOLVED_DEFAULT_PORT_LIBS), \
+	$(if $(filter $(basename $(notdir $(PORT_LIB))), $(LIBS)), $(PORT_LIB),))
+
+# remove default ported libraries from LIBS as they are externally built
+PORTS_LIBS := $(foreach PORT_LIB, $(RESOLVED_PORT_LIBS), $(basename $(notdir $(PORT_LIB))))
+LIBS := $(filter-out $(PORTS_LIBS), $(LIBS))
+
 # linking prerequisites
 OBJS.$(NAME) := $(patsubst %,$(PREFIX_O)%.o,$(basename $(SRCS)))
 RESOLVED_LIBS := $(patsubst %,$(PREFIX_A)%.a, $(DEP_LIBS))
-RESOLVED_LIBS += $(patsubst %,$(PREFIX_A)%.a, $(LIBS))
+RESOLVED_LIBS += $(patsubst %,$(PREFIX_A)%.a, $(LIBS)) $(RESOLVED_PORT_LIBS)
+
+# include header directories of default port versions
+PORTS_CFLAGS := $(call ports_iflags)
+PORTS_CXXFLAGS := $(PORTS_CFLAGS)
 
 # compilation prerequisites - component order-only dependency
 DEPS += $(DEP_LIBS)
@@ -50,9 +66,9 @@ $(OBJS.$(NAME)): | $(DEPS)
 
 # potentially custom CFLAGS/CXXFLAGS/LDFLAGS for compilation and linking
 # add ABS_HEADERS_DIR to CFLAGS/CXXFLAGS as a first -I path to build always using local headers instead of installed ones
-$(OBJS.$(NAME)): CFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CFLAGS) $(LOCAL_CFLAGS) $(call ports_iflags)
-$(OBJS.$(NAME)): CXXFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CXXFLAGS) $(LOCAL_CXXFLAGS) $(call ports_iflags)
-$(PREFIX_PROG)$(NAME): LDFLAGS:=$(LDFLAGS) $(LOCAL_LDFLAGS) $(call ports_lflags)
+$(OBJS.$(NAME)): CFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CFLAGS) $(LOCAL_CFLAGS) $(PORTS_CFLAGS)
+$(OBJS.$(NAME)): CXXFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CXXFLAGS) $(LOCAL_CXXFLAGS) $(PORTS_CXXFLAGS)
+$(PREFIX_PROG)$(NAME): LDFLAGS:=$(LDFLAGS) $(LOCAL_LDFLAGS)
 $(PREFIX_PROG)$(NAME): LDLIBS:=$(LOCAL_LDLIBS) $(LDLIBS)
 
 # dynamically generated dependencies (file-to-file dependencies)
