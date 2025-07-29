@@ -73,7 +73,8 @@ include $(MAKES_PATH)/setup-sysroot.mk
 include $(MAKES_PATH)/funcs.mk
 
 # add ports.mk if exists
-ports.mk := $(MAKES_PATH)/../../phoenix-rtos-ports/ports.mk
+PORTS_DIR ?= $(MAKES_PATH)/../../phoenix-rtos-ports
+ports.mk := $(PORTS_DIR)/ports.mk
 ifneq ($(wildcard $(ports.mk)),)
   include $(ports.mk)
 endif
