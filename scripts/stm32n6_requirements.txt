@@ -1,0 +1,9 @@
+#
+# requirements.txt for stm32n6 scripts
+#
+# Copyright 2025 Phoenix Systems
+# Author: Krzysztof Radzewicz
+#
+
+pycryptodome==3.23.0
+pyserial==3.5
