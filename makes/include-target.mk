@@ -59,7 +59,8 @@ endif
 
 # ARMv7 Cortex R
 TARGETS_ARM7CORTEXR := \
-  armv7r5f-zynqmp
+  armv7r5f-zynqmp \
+  armv7r5f-tda4vm
 
 TARGETS += $(TARGETS_ARM7CORTEXR)
 ifneq (,$(filter $(TARGETS_ARM7CORTEXR),$(TARGET_FAMILY)-$(TARGET_SUBFAMILY)))
