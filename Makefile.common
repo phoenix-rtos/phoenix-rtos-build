@@ -87,6 +87,13 @@ endif
 
 # Do not warn about RWX segments.
 # binutils >= 2.39 required
+_TMP_LD_VERSION_OUTPUT := $(shell $(LD) $(LDFLAGS_PREFIX)--version 2>&1)
+
+$(warning --- Debugging LD Version ---)
+$(warning LD='$(LD)')
+$(warning LDFLAGS_PREFIX='$(LDFLAGS_PREFIX)')
+$(warning Raw command output: '$(_TMP_LD_VERSION_OUTPUT)')
+$(warning --- End Debugging ---)
 LD_VERSION_MINOR := $(shell $(LD) $(LDFLAGS_PREFIX)--version 2> /dev/null | grep -Eo "\b2\.[0-9]*" | cut -d . -f 2)
 ifeq ($(LD_VERSION_MINOR),)
 $(error Can't parse LD version!)
