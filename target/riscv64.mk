@@ -15,11 +15,15 @@ CXX := $(CROSS)g++
 
 OLVL ?= -O2
 
-ifeq ($(RISCV_ISA_STRING),)
-  $(error RISCV_ISA_STRING is not set.)
+# Don't check when building toolchain - FIXME: libphoenix in toolchain should be built as multilib
+ifneq ($(NOCHECKENV),1)
+  ifeq ($(RISCV_ISA_STRING),)
+    $(error RISCV_ISA_STRING is not set. TARGET=$(TARGET))
+  endif
+  CFLAGS += -march=$(RISCV_ISA_STRING)
 endif
 
-CFLAGS += -fomit-frame-pointer -mcmodel=medany -march=$(RISCV_ISA_STRING)
+CFLAGS += -fomit-frame-pointer -mcmodel=medany
 
 CXXFLAGS := $(CFLAGS)
 
