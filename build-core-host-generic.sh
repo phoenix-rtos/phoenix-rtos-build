@@ -17,7 +17,7 @@ b_log "Building libphoenix"
 make -C "libphoenix" -f Makefile.host all
 
 b_log "Building phoenix-rtos-corelibs"
-make -C "phoenix-rtos-corelibs" libtinyaes
+make -C "phoenix-rtos-corelibs" libtinyaes libalgo
 
 b_log "Building phoenix-rtos-filesystems"
 make -C "phoenix-rtos-filesystems" all
