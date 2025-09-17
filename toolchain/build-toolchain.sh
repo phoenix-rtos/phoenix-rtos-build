@@ -78,7 +78,7 @@ cd "${BUILD_DIR}"
 download() {
     log "downloading packages"
 
-    [ ! -f ${BINUTILS}.tar.bz2 ] && wget "http://ftp.gnu.org/gnu/binutils/${BINUTILS}.tar.bz2"
+    [ ! -f ${BINUTILS}.tar.bz2 ] && wget "http://www.mirrorservice.org/sites/ftp.gnu.org/gnu/binutils/${BINUTILS}.tar.bz2"
     [ ! -f ${GCC}.tar.xz ] && wget "http://www.mirrorservice.org/sites/ftp.gnu.org/gnu/gcc/${GCC}/${GCC}.tar.xz"
 
     log "extracting packages"
