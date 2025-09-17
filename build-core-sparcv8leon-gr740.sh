@@ -35,3 +35,6 @@ make -C "phoenix-rtos-utils" all install
 
 b_log "Building posixsrv"
 make -C "phoenix-rtos-posixsrv" all install
+
+b_log "Building lwip"
+make -C "phoenix-rtos-lwip" all install
