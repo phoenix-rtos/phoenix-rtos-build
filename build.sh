@@ -9,7 +9,9 @@
 # Author: Kaja Swat, Aleksander Kaminski, Pawel Pisarczyk
 #
 
-set -e
+set -o errexit
+set -o nounset
+
 ORIG_ENV="$(env)"
 
 # Colon-separated list of dirs to overlay the default rootFS.
@@ -47,7 +49,7 @@ export TARGET TARGET_FAMILY TARGET_SUBFAMILY TARGET_PROJECT PROJECT_PATH PREFIX_
 source ./build.project
 
 # Some makefiles add "$PROJECT_PATH/" to their include path so it has to be set
-[ -z "$PROJECT_PATH" ] && b_die "PROJECT_PATH is not set (or is empty)"
+[ -z "${PROJECT_PATH:-}" ] && b_die "PROJECT_PATH is not set (or is empty)"
 
 : "${PREFIX_ROOTSKEL:="$PREFIX_PROJECT/_fs/root-skel/"}"
 
@@ -65,10 +67,16 @@ fi
 # Default project's overlay directory, it does not have to exist.
 ROOTFS_OVERLAYS="$PROJECT_PATH/rootfs-overlay:${ROOTFS_OVERLAYS}"
 
-CC=${CROSS}gcc
-AS=${CROSS}as
-LD=${CROSS}ld
-AR=${CROSS}ar
+# note that CROSS="" is treated as error in both "host" and non host targets
+[ "${TARGET_FAMILY}" != "host" ] && [ -z "${CROSS:-}" ] && b_die "Non empty CROSS is required for non host targets"
+[ "${TARGET_FAMILY}" == "host" ] && [ -n "${CROSS+set}" ] && b_die "CROSS should not be set for host targets TARGET=${TARGET} CROSS=${CROSS}"
+
+# NOTE: most of those variables are overwritten when make includes target/*.mk
+# TODO: determine why/if this is needed and if export is needed
+CC=${CROSS:-}gcc
+AS=${CROSS:-}as
+LD=${CROSS:-}ld
+AR=${CROSS:-}ar
 
 MAKEFLAGS="--no-print-directory -j 9"
 
@@ -201,7 +209,9 @@ fi
 if [ "${B_HOST}" = "y" ]; then
 	if [ "$TARGET" != "$_TARGET_FOR_HOST_BUILD" ]; then
 		# if not already building for host - re-exec with clean env
-		(env "$ORIG_ENV" NOSAN=1 TARGET=$_TARGET_FOR_HOST_BUILD ./phoenix-rtos-build/build.sh host)
+		# TODO: remove before merging
+		echo "$ORIG_ENV" > /dev/stderr
+		(env --ignore-environment $ORIG_ENV NOSAN=1 TARGET=$_TARGET_FOR_HOST_BUILD ./phoenix-rtos-build/build.sh host)
 	else
 		source ./phoenix-rtos-build/build-host-tools.sh
 	fi
