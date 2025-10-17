@@ -136,6 +136,8 @@ if ! command -v /bin/bear &> /dev/null; then
 elif [ -z "${DO_NOT_EXEC_BEAR+x}" ]; then
 	b_log "Running bear on top of build script"
 
+	# Folder is needed for bear to put output there
+	mkdir -p "$PREFIX_BUILD"
 	OUTPUT_FILE=_build/"$TARGET"/compile_commands.json
 
 	# Exec build one more time with bear on top
@@ -160,7 +162,6 @@ fi
 #
 # Prepare
 #
-mkdir -p "$PREFIX_BUILD"
 mkdir -p "$PREFIX_BUILD_HOST"
 mkdir -p "$PREFIX_BOOT"
 mkdir -p "$PREFIX_PROG" "$PREFIX_PROG_STRIPPED"
