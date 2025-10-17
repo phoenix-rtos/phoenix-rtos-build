@@ -131,6 +131,22 @@ for arg in "${ARGS[@]}"; do
 	esac;
 done
 
+if ! command -v /bin/bear &> /dev/null; then
+	echo "'bear' executable not found. Compilation database will not be built"
+elif [ -z "${DO_NOT_EXEC_BEAR+x}" ]; then
+	b_log "Running bear on top of build script"
+
+	OUTPUT_FILE=_build/"$TARGET"/compile_commands.json
+
+	# Exec build one more time with bear on top
+	if [[ "$(bear --version 2>&1)" == "bear 2."* ]]; then
+		DO_NOT_EXEC_BEAR=y exec bear -o "$OUTPUT_FILE" --append "$0" "${ARGS[@]}"
+	else
+		# versions 3.*.*
+		DO_NOT_EXEC_BEAR=y exec bear --output "$OUTPUT_FILE" --append -- "$0" "${ARGS[@]}"
+	fi
+fi
+
 #
 # Clean if requested
 #
