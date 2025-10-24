@@ -226,12 +226,11 @@ ln -sf "$PREFIX_BUILD/$COMPILE_DB_FNAME" "$COMPILE_DB_FNAME"
 if [ "${B_CORE}" = "y" ]; then
 	# Exec build  with bear on top
 	if [[ "$(bear --version 2>&1)" == "bear 2."* ]]; then
-		bear -o "$OUTPUT_FILE" --append "./phoenix-rtos-build/build-core-${TARGET_FAMILY}-${TARGET_SUBFAMILY}.sh"
+		bear -o "$COMPILE_DB_FNAME" --append "./phoenix-rtos-build/build-core-${TARGET_FAMILY}-${TARGET_SUBFAMILY}.sh"
 	else
 		# versions 3.*.*
-		exec bear --output "$OUTPUT_FILE" --append -- "./phoenix-rtos-build/build-core-${TARGET_FAMILY}-${TARGET_SUBFAMILY}.sh"
+		bear --output "$COMPILE_DB_FNAME" --append -- "./phoenix-rtos-build/build-core-${TARGET_FAMILY}-${TARGET_SUBFAMILY}.sh"
 	fi
-	bear -o "$COMPILE_DB_FNAME" --append "./phoenix-rtos-build/build-core-${TARGET_FAMILY}-${TARGET_SUBFAMILY}.sh"
 fi
 
 #
