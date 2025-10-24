@@ -233,14 +233,16 @@ for tool in "${HOSTUTILS[@]}"; do
 done
 
 # use per-project compile_commands.json compilation database
+mkdir -p "$PREFIX_BUILD"
 COMPILE_DB_FNAME="compile_commands.json"
 ln -sf "$PREFIX_BUILD/$COMPILE_DB_FNAME" "$COMPILE_DB_FNAME"
+
 
 #
 # Build core part
 #
 if [ "${B_CORE}" = "y" ]; then
-	"./phoenix-rtos-build/build-core-${TARGET_FAMILY}-${TARGET_SUBFAMILY}.sh"
+	bear --output "$COMPILE_DB_FNAME" --append -- "./phoenix-rtos-build/build-core-${TARGET_FAMILY}-${TARGET_SUBFAMILY}.sh"
 fi
 
 #
