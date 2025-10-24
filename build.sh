@@ -242,7 +242,7 @@ ln -sf "$PREFIX_BUILD/$COMPILE_DB_FNAME" "$COMPILE_DB_FNAME"
 # Build core part
 #
 if [ "${B_CORE}" = "y" ]; then
-	bear --output "$COMPILE_DB_FNAME" --append -- "./phoenix-rtos-build/build-core-${TARGET_FAMILY}-${TARGET_SUBFAMILY}.sh"
+	bear --o "$COMPILE_DB_FNAME" --append -- "./phoenix-rtos-build/build-core-${TARGET_FAMILY}-${TARGET_SUBFAMILY}.sh"
 fi
 
 #
