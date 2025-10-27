@@ -131,6 +131,24 @@ for arg in "${ARGS[@]}"; do
 	esac;
 done
 
+if ! command -v /bin/bear &> /dev/null; then
+	echo "'bear' executable not found. Compilation database will not be built"
+elif [ -z "${DO_NOT_EXEC_BEAR+x}" ]; then
+	b_log "Running bear on top of build script"
+
+	# Folder is needed for bear to put output there
+	mkdir -p "$PREFIX_BUILD"
+	OUTPUT_FILE=_build/"$TARGET"/compile_commands.json
+
+	# Exec build one more time with bear on top
+	if [[ "$(bear --version 2>&1)" == "bear 2."* ]]; then
+		DO_NOT_EXEC_BEAR=y exec bear -o "$OUTPUT_FILE" --append "$0" "${ARGS[@]}"
+	else
+		# versions 3.*.*
+		DO_NOT_EXEC_BEAR=y exec bear --output "$OUTPUT_FILE" --append -- "$0" "${ARGS[@]}"
+	fi
+fi
+
 #
 # Clean if requested
 #
@@ -215,22 +233,14 @@ for tool in "${HOSTUTILS[@]}"; do
 done
 
 # use per-project compile_commands.json compilation database
-mkdir -p "$PREFIX_BUILD"
 COMPILE_DB_FNAME="compile_commands.json"
 ln -sf "$PREFIX_BUILD/$COMPILE_DB_FNAME" "$COMPILE_DB_FNAME"
-
 
 #
 # Build core part
 #
 if [ "${B_CORE}" = "y" ]; then
-	# Exec build  with bear on top
-	if [[ "$(bear --version 2>&1)" == "bear 2."* ]]; then
-		bear -o "$COMPILE_DB_FNAME" --append "./phoenix-rtos-build/build-core-${TARGET_FAMILY}-${TARGET_SUBFAMILY}.sh"
-	else
-		# versions 3.*.*
-		bear --output "$COMPILE_DB_FNAME" --append -- "./phoenix-rtos-build/build-core-${TARGET_FAMILY}-${TARGET_SUBFAMILY}.sh"
-	fi
+	"./phoenix-rtos-build/build-core-${TARGET_FAMILY}-${TARGET_SUBFAMILY}.sh"
 fi
 
 #
