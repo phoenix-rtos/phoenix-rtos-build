@@ -1,7 +1,7 @@
 #
 # Makefile for Phoenix-RTOS 3
 #
-# ARMv8 (Cortex-M33) options
+# ARMv8 Cortex-M options
 #
 # Copyright 2018, 2020, 2024 Phoenix Systems
 #
@@ -13,23 +13,24 @@ CXX := $(CROSS)g++
 
 # common Cortex-M CFLAGS
 OLVL ?= -O2
-CFLAGS += -mthumb -fomit-frame-pointer -mno-unaligned-access
-
-# soft FPU for now, no support in kernel for hard FPU
-CFLAGS += -mfloat-abi=soft -fstack-usage
+CFLAGS += -mthumb -fomit-frame-pointer -mno-unaligned-access -fstack-usage
 
 MCX_USE_CPU1 ?= n
 MCX_CPU0_RST_ADDR ?= n
 KERNEL_DATA_PHADDR ?= 0x20000000
 
 ifeq ($(TARGET_FAMILY), armv8m55)
-  CFLAGS += -mcpu=cortex-m55
+  CFLAGS += -mcpu=cortex-m55 -mfloat-abi=hard -mfpu=fpv5-d16
+  CPPFLAGS += -DKERNEL_FPU_SUPPORT=1
 else ifeq ($(TARGET_FAMILY), armv8m33)
+  CFLAGS += -mfloat-abi=soft
   ifeq ($(MCX_USE_CPU1), y)
     CFLAGS += -mcpu=cortex-m33+nodsp
   else
     CFLAGS += -mcpu=cortex-m33
   endif
+else
+  CFLAGS += -mfloat-abi=soft
 endif
 
 VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
