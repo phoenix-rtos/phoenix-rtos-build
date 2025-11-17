@@ -1,0 +1,60 @@
+libstdc++ tests
+===============
+
+Prerequisites
+-------------
+
+Tests require msgfmt and dejagnu to be installed, run:
+
+	$ sudo apt install gettext dejagnu
+
+Description
+-----------
+
+To run the tests, first make sure the target is built. Then use the runtests.sh script,
+which requires two mandatory arguments:
+
+1. The target architecture
+
+2. The path to the _build directory for the specific toolchain
+
+The test suite uses the DejaGnu framework, which internally calls the runtest program. Any
+arguments passed to runtests.sh beyond the first two will be forwarded directly to runtest.
+
+For more information about runtest, see:
+https://www.gnu.org/software/dejagnu/manual/Invoking-runtest.html
+
+Supported arch:
+ - i386
+
+Available test sets:
+ - 17_intro
+ - 18_support
+ - 19_diagnostics
+ - 20_util
+ - 21_strings
+ - 22_locale
+ - 23_containers
+ - 24_iterators
+ - 25_algorithms
+ - 26_numerics
+ - 27_io
+ - 28_regex
+ - 29_atomics
+ - 30_threads
+
+To select a test set, pass an argument to the script in the following format:
+conformance.exp=<testset>/*
+
+Example invocation:
+
+	$ runtests.sh i386 ~/toolchains/i386-pc-phoenix/_build conformance.exp=17_intro/*
+
+This runs the tests for the i386 target using the specified toolchain _build directory and
+selects the test set 17_intro.
+
+Logs
+----
+
+If the --outdir option is not specified, the .log and .sum files are created in the
+libstdc++-v3/testsuite directory, which is located within the toolchain directory.
