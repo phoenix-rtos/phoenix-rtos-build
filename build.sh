@@ -87,7 +87,7 @@ export EXPORT_CFLAGS EXPORT_CXXFLAGS EXPORT_LDFLAGS EXPORT_STRIP
 #
 if [ $# -lt 1 ]; then
 	echo "Build options should be specified!"
-	echo "Usage: build.sh [clean] [all] [host] [fs] [core] [test] [ports] [project] [image]";
+	echo "Usage: build.sh [clean] [all] [host] [fs] [core] [test] [ports] [project] [image] [bear]";
 	exit 1;
 fi
 
@@ -99,6 +99,7 @@ B_PORTS="n"
 B_PROJECT="n"
 B_IMAGE="n"
 B_TEST="n"
+B_BEAR="n"
 
 # GA CI passes all params as quoted first param - split on ' ' if necessary
 ARGS=("$@")
@@ -123,6 +124,8 @@ for arg in "${ARGS[@]}"; do
 			B_PROJECT="y";;
 		image)
 			B_IMAGE="y";;
+		bear)
+			B_BEAR="y";;
 		all)
 			B_FS="y"; B_CORE="y"; B_HOST="y"; B_PORTS="y"; B_PROJECT="y"; B_IMAGE="y";;
 		*)
@@ -131,7 +134,7 @@ for arg in "${ARGS[@]}"; do
 	esac;
 done
 
-if ! command -v bear &> /dev/null; then
+if [ "$B_CLEAN" = "y" ] && ! command -v bear &> /dev/null; then
 	echo "'bear' executable not found. Compilation database will not be built"
 elif [ -z "${DO_NOT_EXEC_BEAR+x}" ]; then
 	b_log "Running bear on top of build script"
