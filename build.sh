@@ -134,7 +134,7 @@ for arg in "${ARGS[@]}"; do
 	esac;
 done
 
-if [ "$B_BEAR" = "n" ] || ! command -v bear &> /dev/null; then
+if [ -z "${DO_NOT_EXEC_BEAR+x}" ] && [ "$B_BEAR" = "n" ] || ! command -v bear &> /dev/null; then
 	echo "'bear' executable not found. Compilation database will not be built"
 elif [ -z "${DO_NOT_EXEC_BEAR+x}" ]; then
 	b_log "Running bear on top of build script"
