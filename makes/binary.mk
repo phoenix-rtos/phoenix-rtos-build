@@ -14,6 +14,7 @@
 # - LOCAL_LDFLAGS - additional LDFLAGS for current component linking
 # - LOCAL_LDLIBS  - additional LDLIBS for current component linking
 # - LOCAL_INSTALL_PATH - custom rootfs dir for the binary to be installed (if not provided - DEFAULT_INSTALL_PATH)
+# - LOCAL_PORTS_VERSIONS - additional ports configuration for current component compilation
 
 # Global variables (not reset by this script):
 # - ROOTFS_INSTALL_UNSTRIPPED - if non-empty - install binaries into rootfs from PREFIX_PROG (instead of _STRIPPED)
@@ -49,9 +50,9 @@ $(OBJS.$(NAME)): | $(DEPS)
 
 # potentially custom CFLAGS/CXXFLAGS/LDFLAGS for compilation and linking
 # add ABS_HEADERS_DIR to CFLAGS/CXXFLAGS as a first -I path to build always using local headers instead of installed ones
-$(OBJS.$(NAME)): CFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CFLAGS) $(LOCAL_CFLAGS)
-$(OBJS.$(NAME)): CXXFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CXXFLAGS) $(LOCAL_CXXFLAGS)
-$(PREFIX_PROG)$(NAME): LDFLAGS:=$(LDFLAGS) $(LOCAL_LDFLAGS)
+$(OBJS.$(NAME)): CFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CFLAGS) $(LOCAL_CFLAGS) $(call ports_iflags)
+$(OBJS.$(NAME)): CXXFLAGS:=-I"$(ABS_HEADERS_DIR)" $(CXXFLAGS) $(LOCAL_CXXFLAGS) $(call ports_iflags)
+$(PREFIX_PROG)$(NAME): LDFLAGS:=$(LDFLAGS) $(LOCAL_LDFLAGS) $(call ports_lflags)
 $(PREFIX_PROG)$(NAME): LDLIBS:=$(LOCAL_LDLIBS) $(LDLIBS)
 
 # dynamically generated dependencies (file-to-file dependencies)
@@ -126,3 +127,4 @@ LOCAL_CXXFLAGS :=
 LOCAL_LDFLAGS :=
 LOCAL_LDLIBS :=
 LOCAL_INSTALL_PATH :=
+LOCAL_PORTS_VERSIONS :=
