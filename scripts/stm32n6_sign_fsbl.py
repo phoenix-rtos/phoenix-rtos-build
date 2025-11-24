@@ -17,15 +17,17 @@ from enum import Enum
 class AuthenticationError(Exception):
     pass
 
+
 class Color(Enum):
-    DEFAULT = '\033[39m'
-    MAGENTA = '\033[95m'
-    LBLUE = '\033[94m'
-    LCYAN = '\033[96m'
-    LGREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    LRED = '\033[91m'
-    ENDC = '\033[0m'
+    DEFAULT = "\033[39m"
+    MAGENTA = "\033[95m"
+    LBLUE = "\033[94m"
+    LCYAN = "\033[96m"
+    LGREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    LRED = "\033[91m"
+    ENDC = "\033[0m"
+
 
 class ColorFormatter(logging.Formatter):
     COLORS = {
@@ -36,6 +38,7 @@ class ColorFormatter(logging.Formatter):
     def format(self, record):
         message = super().format(record)
         return f"{self.COLORS.get(record.levelno, Color.DEFAULT).value}{message}{Color.ENDC.value}"
+
 
 class HeaderParams:
     def __init__(self, num_pub_keys: int, image: Path, encryption: bool):
@@ -53,7 +56,7 @@ class HeaderParams:
             self.padd_size -= self.encr_size
 
         img_size = os.path.getsize(image) + self.beg_zeros + self.end_zeros
-        self.end_zeros += (16 - (img_size % 16))
+        self.end_zeros += 16 - (img_size % 16)
 
 
 #### PARSE ARGUMENTS
@@ -63,18 +66,40 @@ def parse_args() -> tuple[argparse.Namespace, HeaderParams]:
     parser.add_argument("-o", "--output", required=True, type=Path, help="Path to output header file")
     parser.add_argument("-la", "--load-address", required=True, help="Specify a load address of image")
     parser.add_argument("-iver", "--image-version", default="0", help="Specify image version")
-    parser.add_argument("-prvk", "--private-key", required=True, type=Path, help="Path to unencrypted EC private (.pem) key used to sign image")
-    parser.add_argument("-pubk-id", "--public-key-index", required=True, help="Specify the index of the public key used to verify signature (0-7)")
-    parser.add_argument("-pubk", "--public-key", nargs="+", required=True, type=Path, help="Path to 1-8 EC public keys (.pem) to be accepted for verification")
-    parser.add_argument("-enc-dc", "--encryption-dc", nargs=1, help="Specify derivation constant used to derive encryption key")
-    parser.add_argument("-enc-key", "--encryption-key", type=Path, help="Path to OEM secret file used to derive encryption key")
+    parser.add_argument(
+        "-prvk",
+        "--private-key",
+        required=True,
+        type=Path,
+        help="Path to unencrypted EC private (.pem) key used to sign image",
+    )
+    parser.add_argument(
+        "-pubk-id",
+        "--public-key-index",
+        required=True,
+        help="Specify the index of the public key used to verify signature (0-7)",
+    )
+    parser.add_argument(
+        "-pubk",
+        "--public-key",
+        nargs="+",
+        required=True,
+        type=Path,
+        help="Path to 1-8 EC public keys (.pem) to be accepted for verification",
+    )
+    parser.add_argument(
+        "-enc-dc", "--encryption-dc", nargs=1, help="Specify derivation constant used to derive encryption key"
+    )
+    parser.add_argument(
+        "-enc-key", "--encryption-key", type=Path, help="Path to OEM secret file used to derive encryption key"
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable info and error output")
     args = parser.parse_args()
 
     if not args.image.is_file():
         raise ValueError(f"Argument error: failed to open {args.image}")
 
-    # VALIDATE KEYS 
+    # VALIDATE KEYS
     if not args.private_key.is_file():
         raise ValueError(f"Argument error: failed to open {args.private_key}")
     if (num_pub_keys := len(args.public_key)) < 1 or num_pub_keys > 8:
@@ -84,7 +109,9 @@ def parse_args() -> tuple[argparse.Namespace, HeaderParams]:
             raise ValueError(f"Argument error: failed to open {pubk}")
     args.public_key_index = int(args.public_key_index)
     if args.public_key_index < 0 or args.public_key_index >= num_pub_keys:
-        raise ValueError(f"Argument error: public key index needs to be in range [0, num keys - 1 ({num_pub_keys - 1})]") 
+        raise ValueError(
+            f"Argument error: public key index needs to be in range [0, num keys - 1 ({num_pub_keys - 1})]"
+        )
     validate_keys(args.private_key, args.public_key, args.public_key_index)
 
     args.load_address = struct.pack("<I", int(args.load_address, 16))
@@ -98,12 +125,12 @@ def parse_args() -> tuple[argparse.Namespace, HeaderParams]:
     elif args.encryption_dc != None and args.encryption_key != None:
         args.encryption_dc = validate_dc(args.encryption_dc[0])
         if not args.encryption_key.is_file():
-            raise ValueError(f"Argument error: failed to open {args.encryption_key}") 
+            raise ValueError(f"Argument error: failed to open {args.encryption_key}")
         args.encrypt = True
         args.ext_flags = 0x80000003
     else:
         raise ValueError("Argument error: for encryption, both OEM secret and derivation constant need to be specified")
-    
+
     header_params = HeaderParams(num_pub_keys, args.image, args.encrypt)
     return args, header_params
 
@@ -117,9 +144,13 @@ def validate_keys(private_key: Path, public_keys: list[Path], public_key_index: 
         result = subprocess.run(["openssl", "ec", "-in", str(private_key), "-pubout"], capture_output=True, text=True)
         with open(public_keys[public_key_index], "r") as pbkf:
             if result.stdout != pbkf.read():
-                raise AuthenticationError(f"Authentication error: authentication key ({public_keys[public_key_index]}) doesn't correspond with the private key")
+                raise AuthenticationError(
+                    f"Authentication error: authentication key ({public_keys[public_key_index]}) doesn't correspond with the private key"
+                )
     except subprocess.CalledProcessError as e:
-        raise AuthenticationError(f"Authentication error: authentication key ({public_keys[public_key_index]}) invalid format")
+        raise AuthenticationError(
+            f"Authentication error: authentication key ({public_keys[public_key_index]}) invalid format"
+        )
 
 
 def validate_dc(encryption_dc: str) -> bytes:
@@ -163,12 +194,12 @@ def get_pubkey_bytes(key_path: str) -> bytes:
 # Removes ASN.1/DER metadata from ecdsa signature
 def strip_ecdsa_der(signature: bytes) -> bytes:
     r_len = signature[3]
-    r_bytes = signature[4:4+r_len]
+    r_bytes = signature[4 : 4 + r_len]
     if r_bytes[0] == 0x00:
         r_bytes = r_bytes[1:]
-    signature = signature[5+r_len:]
+    signature = signature[5 + r_len :]
     s_len = signature[0]
-    s_bytes = signature[1:1+s_len]
+    s_bytes = signature[1 : 1 + s_len]
     if s_bytes[0] == 0x00:
         s_bytes = s_bytes[1:]
 
@@ -182,26 +213,22 @@ def strip_ecdsa_der_old(signature_path: str) -> bytes:
         r_bytes = f.read(r_len)
         if r_bytes[0] == 0x00:
             r_bytes = r_bytes[1:]
-        f.read(1) # skips 0x02 (INT) byte
+        f.read(1)  # skips 0x02 (INT) byte
         s_len = int.from_bytes(f.read(1))
         s_bytes = f.read(s_len)
         if s_bytes[0] == 0x00:
             s_bytes = s_bytes[1:]
 
         return r_bytes + s_bytes + bytes(32)
-    
+
 
 #### CRYPTOGRAPHY
 def aes_cmac_pfr_128(var_key: bytes, M: bytes):
     if len(var_key) == 16:
         key = var_key
     else:
-        key = CMAC.new(bytes(16), ciphermod=AES)\
-                  .update(var_key)\
-                  .digest()
-    return CMAC.new(key, ciphermod=AES)\
-               .update(M)\
-               .digest()
+        key = CMAC.new(bytes(16), ciphermod=AES).update(var_key).digest()
+    return CMAC.new(key, ciphermod=AES).update(M).digest()
 
 
 def encrypt_stm_payload(payload: bytes, iv: bytes, enc_key_file: Path, derivation_const: bytes) -> bytes:
@@ -221,35 +248,42 @@ def encrypt_stm_payload(payload: bytes, iv: bytes, enc_key_file: Path, derivatio
 
 
 #### HEADER FUNCTIONS
-def header_base(sig_file: BinaryIO, img_size: int, entry_point: bytes, img_checksum: bytes, args: argparse.Namespace, header: HeaderParams) -> None:
+def header_base(
+    sig_file: BinaryIO,
+    img_size: int,
+    entry_point: bytes,
+    img_checksum: bytes,
+    args: argparse.Namespace,
+    header: HeaderParams,
+) -> None:
     sig_file.seek(0)
-    sig_file.write(b'\x53\x54\x4d\x32')                                     # Magic number
-    sig_file.write(bytes(96))                                               # ECDSA Signature (zero bytes)
-    sig_file.write(img_checksum)                                            # Image Checksum
-    sig_file.write(b'\x00\x03\x02\x00')                                     # Header version
-    sig_file.write(struct.pack("<I", img_size))                             # Image size
-    sig_file.write(entry_point)                                             # Entry point
-    sig_file.write(bytes(4))                                                # Reserved1
-    sig_file.write(args.load_address)                                       # Load address
-    sig_file.write(bytes(4))                                                # Reserved2
-    sig_file.write(args.image_version)                                      # Image version
-    sig_file.write(struct.pack("<I", args.ext_flags))                       # Extension flags
+    sig_file.write(b"\x53\x54\x4d\x32")  # Magic number
+    sig_file.write(bytes(96))  # ECDSA Signature (zero bytes)
+    sig_file.write(img_checksum)  # Image Checksum
+    sig_file.write(b"\x00\x03\x02\x00")  # Header version
+    sig_file.write(struct.pack("<I", img_size))  # Image size
+    sig_file.write(entry_point)  # Entry point
+    sig_file.write(bytes(4))  # Reserved1
+    sig_file.write(args.load_address)  # Load address
+    sig_file.write(bytes(4))  # Reserved2
+    sig_file.write(args.image_version)  # Image version
+    sig_file.write(struct.pack("<I", args.ext_flags))  # Extension flags
     sig_file.write(struct.pack("<I", header.totl_size - header.base_size))  # Post header length
-    sig_file.write(struct.pack("<I", 16))                                   # Binary type
-    sig_file.write(bytes(8))                                                # PAD
-    sig_file.write(bytes(4))                                                # Nonsec payload length 
-    sig_file.write(bytes(4))                                                # Nonsec payload hash
+    sig_file.write(struct.pack("<I", 16))  # Binary type
+    sig_file.write(bytes(8))  # PAD
+    sig_file.write(bytes(4))  # Nonsec payload length
+    sig_file.write(bytes(4))  # Nonsec payload hash
 
 
 def header_auth(sig_file: BinaryIO, args: argparse.Namespace, header: HeaderParams):
-    sig_file.write(b'\x53\x54\x00\x02')                      # Magic number
-    sig_file.write(struct.pack("<I", header.auth_size))      # Extension header length
-    sig_file.write(struct.pack("<I", args.public_key_index)) # Public key index (which one to use)
+    sig_file.write(b"\x53\x54\x00\x02")  # Magic number
+    sig_file.write(struct.pack("<I", header.auth_size))  # Extension header length
+    sig_file.write(struct.pack("<I", args.public_key_index))  # Public key index (which one to use)
     sig_file.write(struct.pack("<I", len(args.public_key)))  # Number of public keys in table
-    sig_file.write(args.algorithm)                           # ECDSA Algorithm num (1-4)
+    sig_file.write(args.algorithm)  # ECDSA Algorithm num (1-4)
 
     pbk_path = args.public_key[args.public_key_index]
-    sig_file.write(get_pubkey_bytes(pbk_path) + bytes(32))   # Verification public key (padding for ECDSA 256)
+    sig_file.write(get_pubkey_bytes(pbk_path) + bytes(32))  # Verification public key (padding for ECDSA 256)
 
     # Public key hashes
     for pubkey_path in args.public_key:
@@ -257,17 +291,17 @@ def header_auth(sig_file: BinaryIO, args: argparse.Namespace, header: HeaderPara
 
 
 def header_encr(sig_file: BinaryIO, plain_hash: bytes, args: argparse.Namespace, header: HeaderParams):
-    sig_file.write(b"\x53\x54\x00\x01")                      # Magic number
-    sig_file.write(struct.pack("<I", header.encr_size))      # Extension header length
-    sig_file.write(struct.pack("<I", 128))                   # Key size
-    sig_file.write(args.encryption_dc)                       # Derivation constant
-    sig_file.write(plain_hash)                               # 128 msb bits of of plain payload SHA256 hash
+    sig_file.write(b"\x53\x54\x00\x01")  # Magic number
+    sig_file.write(struct.pack("<I", header.encr_size))  # Extension header length
+    sig_file.write(struct.pack("<I", 128))  # Key size
+    sig_file.write(args.encryption_dc)  # Derivation constant
+    sig_file.write(plain_hash)  # 128 msb bits of of plain payload SHA256 hash
 
 
 def header_padd(sig_file: BinaryIO, padd_header_size: int):
-    sig_file.write(b'\x53\x54\xff\xff')                      # Magic number
-    sig_file.write(struct.pack("<I", padd_header_size))      # Extension header length
-    sig_file.write(os.urandom(padd_header_size - 8))         # Padding bytes
+    sig_file.write(b"\x53\x54\xff\xff")  # Magic number
+    sig_file.write(struct.pack("<I", padd_header_size))  # Extension header length
+    sig_file.write(os.urandom(padd_header_size - 8))  # Padding bytes
 
 
 def add_payload(sig_file: BinaryIO, payload: bytes, header: HeaderParams) -> None:
@@ -286,7 +320,12 @@ def add_signature(sig_file: BinaryIO, payload: bytes, args: argparse.Namespace, 
 
     try:
         hash_content = hashlib.sha256(sigblock).digest()
-        result = subprocess.run(["openssl", "pkeyutl", "-sign", "-inkey", args.private_key], check=True, capture_output=True, input=hash_content)
+        result = subprocess.run(
+            ["openssl", "pkeyutl", "-sign", "-inkey", args.private_key],
+            check=True,
+            capture_output=True,
+            input=hash_content,
+        )
         sig_file.seek(4)
         sig_file.write(strip_ecdsa_der(result.stdout))
     except subprocess.CalledProcessError as e:
@@ -342,4 +381,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
