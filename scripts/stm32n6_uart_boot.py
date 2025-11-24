@@ -6,7 +6,7 @@
 # Author: Krzysztof Radzewicz
 #
 
-import serial, traceback, argparse, struct, os, logging, sys, math
+import serial, argparse, struct, os, logging, sys, math
 from typing import BinaryIO
 from pathlib import Path
 from enum import Enum
@@ -88,7 +88,7 @@ class ProgLogger(logging.Logger):
         if not self.isEnabledFor(self.progress_level):
             return
         for handler in self.handlers:
-            if self.isEnabledFor(logging.INFO):
+            if self.isEnabledFor(logging.INFO) and isinstance(handler, logging.StreamHandler):
                 count: int = math.ceil(self.width * progress)
                 print("\x1b[2G", end="", file=handler.stream)
                 print(f"{Color.LGREEN.value}{"=" * count}{Color.ENDC.value}", end="", file=handler.stream)
@@ -120,11 +120,7 @@ def parse_args():
     parser.add_argument("-d", "--device", default="/dev/ttyACM0", help="Select serial port device")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable terminal output")
     parser.add_argument("-dbg", "--debug", action="store_true", help="Enable debug output")
-    args = parser.parse_args()
-    if not args.image.is_file():
-        raise ValueError(f"Argument error: failed to open {args.image}")
-
-    return args
+    return parser.parse_args()
 
 
 TO_STRING = {int.from_bytes(ACK): "ACK", int.from_bytes(NACK): "NACK"}
@@ -134,7 +130,7 @@ def b2str(byte_arr: bytes) -> str:
     return ", ".join([TO_STRING.get(byte, f"{hex(byte)}") for byte in byte_arr])
 
 
-def validate_cmdset(avail_cmds: bytes) -> int:
+def validate_cmdset(avail_cmds: bytes):
     for cmd_byte, _ in ALL_COMMANDS:
         if cmd_byte not in avail_cmds:
             raise Exception(f"get: Command with code {cmd_byte} is not available.")
@@ -149,7 +145,7 @@ def calc_checksum(byte_arr: bytes) -> bytes:
 
 def sp_write(sp: serial.Serial, b: bytes, logger: ProgLogger):
     sp.write(b)
-    logger.debug(f"write 0x{b}")
+    logger.debug(f"write 0x{b.hex()}")
 
 
 #### BOOTROM COMMANDS
@@ -229,7 +225,7 @@ def cmd_getphase(sp: serial.Serial, logger: ProgLogger) -> tuple[int, bytes]:
 
 
 # Download command
-def cmd_writemem(sp: serial.Serial, packet_num: int, data: bytes, logger: ProgLogger) -> int:
+def cmd_writemem(sp: serial.Serial, packet_num: int, data: bytes, logger: ProgLogger):
     logger.debug("WRITE MEMORY:")
     sp_write(sp, CMD_WRITE_MEM, logger)
 
@@ -262,25 +258,30 @@ def cmd_writemem(sp: serial.Serial, packet_num: int, data: bytes, logger: ProgLo
         raise AckException(f"writemem, packet: {packet_num}")
 
 
-def download_image(sp: serial.Serial, image_path: str, logger: ProgLogger):
-    logger.info(f"Loading {image_path} image...")
+def download_image(sp: serial.Serial, imgf: BinaryIO, logger: ProgLogger):
+    logger.info(f"Loading image...")
     logger.progress_init()
-    imgsize = os.path.getsize(image_path) / 256
-    last_progress = 0
-    with open(image_path, "rb") as imgf:
-        counter = 0
-        while True:
-            part = imgf.read(256)
-            if not part:
-                break
-            cmd_writemem(sp, counter, part, logger)
-            counter += 1
+    if imgf.seekable():
+        imgsize = imgf.seek(0, os.SEEK_END)
+        imgf.seek(0, os.SEEK_SET)
+    else:
+        imgsize = None
 
-            if counter / imgsize > last_progress + 0.3:
-                last_progress = counter / imgsize
+    last_progress = 0.0
+    counter = 0
+    while True:
+        part = imgf.read(256)
+        if not part:
+            break
+        cmd_writemem(sp, counter, part, logger)
+        counter += 1
+
+        if imgsize is not None:
+            if ((counter * 256) / imgsize) > last_progress + 0.03:
+                last_progress = (counter * 256) / imgsize
                 logger.progress(last_progress)
 
-        logger.progress_end()
+    logger.progress_end()
 
 
 def cmd_start(sp: serial.Serial, start_addr: int, logger: ProgLogger):
@@ -349,7 +350,7 @@ def configure_logger() -> ProgLogger:
     return logger
 
 
-def perform_serial_boot(sp: serial.Serial, fsbl_image: Path, logger: ProgLogger) -> None:
+def perform_serial_boot(sp: serial.Serial, fsbl_image: BinaryIO, logger: ProgLogger) -> None:
     logger.info("===== UART BOOT =====")
     handshake(sp, logger)
     cmd_get(sp, logger)
@@ -370,18 +371,21 @@ def main() -> None:
         else:
             logger.setLevel(logging.CRITICAL)
 
-        with serial.Serial(
-            port=args.device,
-            baudrate=115200,
-            parity=serial.PARITY_EVEN,
-            stopbits=serial.STOPBITS_ONE,
-            bytesize=serial.EIGHTBITS,
-            timeout=2,
-        ) as sp:
-            perform_serial_boot(sp, args.image, logger)
+        with (
+            serial.Serial(
+                port=args.device,
+                baudrate=115200,
+                parity=serial.PARITY_EVEN,
+                stopbits=serial.STOPBITS_ONE,
+                bytesize=serial.EIGHTBITS,
+                timeout=2,
+            ) as sp,
+            open(args.image, "rb") as fsbl_image,
+        ):
+            perform_serial_boot(sp, fsbl_image, logger)
 
     except AckException as ackerr:
-        logger.error(f"{ackerr}. This is usually caused by incorrectly signed image.")
+        logger.error(f"{ackerr}. Try resetting the device. The image could also be signed incorrectly.")
     except Exception as err:
         logger.error(err)
 
