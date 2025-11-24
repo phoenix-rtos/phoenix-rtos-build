@@ -12,7 +12,7 @@ from pathlib import Path
 from enum import Enum
 
 #### CODES
-ACK = bytes([0x79]) 
+ACK = bytes([0x79])
 ACK_ACK = bytes([0x79, 0x79])
 NACK = bytes(0x1F)
 BEGIN = bytes([0x7F])
@@ -33,15 +33,17 @@ class AckException(Exception):
     def __init__(self, function: str):
         super().__init__(f"{function}: missing ACK response")
 
+
 class Color(Enum):
-    DEFAULT = '\033[39m'
-    MAGENTA = '\033[95m'
-    LBLUE = '\033[94m'
-    LCYAN = '\033[96m'
-    LGREEN = '\033[92m'
-    YELLOW = '\033[93m'
-    LRED = '\033[91m'
-    ENDC = '\033[0m'
+    DEFAULT = "\033[39m"
+    MAGENTA = "\033[95m"
+    LBLUE = "\033[94m"
+    LCYAN = "\033[96m"
+    LGREEN = "\033[92m"
+    YELLOW = "\033[93m"
+    LRED = "\033[91m"
+    ENDC = "\033[0m"
+
 
 class ColorFormatter(logging.Formatter):
     COLORS = {
@@ -61,8 +63,9 @@ class ColorFormatter(logging.Formatter):
         message = super().format(record)
         return f"{self.COLORS.get(record.levelno, Color.DEFAULT).value}{message}{Color.ENDC.value}"
 
+
 class ProgLogger(logging.Logger):
-    def __init__(self, *args, progress_bar_width: int = 50,**kwargs):
+    def __init__(self, *args, progress_bar_width: int = 50, **kwargs):
         super().__init__(*args, **kwargs)
         self.width = progress_bar_width
         self.progress_level = logging.NOTSET
@@ -91,13 +94,19 @@ class ProgLogger(logging.Logger):
                 print(f"{Color.LGREEN.value}{"=" * count}{Color.ENDC.value}", end="", file=handler.stream)
                 sys.stdout.flush()
 
-    def progress_end(self, ):
+    def progress_end(
+        self,
+    ):
         if not self.isEnabledFor(self.progress_level):
             return
         for handler in self.handlers:
             print("\x1b[1G", end="", file=handler.stream)
             mess = "Loading successful!"
-            print(f"{Color.LGREEN.value}{mess}{(self.width + 2 - len(mess)) * " "}{Color.ENDC.value}", end="\n", file=handler.stream)
+            print(
+                f"{Color.LGREEN.value}{mess}{(self.width + 2 - len(mess)) * " "}{Color.ENDC.value}",
+                end="\n",
+                file=handler.stream,
+            )
 
 
 # SCRIPT ARGUMENTS:
@@ -114,11 +123,13 @@ def parse_args():
     args = parser.parse_args()
     if not args.image.is_file():
         raise ValueError(f"Argument error: failed to open {args.image}")
-    
+
     return args
 
 
 TO_STRING = {int.from_bytes(ACK): "ACK", int.from_bytes(NACK): "NACK"}
+
+
 def b2str(byte_arr: bytes) -> str:
     return ", ".join([TO_STRING.get(byte, f"{hex(byte)}") for byte in byte_arr])
 
@@ -142,7 +153,7 @@ def sp_write(sp: serial.Serial, b: bytes, logger: ProgLogger):
 
 
 #### BOOTROM COMMANDS
-def cmd_get(sp: serial.Serial, logger: ProgLogger) -> None: 
+def cmd_get(sp: serial.Serial, logger: ProgLogger) -> None:
     logger.debug("GET:")
     sp_write(sp, CMD_GET, logger)
 
@@ -173,7 +184,7 @@ def cmd_getver(sp: serial.Serial, logger: ProgLogger) -> None:
     logger.debug(f"recv {b2str(response)}")
     if response != ACK:
         raise AckException("getver")
-    
+
     response = sp.read_until(ACK)
     if bytes([response[-1]]) != ACK:
         raise AckException("getver")
@@ -190,11 +201,11 @@ def cmd_getid(sp: serial.Serial, logger: ProgLogger) -> None:
     logger.debug(f"recv {b2str(response)}")
     if response != ACK:
         raise AckException("getid")
-    
+
     response = sp.read_until(ACK)
     if bytes([response[-1]]) != ACK:
         raise AckException("getid")
-    
+
     pid = (response[0] << 4) | response[1]
     logger.info(f"Device ID: {pid}")
 
@@ -207,11 +218,10 @@ def cmd_getphase(sp: serial.Serial, logger: ProgLogger) -> tuple[int, bytes]:
     logger.debug(f"recv {b2str(response)}")
     if response != ACK:
         raise AckException("getphase")
-    
+
     response = sp.read_until(ACK)
     if bytes([response[-1]]) != ACK:
         raise AckException("getphase")
-    
 
     phase = response[1]
     address = response[5:1:-1]
@@ -227,21 +237,21 @@ def cmd_writemem(sp: serial.Serial, packet_num: int, data: bytes, logger: ProgLo
     logger.debug(f"recv {b2str(response)}")
     if response != ACK:
         raise AckException("writemem")
-    
+
     if packet_num >= 0xF2:
         raise Exception("writemem: tried to write OTP")
-    
+
     packetid = struct.pack(">I", packet_num)
     sp_write(sp, packetid + calc_checksum(packetid), logger)
-    
+
     response = sp.read(1)
     logger.debug(f"recv {b2str(response)}")
     if response != ACK:
         raise AckException(f"writemem, packet: {packet_num}")
-    
+
     if len(data) > 256:
         raise Exception("writemem: packet too long")
-    
+
     size = len(data) - 1
     buf = bytes([size]) + data
     sp_write(sp, buf + calc_checksum(buf), logger)
@@ -300,15 +310,15 @@ def cmd_readpart(sp: serial.Serial, offset: int, rsize: int, logger: ProgLogger)
     logger.debug(f"recv {b2str(response)}")
     if response != ACK:
         raise AckException("readpart")
-    
+
     buf = struct.pack(">B", 0xF3) + struct.pack(">I", offset)
     sp_write(sp, buf + calc_checksum(buf), logger)
-    
+
     response = sp.read(1)
     logger.debug(f"recv {b2str(response)}")
     if response != ACK:
         raise AckException(f"readpart, off: {offset}")
-    
+
     size_bytes = struct.pack(">B", min(255, rsize - 1))
     buf = size_bytes + bytes([int.from_bytes(size_bytes) ^ 0xFF])
     sp_write(sp, buf, logger)
@@ -317,9 +327,9 @@ def cmd_readpart(sp: serial.Serial, offset: int, rsize: int, logger: ProgLogger)
     logger.debug(f"recv {b2str(response)}")
     if response != ACK:
         raise AckException(f"readpart, offset: {offset}")
-    
+
     return sp.read(rsize)
-    
+
 
 def handshake(sp: serial.Serial, logger: ProgLogger) -> None:
     sp_write(sp, BEGIN, logger)
@@ -359,8 +369,15 @@ def main() -> None:
             logger.setLevel(logging.INFO)
         else:
             logger.setLevel(logging.CRITICAL)
-            
-        with serial.Serial(port=args.device, baudrate=115200, parity=serial.PARITY_EVEN, stopbits=serial.STOPBITS_ONE, bytesize=serial.EIGHTBITS, timeout=2) as sp:
+
+        with serial.Serial(
+            port=args.device,
+            baudrate=115200,
+            parity=serial.PARITY_EVEN,
+            stopbits=serial.STOPBITS_ONE,
+            bytesize=serial.EIGHTBITS,
+            timeout=2,
+        ) as sp:
             perform_serial_boot(sp, args.image, logger)
 
     except AckException as ackerr:
@@ -371,4 +388,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
