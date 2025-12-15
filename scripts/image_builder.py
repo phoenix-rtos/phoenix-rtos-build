@@ -13,12 +13,14 @@ import os
 import sys
 import subprocess
 from collections import defaultdict
-from enum import Enum, IntEnum
+from enum import Enum, IntEnum, StrEnum
 from pathlib import Path
 from dataclasses import InitVar, asdict, dataclass, field, KW_ONLY, fields
-from typing import IO, Any, BinaryIO, ClassVar, Dict, List, Optional, TextIO, Tuple, Union
+from typing import IO, Any, BinaryIO, ClassVar, Dict, List, Optional, TextIO, Tuple, Union, Type, Generator
 import yaml
 import jinja2
+from cryptography.hazmat.primitives import serialization
+import cryptography.hazmat.primitives.asymmetric.ec as ec
 
 from nvm_config import FlashMemory, read_nvm, find_target_part
 from strip import ElfParser, PhFlags, PhType
@@ -93,6 +95,33 @@ class PloScriptEncoding(Enum):
 
 class PloCmdFactory:
     """Plo command factory from different input args/kwargs"""
+    _cmd_lookup: ClassVar[Optional[Dict[str, Type['PloCmdBase']]]] = None
+
+    @staticmethod
+    def _get_subclasses(parent: Type['PloCmdBase']) -> Generator[Type['PloCmdBase'], None, None]:
+        for child in parent.__subclasses__():
+            yield child
+            yield from PloCmdFactory._get_subclasses(child)
+
+    @classmethod
+    def _create_lookup(cls) -> Dict[str, Type['PloCmdBase']]:
+        lookup = {}
+
+        for cmd_class in cls._get_subclasses(PloCmdBase):
+            if hasattr(cmd_class, "NAME"):
+                lookup[cmd_class.NAME] = cmd_class
+            if hasattr(cmd_class, "ALIASES"):
+                for alias in cmd_class.ALIASES:
+                    lookup[alias] = cmd_class
+        
+        return lookup
+
+    @classmethod
+    def _get_cmd(cls, cmd_name: str) -> Optional[Type['PloCmdBase']]:
+        if cls._cmd_lookup is None:
+            cls._cmd_lookup = cls._create_lookup()
+        
+        return cls._cmd_lookup.get(cmd_name)
 
     @staticmethod
     def _extract_extra_flags(cmd_args: List[str]) -> Optional[str]:
@@ -120,16 +149,14 @@ class PloCmdFactory:
         kwargs["name"] = cmd_name
         extra_flags = cls._extract_extra_flags(cmd_args)
         # set extra_flags only if not explicitly provided
+
         if extra_flags is not None:
             kwargs["extra_flags"] = kwargs.get("extra_flags", extra_flags)
 
-        # TODO: use more generic approach with cls.NAME?
-        if cmd_name in ("kernel", "kernelimg"):
-            return PloCmdKernel(*cmd_args, **kwargs)
-        if cmd_name in ("app", "blob"):
-            return PloCmdApp(*cmd_args, **kwargs)
-        if cmd_name in ("call"):
-            return PloCmdCall(*cmd_args, **kwargs)
+        # using a generic approach to parse command name
+        cmd_class = cls._get_cmd(cmd_name)
+        if cmd_class is not None:
+            return cmd_class(*cmd_args, **kwargs)
 
         # TODO: add compile-time checks for scripts validity (eg. memory regions cross-check)?
 
@@ -220,6 +247,7 @@ class PloCmdKernel(PloCmdBase):
         kernel flash0
     """
     NAME: ClassVar = "kernel"
+    ALIASES: ClassVar[List] = ["kernelimg"]
     device: str
 
     # internal fields
@@ -287,6 +315,7 @@ class PloCmdApp(PloCmdBase):
         app flash0 -x psh;-i;/etc/rc.psh ddr ddr
     """
     NAME: ClassVar = "app"
+    ALIASES: ClassVar[List[str]] = ["blob"]
     name: str = field(default=NAME, kw_only=True)
 
     device: str                         # PLO device name
@@ -321,6 +350,7 @@ class PloCmdApp(PloCmdBase):
             self.flags = CmdAppFlags.EXEC_NO_COPY
 
     def __post_init__(self, extra_flags: str = '', filename_args: str = ''):
+        print(vars(self))
         self._parse_flags(extra_flags)
 
         if filename_args:
@@ -416,7 +446,7 @@ class PloCmdCall(PloCmdBase):
         return payload_offs, None
 
 
-@dataclass
+@dataclass(kw_only=True)
 class PloScript:
     """Full PLO script definition"""
     size: int                  # reserved size for the plo script
@@ -432,14 +462,10 @@ class PloScript:
         if isinstance(self.offs, str):
             self.offs = int(self.offs)
 
-    def write(self, file: TextIO, enc: PloScriptEncoding = PloScriptEncoding.STRING_MAGIC_V1) -> List[ProgInfo]:
+    def _write_progs(self, file: TextIO, enc: PloScriptEncoding = PloScriptEncoding.STRING_MAGIC_V1) -> List[ProgInfo]:
         prog_offs = self.offs + self.size  # init with "just after the script"
         progs = []
 
-        if self.magic is not None:
-            if len(self.magic) != 8:
-                raise ValueError(f"PLO magic string '{self.magic}' with invalid len ({len(self.magic)} != 8)")
-            file.write(f"{self.magic}\n")
         for cmd in self.contents:
             prog_offs, prog_spec = cmd.emit(file, enc, prog_offs, self.is_relative)
             if prog_spec:
@@ -451,6 +477,81 @@ class PloScript:
             raise ValueError(f"Generated user script is too large (allocated size: {self.size} < actual size {file.tell()})")
 
         return progs
+
+    def write(self, file: TextIO, enc: PloScriptEncoding = PloScriptEncoding.STRING_MAGIC_V1) -> List[ProgInfo]:
+        if self.magic is not None:
+            if len(self.magic) != 8:
+                raise ValueError(f"PLO magic string '{self.magic}' with invalid len ({len(self.magic)} != 8)")
+            file.write(f"{self.magic}\n")
+        
+        return self._write_progs(file, enc)
+
+
+class EcdsaAlgorithm(StrEnum):
+    ECDSA_128 = "ecdsa-128"
+    ECDSA_256 = "ecdsa-256"    
+    ECDSA_384 = "ecdsa-384"
+    ECDSA_512 = "ecdsa-512"
+
+    @classmethod
+    def from_str(cls, string: str) -> 'EcdsaAlgorithm':
+        return EcdsaAlgorithm[string]
+    
+    def key_len(self) -> int:
+        return int(self.value[-3:])
+
+
+class HashAlgorithm(StrEnum):
+    SHA2_128 = "sha2-128"
+    SHA2_256 = "sha2-256"
+    SHA2_384 = "sha2-384"
+    SHA2_512 = "sha2-512"
+
+    @classmethod
+    def from_str(cls, string: str) -> 'HashAlgorithm':
+        return HashAlgorithm[string]
+    
+    def hash_len(self):
+        return int(self.value[-3:])
+
+
+@dataclass(kw_only=True)
+class SecurePloScript(PloScript):
+    """Full Secure PLO script definiton"""
+    ecdsa_algorithm: EcdsaAlgorithm
+    hash_algorithm: EcdsaAlgorithm
+    script_privkey: Path
+    privkey: ec.EllipticCurvePrivateKey | None = field(init=False, default=None)
+
+    @staticmethod
+    def read_pem_key(path: Path) -> ec.EllipticCurvePrivateKey:
+        """Reads an EC private key from a pem file. For now only unencrypted keys supported"""
+        with open(path, "rb") as f:
+            pem_bytes = f.read()
+        try: 
+            return serialization.load_pem_private_key(data=pem_bytes, password=None)
+        except:
+            raise ValueError(f"Failed to parse {path} private key")
+
+    def __post_init__(self):
+        super().__post_init__()
+        if isinstance(self.ecdsa_algorithm, str):
+            self.ecdsa_algorithm = EcdsaAlgorithm.from_str(self.ecdsa_algorithm)
+        if isinstance(self.hash_algorithm, str):
+            self.hash_algorithm = HashAlgorithm.from_str(self.hash_algorithm)
+        # load private key
+        self.privkey = SecurePloScript.read_pem_key(self.script_privkey)
+        # if (key_len := len(self.privkey_bytes)) != (algo_len := self.ecdsa_algorithm.key_len() // 8):
+        #     raise ValueError(f"{self.script_privkey} length invalid - expected: {algo_len} bytes, got: {key_len} bytes")
+    
+    def write(self, file: TextIO, enc: PloScriptEncoding = PloScriptEncoding.STRING_MAGIC_V1) -> List[ProgInfo]:
+        #TODO: write the script and do all secure commands parsing
+        # save the hashes of the command content and write them after each app/blob whatever
+        # make secure comand variants
+
+        progs = self._write_progs(file, enc)
+        return progs
+    
 
 
 def render_val(tpl: Any, **kwargs) -> Any:  # mostly str | List[str] | Dict[str, str]
@@ -488,7 +589,7 @@ def nvm_to_dict(nvm: List[FlashMemory]) -> Dict[str, Dict[str, Any]]:
     return nvm_dict
 
 
-def parse_plo_script(nvm: List[FlashMemory], script_name: str) -> PloScript:
+def parse_plo_script(nvm: List[FlashMemory], script_name: str, script_privkey: Path | None = None) -> PloScript:
     """Parse YAML/jinja2 plo script and return it as PloScript object"""
 
     nvm_dict = nvm_to_dict(nvm)
@@ -497,15 +598,22 @@ def parse_plo_script(nvm: List[FlashMemory], script_name: str) -> PloScript:
         script_dict = yaml.safe_load(f)
 
         # render templates in basic plo script attributes
-        plo_param_names = [f.name for f in fields(PloScript) if f.init]
+        plo_script_class = PloScript if script_privkey is None else SecurePloScript
+        plo_param_names = [f.name for f in fields(plo_script_class) if f.init]
         plo_kwargs = {k: render_val(script_dict.get(k), nvm=nvm_dict) for k in plo_param_names if k in script_dict}
-        script = PloScript(**plo_kwargs)
+
+        # we could avoid tinkering with the dictionary here if privkey path was embedded in the secure script yaml
+        if script_privkey is not None:
+            plo_kwargs["script_privkey"] = script_privkey
+
+        script = plo_script_class(**plo_kwargs)
 
         tpl_context = {'nvm': nvm_dict, 'script': script}
         for cmd in script_dict['contents']:
             try:
                 if isinstance(cmd, str):
                     cmd_rendered = render_val(cmd, **tpl_context)
+                    print(cmd_rendered)
                     cmddef = PloCmdFactory.build(cmd_rendered)
                 else:
                     # render all values
@@ -530,12 +638,14 @@ def parse_plo_script(nvm: List[FlashMemory], script_name: str) -> PloScript:
 
 
 def write_plo_script(nvm: List[FlashMemory],
-                     script_name:
-                     str, out_name: str | None = None,
-                     enc: PloScriptEncoding = PloScriptEncoding.STRING_MAGIC_V1) -> List[ProgInfo]:
+                     script_name: str,
+                     out_name: str | None = None,
+                     enc: PloScriptEncoding = PloScriptEncoding.STRING_MAGIC_V1,
+                     script_privkey: Path | None = None) -> List[ProgInfo]:
     """Write desired PLO script and return contents of the target partition (including plo script itself)"""
     os.makedirs(PLO_SCRIPT_DIR, exist_ok=True)
-    plo_script = parse_plo_script(nvm, script_name)
+
+    plo_script = parse_plo_script(nvm, script_name, script_privkey)
 
     if out_name is not None:
         if out_name.startswith("/"):
@@ -545,12 +655,12 @@ def write_plo_script(nvm: List[FlashMemory],
     else:
         path = PLO_SCRIPT_DIR / os.path.basename(script_name).removesuffix(".yaml")
 
+    print(f"READONG FROM: {path}")
     with open(path, "w", encoding="ascii") as f:
         progs = plo_script.write(f, enc)
 
     progs = [ProgInfo(path, plo_script.offs, os.path.getsize(path), max_size=plo_script.size)] + progs
     return progs
-
 
 
 def set_offset(file: IO[bytes], target_offset: int, padding_byte: int):
@@ -619,6 +729,7 @@ def create_ptable(flash: FlashMemory) -> Path:
 def write_image(contents: List[ProgInfo], img_out_name: Path, img_max_size: int, padding_byte) -> int:
     """Creates partition/disk image with desired `contents`"""
     remove_if_exists(img_out_name)
+    # print(f"IMGOUTNAME: {img_out_name}")
 
     logging.verbose("program images:\n%s", "\n".join([str(prog) for prog in contents]))
 
@@ -638,7 +749,7 @@ def write_image(contents: List[ProgInfo], img_out_name: Path, img_max_size: int,
     return 0
 
 
-def parse_args() ->argparse.Namespace:
+def parse_args() -> argparse.Namespace:
     def env_or_required(key):
         """required as a commandline param or ENV var"""
         return {'default': os.environ.get(key)} if key in os.environ else {'required': True}
@@ -677,6 +788,9 @@ def parse_args() ->argparse.Namespace:
     # opt 2 - define partition contents by hand
     part_exclusive_group.add_argument("--contents", type=str, action="append", help="filename to append to the partition image in format `path[:offset]`")
 
+    # opt-in to secure user plo scripts
+    partition.add_argument("--private-key", type=Path, default=None ,dest="script_privkey", help="Private key path for creating a signed, secure PLO script")
+
 
     script = subparsers.add_parser("script", help="prepare PLO script from yaml/template")
     script.add_argument("--nvm", type=str, default="nvm.yaml", help="Path to NVM config (default: %(default)s)")
@@ -691,6 +805,9 @@ def parse_args() ->argparse.Namespace:
     disk.add_argument("--out", type=str, dest="out_name", help="Output disk file name (or full path) - default is the name from nvm config")
 
     args = parser.parse_args()
+
+    if args.cmd == "partition" and args.script_privkey and not args.script_name:
+        raise ValueError("Secure PLO scripts only allowed in partition command")
 
     # set common paths/vars as globals
     global TARGET, SIZE_PAGE, PREFIX_BOOT, PREFIX_ROOTFS, PREFIX_PROG_STRIPPED, PLO_SCRIPT_DIR
@@ -762,7 +879,7 @@ def main() -> int:
 
         contents: List[ProgInfo] = []
         if args.script_name:
-            contents = write_plo_script(nvm, args.script_name)
+            contents = write_plo_script(nvm, args.script_name, script_privkey=args.script_privkey)
 
             # if we're making non-relative plo script - change offsets by partition beginning
             if contents and (contents[0].offs - target_part.offs) >= 0:
