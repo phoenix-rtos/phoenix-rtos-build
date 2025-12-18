@@ -282,7 +282,7 @@ class CmdAppFlags(IntEnum):
 @dataclass
 class PloCmdApp(PloCmdBase):
     """Support for app/blob command:
-        app <device> [-x|-xn] <filename[;args]> <text_map> <data_map[;extra_maps]>
+        app <device> [-x|-xn] <filename[;args]> <text_map> <data_map[;extra_maps]> [partition name]
         blob <device> </rootfs/path> <data_map>
         app flash0 -x psh;-i;/etc/rc.psh ddr ddr
     """
@@ -293,6 +293,7 @@ class PloCmdApp(PloCmdBase):
     filename_args: InitVar[str] = ""    # program/blob name/full path with optional args separated by `;`
     text_map: str = ""                  # target memory map for program .text
     data_maps: str = ""                 # target memory map for program data + extra maps the process should have access to
+    partition: str = ""                 # target partition name (optional)
     _ = KW_ONLY
     filename: str = ""
     args: List[str] = field(default_factory=list)
@@ -358,7 +359,7 @@ class PloCmdApp(PloCmdBase):
         if enc == PloScriptEncoding.DEBUG_ASDICT:
             file.write(str(asdict(self)) + "\n")
         elif enc == PloScriptEncoding.STRING_MAGIC_V1:
-            maps_str = f"{self.text_map} {self.data_maps}".strip()  # remove extra spaces if `text_map` is not used (blob cmd)
+            maps_str = f"{self.text_map} {self.data_maps} {self.partition}".strip()  # remove extra spaces if `text_map` is not used (blob cmd)
             file.write(f"{self.name} {self.device}{self.flags.emit_as_string()} "
                        f"{';'.join([self.filename, *self.args])} {maps_str}\n")
         else:
