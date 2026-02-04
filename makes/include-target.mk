@@ -20,6 +20,7 @@ endif
 # ARMv8 Cortex Mx
 TARGETS_ARM8CORTEXM := \
   armv8m33-mcxn94x \
+  armv8m33-stm32u5 \
   armv8m55-stm32n6
 
 TARGETS += $(TARGETS_ARM8CORTEXM)
