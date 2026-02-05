@@ -8,9 +8,9 @@
 
 import argparse, struct, subprocess, hashlib, base64, logging, sys
 from typing import BinaryIO, List, NamedTuple, Optional
-import Crypto.Random
-from Crypto.Hash import CMAC
-from Crypto.Cipher import AES
+import Cryptodome.Random
+from Cryptodome.Hash import CMAC
+from Cryptodome.Cipher import AES
 from pathlib import Path
 from enum import Enum, IntFlag
 
@@ -376,7 +376,7 @@ def header_encr(sig_file: BinaryIO, plain_hash: Optional[bytes], header: HeaderP
 def header_padd(sig_file: BinaryIO, header: HeaderParams):
     sig_file.write(b"\x53\x54\xff\xff")  # Magic number
     sig_file.write(struct.pack("<I", header.padd_size))  # Extension header length
-    rand = Crypto.Random.get_random_bytes(header.padd_size - 8)
+    rand = Cryptodome.Random.get_random_bytes(header.padd_size - 8)
     sig_file.write(rand)  # Padding bytes
 
 

@@ -5,5 +5,5 @@
 # Author: Krzysztof Radzewicz
 #
 
-pycryptodome==3.23.0
+pycryptodomex==3.23.0
 pyserial==3.5
