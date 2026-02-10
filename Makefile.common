@@ -12,6 +12,7 @@ SIL ?= @
 # function - returns the directory of the current Makefile
 my-dir = $(dir $(lastword $(MAKEFILE_LIST)))
 MAKES_PATH := $(abspath $(call my-dir))/makes
+SCRIPTS_PATH := $(abspath $(call my-dir))/scripts
 
 #
 # setup basic variables
@@ -130,6 +131,12 @@ LDFLAGS_WHOLE_ARCHIVE_END ?= $(LDFLAGS_PREFIX)--no-whole-archive
 EXPORT_CFLAGS := $(CFLAGS)
 EXPORT_CXXFLAGS := $(CXXFLAGS)
 EXPORT_LDFLAGS := $(LDFLAGS)
+
+# GRAPHS LOGIC
+ifeq ($(GRAPHS), 1)
+  CFLAGS += -fdump-rtl-expand -O0 -fno-inline-functions
+  include $(MAKES_PATH)/graphs.mk
+endif
 
 # add our coding-style related options
 CFLAGS += -Wall -Wstrict-prototypes -Wundef -Werror -fno-common
