@@ -508,12 +508,13 @@ def parse_plo_script(nvm: List[FlashMemory], script_name: str) -> PloScript:
                     cmd_rendered = render_val(cmd, **tpl_context)
                     cmddef = PloCmdFactory.build(cmd_rendered)
                 else:
-                    # render all values
-                    args = {k: render_val(v, **tpl_context) for k, v in cmd.items()}
-                    enabled = args.pop('if', True)
+                    enabled = render_val(cmd.get('if', True), **tpl_context)
                     if not str2bool(enabled):
-                        logging.debug("PLO command disabled (if: '%s'): %s", enabled, str(args))
+                        logging.debug("PLO command disabled: %s", str(cmd))
                         continue
+
+                    # render all values
+                    args = {k: render_val(v, **tpl_context) for k, v in cmd.items() if k != 'if'}
 
                     if 'str' in args:
                         # command still as string, just conditional
