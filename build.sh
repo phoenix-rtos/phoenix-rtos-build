@@ -253,7 +253,9 @@ fi
 # Build ports
 #
 if [ "${B_PORTS}" = "y" ] && [ -d phoenix-rtos-ports ]; then
-	./phoenix-rtos-ports/build.sh
+  DUMMY_VERSION="v3.3.1-0-g"
+  GIT_DESC="$(cd "./phoenix-rtos-build" && git describe --tags --abbrev=0 --match "v[[:digit:]].[[:digit:]]*.[[:digit:]]*" 2> /dev/null || echo "${DUMMY_VERSION}")"
+  PHOENIX_VER="${GIT_DESC}" PORTS_CONFIG="${PREFIX_PROJECT}/${PORTS_CONFIG}" ./phoenix-rtos-ports/build.sh
 fi
 
 #
