@@ -3,7 +3,7 @@
 # Generic image builder for Phoenix-RTOS based projects.
 # Parses plo scripts in YAML format to produce target plo scripts partition/disk images.
 #
-# Copyright 2024 Phoenix Systems
+# Copyright 2024 2026 Phoenix Systems
 # Author: Marek Bialowas
 #
 
@@ -13,12 +13,17 @@ import os
 import sys
 import subprocess
 from collections import defaultdict
-from enum import Enum, IntEnum
+from enum import Enum, IntEnum, StrEnum
 from pathlib import Path
 from dataclasses import InitVar, asdict, dataclass, field, KW_ONLY, fields
-from typing import IO, Any, BinaryIO, ClassVar, Dict, List, Optional, TextIO, Tuple, Union
+from typing import IO, Any, BinaryIO, ClassVar, Dict, List, Optional, TextIO, Tuple, Union, Type, Generator
 import yaml
 import jinja2
+from Cryptodome.Signature import DSS
+from Cryptodome.PublicKey import ECC
+from Cryptodome.Hash import SHA256, SHA384, SHA512
+
+import base64
 
 from nvm_config import FlashMemory, read_nvm, find_target_part
 from strip import ElfParser, PhFlags, PhType
@@ -33,7 +38,8 @@ PREFIX_BOOT: Path
 PREFIX_ROOTFS: Path
 PREFIX_PROG_STRIPPED: Path
 PLO_SCRIPT_DIR: Path
-
+PLO_SECURE_SCRIPT_KEY: Optional[ECC.EccKey]
+HASH_ALGO_USER_SCRIPT: Optional["HashAlgorithm"]
 
 @dataclass
 class ProgInfo:
@@ -84,15 +90,80 @@ def get_elf_sizes(path : Path) -> Tuple[int, int, int, int]:
                 bss_ph[0].p_vaddr, round_up(bss_ph[0].p_memsz, SIZE_PAGE))
 
 
+class EccCurve(StrEnum):
+    P256 = "P-256"
+    P384 = "P-384"
+    
+    @property
+    def bits(self) -> int:
+        return int(self.value[-3:])
+    
+    @property
+    def bytes(self) -> int:
+        return int(self.value[-3:]) // 8
+    
+
+class HashAlgorithm(StrEnum):
+    SHA2_256 = "sha2-256"
+    SHA2_384 = "sha2-384"
+    SHA2_512 = "sha2-512"
+    
+    def primitive(self, mess: bytes):
+        return {
+            self.SHA2_256: SHA256.new(mess),
+            self.SHA2_384: SHA384.new(mess),
+            self.SHA2_512: SHA512.new(mess)
+        }[self]
+    
+    def digest(self, mess: bytes) -> bytes:
+        """Returns the hash digest of a message in little endian"""
+        return bytes(reversed(self.primitive(mess).digest()))
+    
+    @property
+    def bits(self):
+        return int(self.value[-3:])
+
+    @property
+    def bytes(self):
+        return self.bits // 8
+
+
 class PloScriptEncoding(Enum):
     """All supported types of PLO script encoding"""
-    DEBUG_ASDICT = -1    # debug-only output
-    STRING_MAGIC_V1 = 0  # human-readable string, beginning with 8-char magic string
+    DEBUG_ASDICT = -1       # debug-only output
+    STRING_ASCII_V1 = 0     # human-readable string, beginning with 8-char magic string or signature for secure scripts
     # BINARY_V1 = 10        # packed binary representation of the script NOTE: not yet implemented
 
 
 class PloCmdFactory:
     """Plo command factory from different input args/kwargs"""
+    _cmd_lookup: ClassVar[Optional[Dict[str, Type['PloCmdBase']]]] = None
+
+    @staticmethod
+    def _get_subclasses(parent: Type['PloCmdBase']) -> Generator[Type['PloCmdBase'], None, None]:
+        for child in parent.__subclasses__():
+            yield child
+            yield from PloCmdFactory._get_subclasses(child)
+
+    @staticmethod
+    def _create_lookup() -> Dict[str, Type['PloCmdBase']]:
+        lookup = {}
+
+        for cmd_class in PloCmdFactory._get_subclasses(PloCmdBase):
+            if hasattr(cmd_class, "NAME"):
+                lookup[cmd_class.NAME] = cmd_class
+            if hasattr(cmd_class, "ALIASES"):
+                for alias in cmd_class.ALIASES:
+                    lookup[alias] = cmd_class
+        
+        return lookup
+
+    @classmethod
+    def _get_cmd_class(cls, cmd_name: str) -> Optional[Type['PloCmdBase']]:
+        if cls._cmd_lookup is None:
+            cls._cmd_lookup = cls._create_lookup()
+        
+        return cls._cmd_lookup.get(cmd_name)
 
     @staticmethod
     def _extract_extra_flags(cmd_args: List[str]) -> Optional[str]:
@@ -120,16 +191,14 @@ class PloCmdFactory:
         kwargs["name"] = cmd_name
         extra_flags = cls._extract_extra_flags(cmd_args)
         # set extra_flags only if not explicitly provided
+
         if extra_flags is not None:
             kwargs["extra_flags"] = kwargs.get("extra_flags", extra_flags)
 
-        # TODO: use more generic approach with cls.NAME?
-        if cmd_name in ("kernel", "kernelimg"):
-            return PloCmdKernel(*cmd_args, **kwargs)
-        if cmd_name in ("app", "blob"):
-            return PloCmdApp(*cmd_args, **kwargs)
-        if cmd_name in ("call"):
-            return PloCmdCall(*cmd_args, **kwargs)
+        # generic lookup to parse command name
+        cmd_class = cls._get_cmd_class(cmd_name)
+        if cmd_class is not None:
+            return cmd_class(*cmd_args, **kwargs)
 
         # TODO: add compile-time checks for scripts validity (eg. memory regions cross-check)?
 
@@ -172,7 +241,7 @@ class PloCmdGeneric(PloCmdBase):
     def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
         if enc == PloScriptEncoding.DEBUG_ASDICT:
             file.write(str(asdict(self)) + "\n")
-        elif enc == PloScriptEncoding.STRING_MAGIC_V1:
+        elif enc == PloScriptEncoding.STRING_ASCII_V1:
             # basic plo cmd - just emit as a string
             file.write(self.cmd + "\n")
         else:
@@ -194,7 +263,7 @@ class PloCmdAlias(PloCmdBase):
     def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, ProgInfo]:
         if enc == PloScriptEncoding.DEBUG_ASDICT:
             file.write(str(asdict(self)) + "\n")
-        elif enc == PloScriptEncoding.STRING_MAGIC_V1:
+        elif enc == PloScriptEncoding.STRING_ASCII_V1:
             if self.set_base:
                 if is_relative:
                     file.write(f"alias -rb {payload_offs:#x}\n")
@@ -220,6 +289,7 @@ class PloCmdKernel(PloCmdBase):
         kernel flash0
     """
     NAME: ClassVar = "kernel"
+    ALIASES: ClassVar[List] = ["kernelimg"]
     device: str
 
     # internal fields
@@ -229,25 +299,66 @@ class PloCmdKernel(PloCmdBase):
     abspath: Path = field(init=False)
 
     def __post_init__(self, extra_flags: str = ''):
-        if self.name == "kernelimg":
+        if self.name == self.ALIASES[0]:
             self.suffix = "bin"
 
         self.filename = f"phoenix-{'-'.join(TARGET.split('-')[:2])}.{self.suffix}"
         self.abspath = PREFIX_PROG_STRIPPED / self.filename
         self.size = os.path.getsize(self.abspath)
 
-    def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
+    def _emit_alias(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
         alias = PloCmdAlias(self.filename, self.size)
-        new_offs, prog_info = alias.emit(file, enc, payload_offs, is_relative)
+        return alias.emit(file, enc, payload_offs, is_relative)
+
+    def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
+        new_offs, prog_info = self._emit_alias(file, enc, payload_offs, is_relative)
 
         if enc == PloScriptEncoding.DEBUG_ASDICT:
             file.write(str(asdict(self)) + "\n")
-        elif enc == PloScriptEncoding.STRING_MAGIC_V1:
-            if self.name == "kernel":
+        elif enc == PloScriptEncoding.STRING_ASCII_V1:
+            if self.name == self.NAME:
                 file.write(f"{self.name} {self.device}\n")
             else:  # kernelimg
                 tbeg, tsz, dbeg, dsz = get_elf_sizes(self.abspath.with_suffix(".elf"))
                 file.write(f"{self.name} {self.device} {self.filename} {tbeg:#x} {tsz:#x} {dbeg:#x} {dsz:#x}\n")
+        else:
+            raise NotImplementedError(f"PloScriptEncoding {enc.value} not implemented")
+
+        return new_offs, prog_info
+
+
+@dataclass(kw_only=True)
+class PloCmdKernelSecure(PloCmdKernel):
+    """Secure Kernel command doesn't support 'kernelimg' subtype
+        kernel-sec <device> <filename> <ecc_curve> <hash_algorithm> <public_key>
+        kernel-sec flash0 phoenix-armv8m55-stm32n6-sig.elf P-256 SHA2_256 vOCv8Zz1qmp0aaMNYdBOQ3bku/Y4EFLunn8zklyVTVI=DtcZ/dcY8Px28EtnihUPhCPooKbD2y0womTyuCL1e6Q=
+    """
+    NAME: ClassVar = "kernel-sec"
+
+    hash_algorithm: HashAlgorithm | str
+    public_key: ECC.EccKey | str
+    ecc_curve: EccCurve = field(init=False)
+
+    def __post_init__(self, extra_flags: str = ''):
+        self.filename = f"phoenix-{'-'.join(TARGET.split('-')[:2])}-sig.{self.suffix}"
+        self.abspath = PREFIX_PROG_STRIPPED / self.filename
+        self.size = os.path.getsize(self.abspath)
+
+        if isinstance(self.hash_algorithm, str):
+            self.hash_algorithm = HashAlgorithm(self.hash_algorithm)
+        if isinstance(self.public_key, str):
+            key_path = Path(self.public_key)
+            self.public_key = read_pem_pub_key(key_path)
+        self.ecc_curve = get_ecc_curve(self.public_key)
+
+    def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
+        new_offs, prog_info = self._emit_alias(file, enc, payload_offs, is_relative)
+        pubkey_str: str = encode_public_key(self.public_key, self.ecc_curve)
+
+        if enc == PloScriptEncoding.DEBUG_ASDICT:
+            file.write(str(asdict(self)) + "\n")
+        elif enc == PloScriptEncoding.STRING_ASCII_V1:
+            file.write(f"{self.name} {self.device} {self.filename} {self.ecc_curve} {self.hash_algorithm} {pubkey_str}\n")
         else:
             raise NotImplementedError(f"PloScriptEncoding {enc.value} not implemented")
 
@@ -287,6 +398,7 @@ class PloCmdApp(PloCmdBase):
         app flash0 -x psh;-i;/etc/rc.psh ddr ddr
     """
     NAME: ClassVar = "app"
+    ALIASES: ClassVar[List[str]] = ["blob"]
     name: str = field(default=NAME, kw_only=True)
 
     device: str                         # PLO device name
@@ -338,29 +450,76 @@ class PloCmdApp(PloCmdBase):
         self.size = os.path.getsize(self.abspath)
 
         # HACKISH: blob cmd - treat 'text_map' as data map to support specifying by string
-        if self.name == "blob" and not self.data_maps and self.text_map:
+        if self.name == self.ALIASES[0] and not self.data_maps and self.text_map:
             self.data_maps = self.text_map
             self.text_map = ""
 
         required_attrs = ["filename", "data_maps"]
-        if self.name == "app":
+        if self.name == self.NAME:
             required_attrs.append("text_map")
 
         for req_val_name in required_attrs:
             if not asdict(self).get(req_val_name):
                 raise TypeError(f"Required attribute '{req_val_name}' not present/empty")
 
-    def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
+    def _emit_alias(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
         alias = PloCmdAlias(self.filename, self.size)
         new_offs, prog_info = alias.emit(file, enc, payload_offs, is_relative)
         prog_info.path = self.abspath
 
+        return new_offs, prog_info
+
+    def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
+        new_offs, prog_info = self._emit_alias(file, enc, payload_offs, is_relative)
+
         if enc == PloScriptEncoding.DEBUG_ASDICT:
             file.write(str(asdict(self)) + "\n")
-        elif enc == PloScriptEncoding.STRING_MAGIC_V1:
+        elif enc == PloScriptEncoding.STRING_ASCII_V1:
             maps_str = f"{self.text_map} {self.data_maps}".strip()  # remove extra spaces if `text_map` is not used (blob cmd)
             file.write(f"{self.name} {self.device}{self.flags.emit_as_string()} "
                        f"{';'.join([self.filename, *self.args])} {maps_str}\n")
+        else:
+            raise NotImplementedError(f"PloScriptEncoding {enc.value} not implemented")
+
+        return new_offs, prog_info
+
+
+@dataclass(kw_only=True)
+class PloCmdAppSecure(PloCmdApp):
+    """Support for app-secure/blob-secure command:
+        app-secure <device> [-x|-xn] <filename[;args]> <text_map> <data_map[;extra_maps]> <hash_algorithm> <app_hash>
+        blob-secure <device> </rootfs/path> <data_map> <hash_algorithm> <blob_hash>
+        app-secure flash0 -x psh;-i;/etc/rc.psh ddr ddr sha2-256 vOCv8Zz1qmp0aaMNYdBOQ3bku/Y4EFLunn8zklyVTVI=
+    """
+    NAME: ClassVar = "app-secure"
+    ALIASES: ClassVar[List[str]] = ["blob-secure"]
+    hash_algorithm: HashAlgorithm | str
+
+    # internal field
+    content_hash: str | None = field(init=False, default=None)
+
+    def __post_init__(self, extra_flags: str = '', filename_args: str = ''):
+        super().__post_init__(extra_flags, filename_args)
+
+        if isinstance(self.hash_algorithm, str):
+            self.hash_algorithm = HashAlgorithm(self.hash_algorithm)
+        
+    def _get_content_hash(self, content: ProgInfo):
+        with open(content.path, "rb") as inf:
+            raw = inf.read(content.size)
+            digest = self.hash_algorithm.digest(raw)
+            return base64.b64encode(digest).decode(encoding="ascii")
+
+    def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
+        new_offs, prog_info = self._emit_alias(file, enc, payload_offs, is_relative)
+        self.content_hash = self._get_content_hash(prog_info)
+
+        if enc == PloScriptEncoding.DEBUG_ASDICT:
+            file.write(str(asdict(self)) + "\n")
+        elif enc == PloScriptEncoding.STRING_ASCII_V1:
+            maps_str = f"{self.text_map} {self.data_maps}".strip()  # remove extra spaces if `text_map` is not used (blob cmd)
+            file.write(f"{self.name} {self.device}{self.flags.emit_as_string()} "
+                       f"{';'.join([self.filename, *self.args])} {maps_str} {self.hash_algorithm} {self.content_hash}\n")
         else:
             raise NotImplementedError(f"PloScriptEncoding {enc.value} not implemented")
 
@@ -398,25 +557,68 @@ class PloCmdCall(PloCmdBase):
 
         self.size = 0x1000  # FIXME: get real defined script size
 
-    def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
+    def _emit_alias(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
         alias = PloCmdAlias(self.filename, self.size, set_base=self.set_base)
         if self.absolute:  # force absolute call even if the current script is relative
             is_relative = False
 
         alias.emit(file, enc, self.offset, is_relative)
 
+        return payload_offs, None
+
+    def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
+        prog_offs, prog_spec = self._emit_alias(file, enc, payload_offs, is_relative)
+
         if enc == PloScriptEncoding.DEBUG_ASDICT:
             file.write(str(asdict(self)) + "\n")
-        elif enc == PloScriptEncoding.STRING_MAGIC_V1:
+        elif enc == PloScriptEncoding.STRING_ASCII_V1:
             file.write(f"call {self.device} {self.filename} {self.target_magic}\n")
         else:
             raise NotImplementedError(f"PloScriptEncoding {enc.value} not implemented")
 
         # call doesn't change the payload offset nor write anything to the target partition
-        return payload_offs, None
+        return prog_offs, prog_spec
 
 
-@dataclass
+# kw_only fields allow inheritance from PloCmdCall class
+@dataclass(kw_only=True)
+class PloCmdCallSecure(PloCmdCall):
+    """Support for call-secure command:
+        call-secure [-setbase|-absolute] <device> <alias_name> <target_offs> <ecc_curve> <hash_algorithm> <public_key>
+        call-secure flash0 nlr0.plo 0x400000 P-256 sha2-256 vOCv8Zz1qmp0aaMNYdBOQ3bku/Y4EFLunn8zklyVTVI=DtcZ/dcY8Px28EtnihUPhCPooKbD2y0womTyuCL1e6Q=
+    """
+    NAME: ClassVar[str] = "call-secure"
+    target_magic: None = None                # overwrite magic number 
+    hash_algorithm: HashAlgorithm | str
+    public_key: ECC.EccKey | str
+    ecc_curve: EccCurve = field(init=False)
+    
+    def __post_init__(self, extra_flags = ''):
+        super().__post_init__(extra_flags)
+
+        if isinstance(self.hash_algorithm, str):
+            self.hash_algorithm = HashAlgorithm(self.hash_algorithm)
+        if isinstance(self.public_key, str):
+            key_path = Path(self.public_key)
+            self.public_key = read_pem_pub_key(key_path)
+        self.ecc_curve = get_ecc_curve(self.public_key)
+    
+    def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
+        prog_offs, prog_spec = self._emit_alias(file, enc, payload_offs, is_relative)
+        
+        if enc == PloScriptEncoding.DEBUG_ASDICT:
+            file.write(str(asdict(self)) + "\n")
+        elif enc == PloScriptEncoding.STRING_ASCII_V1:
+            assert isinstance(self.ecc_curve, EccCurve)
+            pubkey_str = encode_public_key(self.public_key, self.ecc_curve)
+            file.write(f"{self.NAME} {self.device} {self.filename} {self.ecc_curve} {self.hash_algorithm} {pubkey_str}\n")
+        else:
+            raise NotImplementedError(f"PloScriptEncoding {enc.value} not implemented")
+        
+        return prog_offs, prog_spec
+
+
+@dataclass()
 class PloScript:
     """Full PLO script definition"""
     size: int                  # reserved size for the plo script
@@ -432,14 +634,10 @@ class PloScript:
         if isinstance(self.offs, str):
             self.offs = int(self.offs)
 
-    def write(self, file: TextIO, enc: PloScriptEncoding = PloScriptEncoding.STRING_MAGIC_V1) -> List[ProgInfo]:
+    def _write_progs(self, file: TextIO, enc: PloScriptEncoding = PloScriptEncoding.STRING_ASCII_V1) -> List[ProgInfo]:
         prog_offs = self.offs + self.size  # init with "just after the script"
         progs = []
 
-        if self.magic is not None:
-            if len(self.magic) != 8:
-                raise ValueError(f"PLO magic string '{self.magic}' with invalid len ({len(self.magic)} != 8)")
-            file.write(f"{self.magic}\n")
         for cmd in self.contents:
             prog_offs, prog_spec = cmd.emit(file, enc, prog_offs, self.is_relative)
             if prog_spec:
@@ -452,6 +650,68 @@ class PloScript:
 
         return progs
 
+    def write(self, file: TextIO, enc: PloScriptEncoding = PloScriptEncoding.STRING_ASCII_V1) -> List[ProgInfo]:
+        if self.magic is not None:
+            if len(self.magic) != 8:
+                raise ValueError(f"PLO magic string '{self.magic}' with invalid len ({len(self.magic)} != 8)")
+            file.write(f"{self.magic}\n")
+        
+        return self._write_progs(file, enc)
+    
+
+@dataclass(kw_only=True)
+class SecurePloScript(PloScript):
+    """Full Secure PLO script definiton"""
+    hash_algorithm: HashAlgorithm
+    signature_offs: int = field(init=False, default=0)
+    contents_offs: int = field(init=False, default=0)
+    ecc_curve: EccCurve = field(init=False)
+
+    def __post_init__(self):
+        super().__post_init__()
+        if isinstance(self.hash_algorithm, str):
+            self.hash_algorithm = HashAlgorithm(self.hash_algorithm)
+        self.ecc_curve = get_ecc_curve(PLO_SECURE_SCRIPT_KEY)
+
+    def write(self, file: TextIO, enc: PloScriptEncoding = PloScriptEncoding.STRING_ASCII_V1) -> List[ProgInfo]:
+        file.write(f"{self.ecc_curve}\n")
+        file.write(f"{self.hash_algorithm}\n")
+        self.signature_offs = file.tell()
+
+        placeholder = base64.b64encode(bytes(self.ecc_curve.bytes)).decode(encoding="ascii")
+        file.write(f"{placeholder}\n")
+        file.write(f"{placeholder}\n")
+        self.contents_offs = file.tell()
+
+        prog_spec = self._write_progs(file, enc)
+
+        self._write_script_signature(file)
+
+        return prog_spec
+    
+    def _write_script_signature(self, file: TextIO):
+        """Reads script file after it's rendered and embeds an ECDSA signature"""
+        starting_offs: int = file.tell()
+        file.seek(self.offs)
+        script = file.read()
+
+        ecdsa_algo, hash_algo, _r, _s, *contents = script.splitlines(keepends=True)
+        script_message: str = "".join([ecdsa_algo, hash_algo, *contents])
+        message: bytes = script_message.encode(encoding="ascii")
+        
+        signer = DSS.new(key=PLO_SECURE_SCRIPT_KEY, mode="fips-186-3")
+        sig_bytes = signer.sign(self.hash_algorithm.primitive(message))
+        r = sig_bytes[:self.ecc_curve.bytes]
+        s = sig_bytes[self.ecc_curve.bytes:]
+        r_text, s_text = map(lambda b: base64.b64encode(b).decode(encoding="ascii"), [r, s])
+
+        file.seek(self.signature_offs)
+        file.write(f"{r_text}\n")
+        file.write(f"{s_text}\n")
+        assert file.tell() == self.contents_offs, f"{file.tell()} != {self.contents_offs}"
+
+        file.seek(starting_offs)
+    
 
 def render_val(tpl: Any, **kwargs) -> Any:  # mostly str | List[str] | Dict[str, str]
     """Uses jinja2 to render possible template variable - kwargs will be defined global variables"""
@@ -497,9 +757,11 @@ def parse_plo_script(nvm: List[FlashMemory], script_name: str) -> PloScript:
         script_dict = yaml.safe_load(f)
 
         # render templates in basic plo script attributes
-        plo_param_names = [f.name for f in fields(PloScript) if f.init]
+        plo_script_class = PloScript if PLO_SECURE_SCRIPT_KEY is None else SecurePloScript
+        plo_param_names = [f.name for f in fields(plo_script_class) if f.init]
         plo_kwargs = {k: render_val(script_dict.get(k), nvm=nvm_dict) for k in plo_param_names if k in script_dict}
-        script = PloScript(**plo_kwargs)
+
+        script = plo_script_class(**plo_kwargs)
 
         tpl_context = {'nvm': nvm_dict, 'script': script}
         for cmd in script_dict['contents']:
@@ -518,6 +780,10 @@ def parse_plo_script(nvm: List[FlashMemory], script_name: str) -> PloScript:
                     if 'str' in args:
                         # command still as string, just conditional
                         cmddef = PloCmdFactory.build(args["str"])
+                    elif 'base_cmd' in  args:
+                        # hacky: deriving secure plo commands can only use kwarg fields - use base_cmd to avoid changing the behavior of 'str'
+                        cmd_str = args.pop("base_cmd")
+                        cmddef =  PloCmdFactory.build(cmd_str, **args)
                     else:
                         # treat all dict elements as keyword arguments
                         cmddef = PloCmdFactory.build(**args)
@@ -530,9 +796,9 @@ def parse_plo_script(nvm: List[FlashMemory], script_name: str) -> PloScript:
 
 
 def write_plo_script(nvm: List[FlashMemory],
-                     script_name:
-                     str, out_name: str | None = None,
-                     enc: PloScriptEncoding = PloScriptEncoding.STRING_MAGIC_V1) -> List[ProgInfo]:
+                     script_name: str,
+                     out_name: str | None = None,
+                     enc: PloScriptEncoding = PloScriptEncoding.STRING_ASCII_V1) -> List[ProgInfo]:
     """Write desired PLO script and return contents of the target partition (including plo script itself)"""
     os.makedirs(PLO_SCRIPT_DIR, exist_ok=True)
     plo_script = parse_plo_script(nvm, script_name)
@@ -545,12 +811,12 @@ def write_plo_script(nvm: List[FlashMemory],
     else:
         path = PLO_SCRIPT_DIR / os.path.basename(script_name).removesuffix(".yaml")
 
-    with open(path, "w", encoding="ascii") as f:
+    # allow read and modify in place
+    with open(path, "w+", encoding="ascii") as f:
         progs = plo_script.write(f, enc)
 
     progs = [ProgInfo(path, plo_script.offs, os.path.getsize(path), max_size=plo_script.size)] + progs
     return progs
-
 
 
 def set_offset(file: IO[bytes], target_offset: int, padding_byte: int):
@@ -638,10 +904,52 @@ def write_image(contents: List[ProgInfo], img_out_name: Path, img_max_size: int,
     return 0
 
 
-def parse_args() ->argparse.Namespace:
+def read_pem_priv_key(path: Path, passkey: bytes) -> ECC.EccKey:
+    """Loads an encoded ECC private key in PEM format."""
+    try: 
+        with open(path, "r") as f:
+            pem_str = f.read()
+            return ECC.import_key(pem_str, passkey)
+    except:
+        raise ValueError(f"Failed to load {path} private key")
+    
+
+def read_pem_pub_key(path: Path) -> ECC.EccKey:
+    """Loads an ECC public key in pem format."""
+    try: 
+        with open(path, "r") as f:
+            pem_str = f.read()
+            return ECC.import_key(pem_str)
+    except:
+        raise ValueError(f"Failed to load {path} public key")
+
+
+def get_ecc_curve(key: ECC.EccKey) -> EccCurve:
+    return EccCurve({
+        "NIST P-256": "P-256",
+        "NIST P-384": "P-384",
+        "NIST P-512": "P-512"
+    }[key.curve])
+
+
+def encode_public_key(key: ECC.EccKey, curve: EccCurve) -> str:
+    """Encode EC public key as a base64 ascii string of the curve point coordinates (Qx, Qy), where each coordinate is an integer in little endian"""
+    raw = key.export_key(format="raw")
+    # remove leading metadata byte
+    q_x: bytes = base64.b64encode(bytes(reversed(raw[1:1+curve.bytes])))
+    q_y: bytes = base64.b64encode(bytes(reversed(raw[1+curve.bytes:])))
+
+    return f"{q_x.decode("ascii")}{q_y.decode("ascii")}"
+
+
+def parse_args() -> argparse.Namespace:
     def env_or_required(key):
         """required as a commandline param or ENV var"""
         return {'default': os.environ.get(key)} if key in os.environ else {'required': True}
+    
+    def default_from_env(key):
+        """default value taken from ENV, otherwise it's None"""
+        return {'default': os.environ.get(key) if key in os.environ else None}
 
     parser = argparse.ArgumentParser(description="Create PLO scripts, partitions and disk images")
     parser.add_argument("-v", "--verbose", action='count', default=0, help="Increase verbosity (can be used multiple times)")
@@ -677,6 +985,10 @@ def parse_args() ->argparse.Namespace:
     # opt 2 - define partition contents by hand
     part_exclusive_group.add_argument("--contents", type=str, action="append", help="filename to append to the partition image in format `path[:offset]`")
 
+    # opt-in to secure user plo scripts by providing private-key
+    partition.add_argument("--private-key", type=Path, default=None, dest="script_privkey", help="Private ECC key path for creating a signed, secure PLO script")
+    partition.add_argument("--passwd", type=str, default=None, dest="privkey_pass", help="Password for encrypted private key")
+    partition.add_argument("--hash_algo", **default_from_env("HASH_ALGO_USER_SCRIPT"), type=HashAlgorithm, choices=list(HashAlgorithm), help="Hash algorithm used to sign secure PLO script")
 
     script = subparsers.add_parser("script", help="prepare PLO script from yaml/template")
     script.add_argument("--nvm", type=str, default="nvm.yaml", help="Path to NVM config (default: %(default)s)")
@@ -692,8 +1004,11 @@ def parse_args() ->argparse.Namespace:
 
     args = parser.parse_args()
 
+    if args.cmd == "partition" and args.script_privkey and args.contents:
+        raise ValueError("Secure PLO scripts cannot be made out of raw partition content")
+
     # set common paths/vars as globals
-    global TARGET, SIZE_PAGE, PREFIX_BOOT, PREFIX_ROOTFS, PREFIX_PROG_STRIPPED, PLO_SCRIPT_DIR
+    global TARGET, SIZE_PAGE, PREFIX_BOOT, PREFIX_ROOTFS, PREFIX_PROG_STRIPPED, PLO_SCRIPT_DIR, PLO_SECURE_SCRIPT_KEY, HASH_ALGO_USER_SCRIPT
     TARGET = args.target
     SIZE_PAGE = args.size_page
     PREFIX_BOOT = Path(args.prefix_boot)
@@ -701,6 +1016,17 @@ def parse_args() ->argparse.Namespace:
     PREFIX_PROG_STRIPPED = Path(args.prefix_prog_stripped)
     PLO_SCRIPT_DIR = Path(args.plo_script_dir)
 
+    if args.cmd == "partition" and args.script_privkey is not None:
+        if args.hash_algo is None:
+            raise ValueError("Must provide hash algorithm to sign a secure plo script")
+        if args.privkey_pass is None:
+            raise ValueError("Must provide private key password")
+        PLO_SECURE_SCRIPT_KEY = read_pem_priv_key(args.script_privkey, args.privkey_pass)
+        HASH_ALGO_USER_SCRIPT = HashAlgorithm(args.hash_algo)
+    else:
+        PLO_SECURE_SCRIPT_KEY = None
+        HASH_ALGO_USER_SCRIPT = None
+    
     return args
 
 
