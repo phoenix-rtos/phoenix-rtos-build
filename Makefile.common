@@ -110,6 +110,8 @@ ifneq ($(PROJECT_PATH),)
   CXXFLAGS := -I$(PROJECT_PATH) $(CXXFLAGS)
 endif
 
+CPPFLAGS += $(PROJECT_CPPFLAGS)
+
 # Project specyfic commands used for object file modification
 # first arg: input object file - result of actual compilation/linking step
 # second arg: output object file
