@@ -2,7 +2,7 @@
 #
 # Script to remove references to .symtab from relocation section and then run strip
 #
-# Copyright 2022, 2024 Phoenix Systems
+# Copyright 2022, 2024, 2026 Phoenix Systems
 # Author: Andrzej Glowinski, Marek Bialowas
 #
 
@@ -12,10 +12,13 @@ import sys
 import tempfile
 from io import BytesIO
 from dataclasses import dataclass
-from enum import Flag, IntEnum
+from enum import IntFlag, IntEnum
 import struct
 from typing import ClassVar, Type, List, Tuple
 
+import shutil
+
+EI_NIDENT = 16
 
 class EiClass(IntEnum):
     """EI_CLASS field from e_ident that determines if elf is 32 or 64-bit"""
@@ -38,8 +41,21 @@ class EiData(IntEnum):
 class ShType(IntEnum):
     """Interpretation of sh_type field of ElfXX_Shdr struct. Determines section type"""
     SHT_NULL = 0
-    SHT_RELA = 4
-    SHT_REL = 9
+    SHT_PROGBITS =  1
+    SHT_SYMTAB =  2
+    SHT_STRTAB =  3
+    SHT_RELA =  4
+    SHT_HASH =  5
+    SHT_DYNAMIC =  6
+    SHT_NOTE =  7
+    SHT_NOBITS =  8
+    SHT_REL =  9
+    SHT_SHLIB =  10
+    SHT_DYNSYM =  11
+    SHT_LOPROC =  0x70000000
+    SHT_HIPROC =  0x7fffffff
+    SHT_LOUSER =  0x80000000
+    SHT_HIUSER = 0xffffffff
 
 
 class PhType(IntEnum):
@@ -92,12 +108,13 @@ class PhType(IntEnum):
 
 
 # Segment flag bits.
-class PhFlags(Flag):
+class PhFlags(IntFlag):
     PF_X = 1                # Execute
     PF_W = 2                # Write
     PF_R = 4                # Read
     PF_MASKOS = 0x0ff00000  # Bits for operating system-specific semantics.
     PF_MASKPROC = 0xf0000000 # Bits for processor-specific semantics.
+
 
 class ElfStruct:
     """Abstract for every ELF struct"""
@@ -201,6 +218,17 @@ class ElfShdr(ElfStruct):
     sh_info: int
     sh_addralign: int
     sh_entsize: int
+    
+    def content(self, b: BytesIO) -> bytes:
+        old_offset = b.tell()
+        b.seek(self.sh_offset)
+        res: bytes = b.read(self.sh_size)
+        b.seek(old_offset)
+        return res
+    
+    @staticmethod
+    def from_eclass(ecls: EiClass) -> Type["ElfShdr"]:
+        return {EiClass.ELFCLASS32: Elf32Shdr}[ecls]
 
 
 @dataclass
@@ -235,6 +263,13 @@ class ElfPhdr(ElfStruct):
     def __post_init__(self):
         self.p_type = PhType(self.p_type)
         self.p_flags = PhFlags(self.p_flags)
+    
+    def content(self, b: BytesIO) -> bytes:
+        old_offset = b.tell()
+        b.seek(self.p_offset)
+        res: bytes = b.read(self.p_filesz)
+        b.seek(old_offset)
+        return res
 
 
 @dataclass
@@ -282,6 +317,13 @@ class ElfFixedSizeTable:
         for off in range(self.offset, self.offset + self.size, self.entrySize):
             assert self.entrySize == self.header.get_size()
             yield self.parser.read_struct(self.header, off), off
+    
+    def __getitem__(self, index: int):
+        assert self.entrySize == self.header.get_size()
+        ent_off: int = index * self.entrySize
+        if ent_off >= self.size:
+            raise IndexError("Table index out of bounds")
+        return self.parser.read_struct(self.header, self.offset + ent_off), self.offset + ent_off
 
     def __str__(self) -> str:
         return "\n".join([str(s) for s, _ in self])
@@ -327,9 +369,9 @@ class ElfParser:
 
     def __init__(self, b: BytesIO):
         self.data = b
-        self.ident = ElfEident.parse(self.data.read(16))
+        self.ident = ElfEident.parse(self.data.read(EI_NIDENT))
         header_type = {EiClass.ELFCLASS32: Elf32Ehdr}[self.ident.get_class()]
-        header = self.read_struct(header_type, 16)
+        header = self.read_struct(header_type, EI_NIDENT)
         assert isinstance(header, ElfEhdr)
         self.header = header
 
@@ -350,6 +392,111 @@ class ElfParser:
 
     def get_program_headers(self) -> ElfPhdrTable:
         return ElfPhdrTable(self.header, self)
+    
+    def get_ehdr_bytes(self) -> bytes:
+        self.data.seek(0)
+        ident_bytes = self.data.read(EI_NIDENT)
+        return ident_bytes + self.header.serialize(self.ident.get_endianness())
+    
+    def _update_header_offsets(self, expaned_at: int, offset_by: int):
+        """Update header offsets after payload was expanded at a given address"""
+        for ph, ph_off in self.get_program_headers():
+            if ph.p_offset <= expaned_at:
+                continue
+            ph.p_offset += offset_by
+            self.write_struct(ph, ph_off)
+        
+        for sh, sh_off in self.get_sections():
+            if sh.sh_offset <= expaned_at or sh.sh_type == ShType.SHT_NOBITS:
+                continue
+            sh.sh_offset += offset_by
+            self.write_struct(sh, sh_off)
+
+    def add_section(self, name: str, content: bytes):
+        if not self.data.writable():
+            raise ValueError("Writing not supported for this object")
+        if not self.data.seekable():
+            raise ValueError("Seeking not supported for this object")
+        
+        # Add new name to strtab
+        shtab: ElfSectionTable = self.get_sections()
+        strtab_hdr: ElfShdr
+        strtab_hdr, _ = shtab[self.header.e_shstrndx]
+
+        self.data.seek(strtab_hdr.sh_offset)
+        strtab = bytearray(self.data.read(strtab_hdr.sh_size))
+        strtab.extend(name.encode(encoding="ascii") + b"\0")
+
+        rest = self.data.read()
+
+        self.data.seek(strtab_hdr.sh_offset)
+        self.data.write(strtab)
+        self.data.write(rest)
+        self.data.seek(0)
+
+        added_bytes: int = len(name) + 1
+
+        self.header.e_shoff += added_bytes
+        self.write_struct(self.header, EI_NIDENT)
+
+        shtab = self.get_sections()
+        strtab_hdr, strtab_hdr_off = shtab[self.header.e_shstrndx]
+        strtab_index: int = strtab_hdr.sh_size
+        strtab_hdr.sh_size += len(name) + 1
+        self.write_struct(strtab_hdr, strtab_hdr_off)
+
+        # Sections/segments that come after the extended names section must have their offsets moved
+        self._update_header_offsets(strtab_hdr.sh_offset, added_bytes)
+
+        # Add new section content after the last section
+        shtab = self.get_sections()
+        last_sh, _ = shtab[self.header.e_shnum - 1]
+        expand_at: int = last_sh.sh_offset + last_sh.sh_size
+        self.data.seek(expand_at)
+        rest = self.data.read()
+        self.data.seek(expand_at)
+        self.data.write(content)
+        self.data.write(rest)
+
+        self.header.e_shoff += len(content)
+        self.write_struct(self.header, EI_NIDENT)
+        self._update_header_offsets(expand_at, len(content))
+        new_sh_off: int = expand_at
+
+        # Add a new section header
+        shtab = self.get_sections()
+
+        last_sh, last_sh_off = shtab[self.header.e_shnum - 1]
+        expand_at: int = last_sh_off + self.header.e_shentsize
+        self.data.seek(expand_at)
+        rest = self.data.read()
+
+        sh_class = ElfShdr.from_eclass(self.ident.get_class())
+        assert sh_class.get_size() == self.header.e_shentsize
+        
+        section_hdr = sh_class(strtab_index, ShType.SHT_NOTE, 0, 0, new_sh_off, len(content), 0, 0, 0, 0)
+        self.write_struct(section_hdr, expand_at)
+        self.header.e_shnum += 1
+        self.write_struct(self.header, EI_NIDENT)
+    
+    def set_section_content(self, name: str, content: bytes):
+        shtab: ElfSectionTable = self.get_sections()
+        strtab_hdr: ElfShdr
+        strtab_hdr, _ = shtab[self.header.e_shstrndx]
+        strtab = strtab_hdr.content(self.data)
+
+        bname = name.encode(encoding="ascii")
+
+        for sh, _ in shtab:
+            if strtab[sh.sh_name:strtab.find(b"\0", sh.sh_name + 1)] != bname:
+                continue
+            if sh.sh_size != len(content):
+                raise ValueError("New content length must be the same")
+            self.data.seek(sh.sh_offset)
+            self.data.write(content)
+            return
+        
+        raise KeyError(f"Section with name: {name} not found")
 
 
 def remove_symtab_references(in_file, out_file):
