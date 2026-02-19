@@ -110,6 +110,16 @@ ifneq ($(PROJECT_PATH),)
   CXXFLAGS := -I$(PROJECT_PATH) $(CXXFLAGS)
 endif
 
+CPPFLAGS += $(PROJECT_CPPFLAGS)
+
+# Project specyfic commands used for object file modification
+# first arg: input object file - result of actual compilation/linking step
+# second arg: output object file
+# Default "mv" command removes original intermediate object file. This is not required. Custom commands that modify
+# object file can keep intermediate version to allow for later comparison
+PROJECT_POST_LINK ?= mv
+PROJECT_POST_COMPILE ?= mv
+
 ifeq ($(HAVE_MMU), n)
   CPPFLAGS += -DNOMMU
 endif
@@ -215,7 +225,9 @@ ARCH =  $(SIL)@mkdir -p $(@D); \
 # --whole-archive is needed for linker to always find constructors in .a files
 LINK = $(SIL)mkdir -p $(@D); \
 	printf "LD  %-24s\n" "$(@F)"; \
-	$(LD) $(CFLAGS) $(LDFLAGS) -o "$@" $(LDFLAGS_WHOLE_ARCHIVE_BEGIN) $^ $(LDFLAGS_WHOLE_ARCHIVE_END) $(LDLIBS)
+	rm -f "$@.pre"; \
+	$(LD) $(CFLAGS) $(LDFLAGS) -o "$@.pre" $(LDFLAGS_WHOLE_ARCHIVE_BEGIN) $^ $(LDFLAGS_WHOLE_ARCHIVE_END) $(LDLIBS); \
+	$(PROJECT_POST_LINK) $@.pre $@
 
 
 HEADER = $(SIL)mkdir -p $(@D); \
@@ -229,22 +241,30 @@ INSTALL_FS = $(SIL)printf "INSTALL %s\n" "$(@:$(PREFIX_ROOTFS)%=%)"; \
 $(PREFIX_O)%.o: %.c
 	@mkdir -p $(@D)
 	@printf "CC  %-24s\n" "$<"
-	$(SIL)$(CC) -c $(CPPFLAGS) $(CFLAGS) "$(abspath $<)" -o "$@" -MD -MP -MF $(PREFIX_O)$*.c.d -MT "$@"
+	$(SIL)rm -f "$@.pre"
+	$(SIL)$(CC) -c $(CPPFLAGS) $(CFLAGS) "$(abspath $<)" -o "$@.pre" -MD -MP -MF $(PREFIX_O)$*.c.d -MT "$@"
+	$(SIL)$(PROJECT_POST_COMPILE) $@.pre $@
 
 $(PREFIX_O)%.o: %.cc
 	@mkdir -p $(@D)
 	@printf "CXX  %-24s\n" "$<"
-	$(SIL)$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) "$(abspath $<)" -o "$@" -MD -MP -MF $(PREFIX_O)$*.cc.d -MT "$@"
+	$(SIL)rm -f "$@.pre"
+	$(SIL)$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) "$(abspath $<)" -o "$@.pre" -MD -MP -MF $(PREFIX_O)$*.cc.d -MT "$@"
+	$(SIL)$(PROJECT_POST_COMPILE) $@.pre $@
 
 $(PREFIX_O)%.o: %.cpp
 	@mkdir -p $(@D)
 	@printf "CXX  %-24s\n" "$<"
-	$(SIL)$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) "$(abspath $<)" -o "$@" -MD -MP -MF $(PREFIX_O)$*.cpp.d -MT "$@"
+	$(SIL)rm -f "$@.pre"
+	$(SIL)$(CXX) -c $(CPPFLAGS) $(CXXFLAGS) "$(abspath $<)" -o "$@.pre" -MD -MP -MF $(PREFIX_O)$*.cpp.d -MT "$@"
+	$(SIL)$(PROJECT_POST_COMPILE) $@.pre $@
 
 $(PREFIX_O)%.o: %.S
 	@mkdir -p $(@D)
 	@printf "ASM %-24s\n" "$<"
-	$(SIL)$(CC) -c $(CPPFLAGS) $(CFLAGS) "$(abspath $<)" -o "$@" -MD -MP -MF $(PREFIX_O)$*.S.d -MT "$@"
+	$(SIL)rm -f "$@.pre"
+	$(SIL)$(CC) -c $(CPPFLAGS) $(CFLAGS) "$(abspath $<)" -o "$@.pre" -MD -MP -MF $(PREFIX_O)$*.S.d -MT "$@"
+	$(SIL)$(PROJECT_POST_COMPILE) $@.pre $@
 
 $(PREFIX_PROG_STRIPPED)%: $(PREFIX_PROG)%
 	@mkdir -p $(@D)
