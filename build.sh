@@ -253,7 +253,7 @@ fi
 # Build ports
 #
 if [ "${B_PORTS}" = "y" ] && [ -d phoenix-rtos-ports ]; then
-	./phoenix-rtos-ports/build.sh
+	PORTS_CONFIG="${PORTS_CONFIG}" ./phoenix-rtos-build/build-ports.sh
 fi
 
 #
@@ -269,3 +269,5 @@ fi
 if [ "${B_IMAGE}" = "y" ]; then
 	b_image
 fi
+
+# vim:noexpandtab:ts=2:sw=2
