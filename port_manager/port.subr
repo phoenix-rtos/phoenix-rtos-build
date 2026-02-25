@@ -1,0 +1,126 @@
+#!/usr/bin/env bash
+#
+# Port management
+#
+# Helper functions for building Phoenix-RTOS ports
+#
+# Copyright 2024, 2026 Phoenix Systems
+# Author: Daniel Sawka, Adam Greloch
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+# Variables needed for the functions below
+: "${PREFIX_PORT:?variable unset}"
+: "${PREFIX_PORT_BUILD:?variable unset}"
+: "${PORTS_MIRROR_BASEURL:?variable unset}"
+
+# b_port_download(baseurl, filename, [orig_filename])
+#  Fetch a file from ${baseurl}${filename} (or ${baseurl}${orig_filename} if provided) and save as ${filename}
+#  in current port's directory. Provide ${orig_filename} if filename on the external server doesn't follow the
+#  package-X.Y.Z.ext convention (e.g. it's a hash). If download fails, try again from ${PORTS_MIRROR_BASEURL}${filename}.
+b_port_download() {
+	local baseurl="${1:?baseurl missing}"
+	local filename="${2:?filename missing}"
+	local orig_filename="${3:-$filename}"
+
+	if [ ! -f "${PREFIX_PORT}/${filename}" ]; then
+		if ! wget "${baseurl}${orig_filename}" -O "${PREFIX_PORT}/${filename}.part" --no-check-certificate; then
+			wget "${PORTS_MIRROR_BASEURL}${filename}" -O "${PREFIX_PORT}/${filename}.part" --no-check-certificate
+		fi
+
+		mv -f "${PREFIX_PORT}/${filename}.part" "${PREFIX_PORT}/${filename}"
+	fi
+}
+
+# b_port_apply_patches(srcdir, [patch_subdir])
+#  Apply patches to files in ${srcdir}. Non-recursive - use multiple calls with
+#  ${patch_subdir} if you group patches into separate directories.
+b_port_apply_patches() {
+	local srcdir="${1:?srcdir missing}"
+	local patch_subdir="${2:-.}"
+
+	local patch_dir="${PREFIX_PORT}/patches/${patch_subdir}"
+	local marker_dir="${PREFIX_PORT_BUILD}/_markers/${patch_subdir}"
+	if [ -d "${patch_dir}" ]; then
+		mkdir -p "${marker_dir}"
+	fi
+
+	# Restores the initial value of nullglob option upon function return
+	# shellcheck disable=2064
+	trap "$(shopt -p nullglob)" RETURN
+	shopt -s nullglob
+
+	for patchfile in "${patch_dir}"/*.patch; do
+		if [ ! -f "${marker_dir}/$(basename "${patchfile}").applied" ]; then
+			echo "applying patch: ${patchfile}"
+			patch -d "${srcdir}" -p1 <"${patchfile}"
+			touch "${marker_dir}/$(basename "${patchfile}").applied"
+		fi
+	done
+}
+
+b_install_host() {
+	local filelist=("${@:1}")
+	local absdir="${PREFIX_BUILD}/host-prog/"
+	mkdir -p "$absdir"
+
+	for file in "${filelist[@]}"; do
+		if ! [ -f "$file" ]; then
+			echo -e "\033[0;31mFile $file does not exist \033[0m"
+			exit 1
+		fi
+
+		echo -e "\033[0;35mInstalling $(basename "$file") into host-prog\033[0m"
+		install -m 755 "$file" "$absdir"
+	done
+}
+
+# shellcheck disable=2317 # may be used in p_* functions
+# b_optional_dir(dep_name)
+#  Returns installation directory of an optional dependency named ${dep_name}.
+#  This directory is a root to `lib` and `include` directories containing
+#  dependency libraries and headers. If optional dependency is not installed,
+#  returns empty string.
+b_optional_dir() {
+	local dependency_name_env_name="PORT_DEP_${1?dependency_name}"
+	echo "${!dependency_name_env_name}"
+}
+
+# shellcheck disable=2317 # as above
+# b_dependency_dir(dep_name)
+#  Returns installation directory of a required dependency named ${dep_name}.
+#  This directory is a root to `lib` and `include` directories containing
+#  dependency libraries and headers. If a required dependency is not
+#  installed, returns empty string (but if this happens, your port.def.sh is
+#  wrong!).
+b_dependency_dir() {
+	local res, dependency_name
+	dependency_name="${1?}"
+	res="$(b_optional_dir "${dependency_name}")"
+	if [[ -z "$res" ]]; then
+		b_die "dependency for ${dependency_name} required but not installed!"
+	fi
+	echo "${res}"
+}
+
+# b_use(flag_name)
+#  Returns 0 if flag is enabled and non-zero value otherwise.
+b_use() {
+	local use_flag_env_name="PORT_USE_${1?use_flag}"
+	[ "${!use_flag_env_name}" = y ]
+}
+
+b_use_ensure() {
+	local use_flag="${1?use_flag}"
+	local reason="${2?reason}"
+
+	if ! b_use "${use_flag}"; then
+		b_die "'${use_flag}' not enabled but needed for: ${reason}"
+	fi
+}
+
+# TODO: add more USE flag helpers
+
+export -f b_port_download b_port_apply_patches b_install_host \
+	b_optional_dir b_dependency_dir b_use b_use_ensure

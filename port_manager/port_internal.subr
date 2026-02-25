@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+#
+# Port management
+#
+# Internal helper functions
+#
+# Copyright 2026 Phoenix Systems
+# Author: Adam Greloch
+#
+# SPDX-License-Identifier: BSD-3-Clause
+#
+
+reset_env() {
+	# unset phoenix-rtos DEBUG variable as it changes how ports are compiled
+	unset DEBUG
+
+	if [ "$TARGET_FAMILY" = "ia32" ]; then
+		HOST_TARGET="i386"
+		HOST="i386-pc-phoenix"
+	elif [[ "$TARGET_FAMILY" == "arm"* ]]; then
+		HOST_TARGET="arm"
+		HOST="arm-phoenix"
+	elif [ "$TARGET_FAMILY" = "sparcv8leon" ]; then
+		HOST_TARGET="sparc"
+		HOST="sparc-phoenix"
+	else
+		HOST_TARGET="$TARGET_FAMILY"
+		HOST="${TARGET_FAMILY}-phoenix"
+	fi
+	export HOST_TARGET HOST
+
+	# use CFLAGS/LDFLAGS/STRIP taken from make
+	CFLAGS="${EXPORT_CFLAGS}"
+	LDFLAGS="${EXPORT_LDFLAGS}"
+	STRIP="${EXPORT_STRIP}"
+	export CFLAGS LDFLAGS STRIP
+
+	export PORTS_MIRROR_BASEURL="https://files.phoesys.com/ports/"
+
+	export PKG_CONFIG="pkg-config --static"
+
+	if [ -n "$PORTS_INSTALL_STRIPPED" ] && [ "$PORTS_INSTALL_STRIPPED" = "n" ]; then
+		export PREFIX_PROG_TO_INSTALL="$PREFIX_PROG"
+	else
+		export PREFIX_PROG_TO_INSTALL="$PREFIX_PROG_STRIPPED"
+	fi
+}
+
+load_port_def() {
+	local def_path="${1?def_path missing}"
+
+	unset ports_api
+
+	unset name
+	unset version
+	unset desc
+
+	unset source
+	unset archive_filename
+	unset sha256
+	unset size
+
+	unset license
+	unset license_file
+
+	unset src_path
+
+	unset conflicts
+
+	unset depends
+	unset optional
+
+	unset supports
+
+	unset iuse
+
+	unset p_common
+	unset p_prepare
+	unset p_build
+	unset p_build_test
+
+	# shellcheck disable=1090
+	source "${def_path}"
+}
+
+unset_internal_env() {
+	unset load_port_def
+	unset reset_env
+	unset unset_internal_env
+}
