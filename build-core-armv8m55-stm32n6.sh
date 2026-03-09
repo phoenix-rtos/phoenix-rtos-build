@@ -33,6 +33,9 @@ make -C "phoenix-rtos-corelibs" all install
 b_log "Building phoenix-rtos-filesystems"
 make -C "phoenix-rtos-filesystems" all install
 
+b_log "Building phoenix-rtos-usb"
+make -C "phoenix-rtos-usb" libusb usb-headers install
+
 b_log "Building phoenix-rtos-devices"
 make -C "phoenix-rtos-devices" all install
 
