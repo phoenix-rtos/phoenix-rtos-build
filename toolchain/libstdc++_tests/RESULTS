@@ -1,0 +1,48 @@
+This file contains a summary of the results from the last executed test campaign.
+
+=== libstdc++ Summary ===
+
+# of expected passes		8433
+# of unexpected failures	31
+# of expected failures		86
+# of unresolved testcases	7
+# of unsupported tests		2372
+
+Failures with short explanations:
+
+FAIL: 17_intro/names.cc  -std=gnu++17 (test for excess errors) - This test verifies that identifiers are not single-letter names. In our case, libphoenix contains single-letter variables, which causes the failure.
+FAIL: 19_diagnostics/error_category/generic_category.cc  -std=gnu++17 execution test - strerror prints only errno name, while the test expects a more verbose error message
+FAIL: 19_diagnostics/error_category/system_category.cc  -std=gnu++17 execution test - same as above
+FAIL: 20_util/bind/cv_quals_2.cc  -std=gnu++20  (test for warnings, line 39) - The test behaves correctly, this appears to be a framework-related issue.
+FAIL: 20_util/bind/cv_quals_2.cc  -std=gnu++20  (test for warnings, line 43) - same as above
+FAIL: 20_util/bind/cv_quals_2.cc  -std=gnu++20 (test for excess errors) - same as above
+FAIL: 20_util/bind/cv_quals_2.cc  -std=gnu++26  (test for warnings, line 39) - same as above
+FAIL: 20_util/bind/cv_quals_2.cc  -std=gnu++26  (test for warnings, line 43) - same as above
+FAIL: 20_util/bind/cv_quals_2.cc  -std=gnu++26 (test for excess errors) - same as above
+FAIL: 20_util/shared_ptr/thread/default_weaktoshared.cc  -std=gnu++17 execution test - This failure occurs only when all tests are executed together. Reason not checked.
+FAIL: 20_util/shared_ptr/thread/mutex_weaktoshared.cc  -std=gnu++17 execution test - same as above
+FAIL: 21_strings/basic_string/numeric_conversions/char/stod.cc  -std=gnu++17 execution test - The test expects std::out_of_range (via ERANGE), but POSIX does not require errno to be set for "INFINITY" passed to std::stod.
+FAIL: 21_strings/basic_string/numeric_conversions/char/stoi.cc  -std=gnu++17 execution test - same as above
+FAIL: 21_strings/basic_string/numeric_conversions/char/stol.cc  -std=gnu++17 execution test - same as above
+FAIL: 21_strings/basic_string/numeric_conversions/char/stoul.cc  -std=gnu++17 execution test - same as above
+FAIL: 22_locale/time_put/put/char/1.cc  -std=gnu++17 execution test - Locale support is missing. strftime does not support all required format specifiers.
+FAIL: 22_locale/time_put/put/char/9.cc  -std=gnu++17 execution test - same as above
+FAIL: 26_numerics/complex/13450.cc  -std=gnu++17 (test for excess errors) - Mathematical functions for float are implemented as macros, which breaks the test.
+FAIL: 26_numerics/complex/50880.cc  -std=gnu++17 (test for excess errors) - same as above
+FAIL: 26_numerics/headers/cmath/equivalent_functions.cc  -std=gnu++17 (test for excess errors) - Missing mathematical functions for long double.
+FAIL: 26_numerics/headers/cmath/functions_std_c++17.cc  -std=gnu++17 (test for excess errors) - same as above
+FAIL: 26_numerics/valarray/transcend.cc  -std=gnu++17 execution test - pow() returns an imprecise result. This is likely caused by using fmod(), which has known issues.
+FAIL: 27_io/filesystem/path/construct/95048.cc  -std=gnu++17 (test for excess errors) - No support for wchars.
+FAIL: 27_io/headers/cstdio/functions_std.cc  -std=gnu++17 (test for excess errors) - tmpnam() is implemented as a stub.
+FAIL: 27_io/objects/char/2.cc  -std=gnu++17 output pattern test - No support for output redirection using >& in psh.
+FAIL: 29_atomics/atomic_flag/cons/56012.cc  -std=gnu++17 (test for excess errors) - Failure caused by the use of a register keyword.
+
+30_threads/recursive_mutex/try_lock/2.cc - related issue: https://github.com/phoenix-rtos/phoenix-rtos-project/issues/1535
+
+At the moment, it is recommended not to run tests from 30_threads, because the failure in 2.cc causes this section tests to stop running. For this reason, failures in this section were not checked.
+
+FAIL: 30_threads/async/async.cc  -std=gnu++17 execution test
+FAIL: 30_threads/condition_variable/members/1.cc  -std=gnu++17 execution test
+FAIL: 30_threads/condition_variable/members/2.cc  -std=gnu++17 execution test
+FAIL: 30_threads/condition_variable_any/members/1.cc  -std=gnu++17 execution test
+FAIL: 30_threads/condition_variable_any/members/2.cc  -std=gnu++17 execution test
