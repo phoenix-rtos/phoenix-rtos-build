@@ -35,6 +35,10 @@ LDFLAGS_PREFIX := -Wl,
 
 LDFLAGS :=
 
+ifneq ($(KERNEL),1)
+  LDFLAGS += $(LDFLAGS_PREFIX)-T,$(PREFIX_PROJECT)/phoenix-rtos-build/ld/riscv64.ld
+endif
+
 OBJCOPY := $(CROSS)objcopy
 OBJDUMP := $(CROSS)objdump
 
