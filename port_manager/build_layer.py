@@ -89,7 +89,7 @@ def find_ports(ports_dir: str) -> Generator[tuple[dict[str, str], Path]]:
         yield (dct, port_def)
 
 
-PortsToBuildDict = dict[str, str | dict[str, str]]
+PortsToBuildDict = dict[str, str | dict[str, str] | list[dict[str, str]]]
 
 
 def get_ports_to_build(
@@ -101,6 +101,7 @@ def get_ports_to_build(
     configs like:
     ```
     tests: '{{ env.BUILD_TESTS | default(false) }}' # tests built iff BUILD_TESTS is true
+    ports:
     - name: foo
       use: {{ ["flag"] if env.FOO_FLAG }}
       tests: True

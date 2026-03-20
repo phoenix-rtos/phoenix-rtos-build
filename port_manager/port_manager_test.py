@@ -266,3 +266,20 @@ def test_install_bad_env(fix):
     assert ex.value.args[0] == "PREFIX_BUILD_VERSIONED undefined"
 
     os.environ["PREFIX_BUILD_VERSIONED"] = PREFIX_BUILD_VERSIONED
+
+
+def test_ports_to_build_override(fix):
+    all_ports = {
+        "foo-1.2.3": {},
+    }
+    to_build = {
+        "ports": [
+            {"name": "foo"},
+            {"name": "foo", "if": "False"},
+        ]
+    }
+
+    pm = run_dry_build(all_ports, to_build)
+    assert_version_mapping(
+        pm, {}
+    )
