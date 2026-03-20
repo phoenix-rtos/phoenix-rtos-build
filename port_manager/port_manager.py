@@ -173,13 +173,13 @@ class PortManager:
             logger.warning("No port requirements for target. Nothing to do")
             sys.exit(0)
 
-        cands: list[InstallableCandidate] = []
-
         enable_tests = ports_dict.get("tests", True)
 
         if "ports" not in ports_dict or not ports_dict["ports"]:
             logger.error("no ports to install? (`ports:` not present in ports.yaml)")
             sys.exit(1)
+
+        cands: dict[str, InstallableCandidate] = dict()
 
         for port in ports_dict["ports"]:
             assert isinstance(port, dict)
@@ -189,9 +189,6 @@ class PortManager:
             if port_name not in self.discovered_ports:
                 logger.error("unrecognized port:", port_name)
                 sys.exit(1)
-
-            if not build_layer.str_to_bool(port.get("if", True)):
-                continue
 
             port_cands = self.discovered_ports[port_name]
             if "version" in port:
@@ -211,6 +208,10 @@ class PortManager:
                     port_cands.values(), key=lambda c: c.version, reverse=True
                 )[0]
 
+            if not build_layer.str_to_bool(port.get("if", True)):
+                cands.pop(str(cand), None)
+                continue
+
             if not isinstance(cand, InstallableCandidate):
                 logger.error(f"{cand} is not installable!")
                 sys.exit(1)
@@ -221,9 +222,9 @@ class PortManager:
             if use_flags:
                 cand.set_use_flags(use_flags)
 
-            cands.append(cand)
+            cands[str(cand)] = cand
 
-        return cands
+        return list(cands.values())
 
     def print_install_summary(self) -> None:
         ports_str = ""
