@@ -34,6 +34,7 @@ b_port_download() {
 		local url="${1?}"
 		wget --tries="${PORTS_DOWNLOAD_RETRIES}" \
 			--timeout="${PORTS_DOWNLOAD_TIMEOUT}" \
+			--progress="dot:mega" \
 			"${url}" -O "${PREFIX_PORT}/${filename}.part" --no-check-certificate
 	}
 
