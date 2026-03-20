@@ -15,6 +15,12 @@
 : "${PREFIX_PORT_BUILD:?variable unset}"
 : "${PORTS_MIRROR_BASEURL:?variable unset}"
 
+: "${PORTS_DOWNLOAD_RETRIES:=5}"
+: "${PORTS_DOWNLOAD_TIMEOUT:=5}"
+: "${PORTS_ALWAYS_USE_MIRROR:=0}"
+
+set -e
+
 # b_port_download(baseurl, filename, [orig_filename])
 #  Fetch a file from ${baseurl}${filename} (or ${baseurl}${orig_filename} if provided) and save as ${filename}
 #  in current port's directory. Provide ${orig_filename} if filename on the external server doesn't follow the
@@ -24,9 +30,16 @@ b_port_download() {
 	local filename="${2:?filename missing}"
 	local orig_filename="${3:-$filename}"
 
+	run_wget() {
+		local url="${1?}"
+		wget --tries="${PORTS_DOWNLOAD_RETRIES}" \
+			--timeout="${PORTS_DOWNLOAD_TIMEOUT}" \
+			"${url}" -O "${PREFIX_PORT}/${filename}.part" --no-check-certificate
+	}
+
 	if [ ! -f "${PREFIX_PORT}/${filename}" ]; then
-		if ! wget "${baseurl}${orig_filename}" -O "${PREFIX_PORT}/${filename}.part" --no-check-certificate; then
-			wget "${PORTS_MIRROR_BASEURL}${filename}" -O "${PREFIX_PORT}/${filename}.part" --no-check-certificate
+		if [ "${PORTS_ALWAYS_USE_MIRROR}" = "1" ] || ! run_wget "${baseurl}${orig_filename}"; then
+			run_wget "${PORTS_MIRROR_BASEURL}${filename}"
 		fi
 
 		mv -f "${PREFIX_PORT}/${filename}.part" "${PREFIX_PORT}/${filename}"
