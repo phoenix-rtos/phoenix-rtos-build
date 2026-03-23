@@ -12,13 +12,17 @@
 
 from __future__ import annotations
 import sys
+import resolvelib
 
 from .port_manager import PortManager
 
 
 def main() -> None:
-    pm = PortManager(sys.argv)
-    pm.run_cmd()
+    try:
+        pm = PortManager(sys.argv)
+        pm.run_cmd()
+    except resolvelib.resolvers.ResolverException:
+        pass
 
 
 if __name__ == "__main__":
