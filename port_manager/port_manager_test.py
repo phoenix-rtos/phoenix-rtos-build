@@ -295,3 +295,76 @@ def test_ports_to_build_short_name(fix):
 
     pm = run_dry_build(all_ports, to_build)
     assert_version_mapping(pm, {"foo-1.2.3": {}})
+
+
+def test_ports_to_build_disabled_ports(fix):
+    all_ports = {
+        "foo-1.2.3": {"requires": "bar>=1.1.1"},
+        "bar-2.0.0": {},
+    }
+    to_build = {
+        "ports": [
+            {"name": "foo"},
+            {"name": "foo", "version": "1.2.3"},
+        ],
+        "disabled-ports": [
+            "foo",
+        ],
+    }
+
+    pm = run_dry_build(all_ports, to_build)
+    assert_version_mapping(pm, {})
+
+
+def test_ports_to_build_disable_required_dependency(fix):
+    all_ports = {
+        "foo-1.2.3": {"requires": "bar>=1.1.1"},
+        "bar-2.0.0": {},
+    }
+    to_build = {
+        "ports": [
+            {"name": "foo"},
+        ],
+        "disabled-ports": [
+            "bar",
+        ],
+    }
+
+    with pytest.raises(ResolutionImpossible):
+        run_dry_build(all_ports, to_build)
+
+
+def test_ports_to_build_disable_optional_dependency(fix):
+    all_ports = {
+        "foo-1.2.3": {"optional": "bar>=1.1.1"},
+        "bar-2.0.0": {},
+    }
+    to_build = {
+        "ports": [
+            {"name": "foo"},
+        ],
+        "disabled-ports": [
+            "bar",
+        ],
+    }
+
+    pm = run_dry_build(all_ports, to_build)
+    assert_version_mapping(pm, {"foo-1.2.3": {}})
+
+
+def test_ports_to_build_disable_bad_format(fix):
+    all_ports = {
+        "foo-1.2.3": {"optional": "bar>=1.1.1"},
+        "bar-2.0.0": {},
+    }
+
+    for bad_format in [True, "string", [["bar"], ["foo"]]]:
+        to_build = {
+            "ports": [
+                {"name": "foo"},
+            ],
+            "disabled-ports": bad_format,
+        }
+        with pytest.raises(SystemExit) as exc:
+            run_dry_build(all_ports, to_build)
+        assert exc.value.code == 1
