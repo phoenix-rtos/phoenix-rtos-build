@@ -280,6 +280,18 @@ def test_ports_to_build_override(fix):
     }
 
     pm = run_dry_build(all_ports, to_build)
-    assert_version_mapping(
-        pm, {}
-    )
+    assert_version_mapping(pm, {})
+
+
+def test_ports_to_build_short_name(fix):
+    all_ports = {
+        "foo-1.2.3": {},
+    }
+    to_build = {
+        "ports": [
+            "foo",
+        ],
+    }
+
+    pm = run_dry_build(all_ports, to_build)
+    assert_version_mapping(pm, {"foo-1.2.3": {}})

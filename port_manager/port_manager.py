@@ -181,17 +181,21 @@ class PortManager:
 
         cands: dict[str, InstallableCandidate] = dict()
 
-        for port in ports_dict["ports"]:
-            assert isinstance(port, dict)
 
-            port_name = port["name"]
+        for port in ports_dict["ports"]:
+            if isinstance(port, str):
+                port_name = port
+            else:
+                assert isinstance(port, dict)
+                port_name = port["name"]
 
             if port_name not in self.discovered_ports:
                 logger.error("unrecognized port:", port_name)
                 sys.exit(1)
 
             port_cands = self.discovered_ports[port_name]
-            if "version" in port:
+
+            if isinstance(port, dict) and "version" in port:
                 # normalize
                 ver = str(PhxVersion(port["version"]))
 
@@ -208,19 +212,20 @@ class PortManager:
                     port_cands.values(), key=lambda c: c.version, reverse=True
                 )[0]
 
-            if not build_layer.str_to_bool(port.get("if", True)):
-                cands.pop(str(cand), None)
-                continue
+            if isinstance(port, dict):
+                if not build_layer.str_to_bool(port.get("if", True)):
+                    cands.pop(str(cand), None)
+                    continue
+
+                cand.build_tests = port.get("tests", False) and enable_tests
+
+                use_flags = port.get("use", None)
+                if use_flags:
+                    cand.set_use_flags(use_flags)
 
             if not isinstance(cand, InstallableCandidate):
                 logger.error(f"{cand} is not installable!")
                 sys.exit(1)
-
-            cand.build_tests = port.get("tests", False) and enable_tests
-
-            use_flags = port.get("use", None)
-            if use_flags:
-                cand.set_use_flags(use_flags)
 
             cands[str(cand)] = cand
 
