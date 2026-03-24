@@ -224,7 +224,7 @@ class PortManager:
                 )[0]
 
             if isinstance(port, dict):
-                if not build_layer.str_to_bool(port.get("if", True)):
+                if not port.get("if", True):
                     cands.pop(str(cand), None)
                     continue
 

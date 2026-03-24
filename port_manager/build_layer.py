@@ -43,6 +43,8 @@ PORT_MGMT_DIR = Path(__file__).parent
 # borrowed from phoenix-rtos-build/scripts/image_builder.py
 def str_to_bool(v: str | bool) -> bool:
     """False is denoted by empty string or any literal sensible false values"""
+    if not v:
+        return False
     if isinstance(v, bool):
         return v
     return v.lower() not in ("", "no", "false", "n", "0")
@@ -89,7 +91,7 @@ def find_ports(ports_dir: str) -> Generator[tuple[dict[str, str], Path]]:
         yield (dct, port_def)
 
 
-PortsToBuildDict = dict[str, str | dict[str, str] | list[dict[str, str]]]
+PortsToBuildDict = dict[str, bool | str | dict[str, str] | list[dict[str, str]]]
 
 
 def get_ports_to_build(
@@ -97,16 +99,17 @@ def get_ports_to_build(
 ) -> PortsToBuildDict | None:
     """
     Reads port.yaml files from colon-separated ports_yamls. Files are first
-    rendered as jinja2 templates with OS environment, allowing for env-dependent
-    configs like:
+    rendered as jinja2 templates with OS environment and a `bool` function for
+    converting bool-like string environment variables to boolean, allowing
+    for env-dependent configs like:
     ```
-    tests: '{{ env.BUILD_TESTS | default(false) }}' # tests built iff BUILD_TESTS is true
+    tests: {{ bool(env.BUILD_TESTS) }} # tests built iff BUILD_TESTS is true
     ports:
     - name: foo
-      use: {{ ["flag"] if env.FOO_FLAG }}
+      use: {{ ["flag"] if bool(env.USE_FOO_FLAG) }}
       tests: True
     - name: bar
-      if: '{{ env.BUILD_BAR | default(false) }}' # bar built iff BUILD_BAR is true
+      if: {{ bool(env.BUILD_BAR) }} # bar built iff BUILD_BAR is true
     ```
     This is a behaviour somewhat similar to plo yaml scripts.
     """
@@ -118,6 +121,7 @@ def get_ports_to_build(
             continue
         with open(ports_yaml, encoding="utf-8") as f:
             template = jinja2.Template(f.read())
+            template.globals["bool"] = str_to_bool
             dct = yaml.safe_load(template.render(env=os.environ))
             if dct:
                 nonempty_ports_yamls.append(ports_yaml)
