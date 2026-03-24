@@ -275,7 +275,7 @@ def test_ports_to_build_override(fix):
     to_build = {
         "ports": [
             {"name": "foo"},
-            {"name": "foo", "if": "False"},
+            {"name": "foo", "if": False},
         ]
     }
 
