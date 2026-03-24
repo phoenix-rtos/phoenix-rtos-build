@@ -1,0 +1,8 @@
+# port-manager requirements (pinned to 24.04 LTS versions as of 19-02-2026)
+packaging==24.0
+pyparsing==3.1.1
+PyYAML==6.0.1
+pytest==7.4.1
+resolvelib==1.0.1
+jinja2==3.1.2
+rich==13.9.4
