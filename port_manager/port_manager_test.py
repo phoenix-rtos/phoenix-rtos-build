@@ -244,30 +244,27 @@ def test_install_path(fix):
     )
 
 
-def test_install_bad_env(fix):
-    del os.environ["PREFIX_BUILD"]
+def test_install_bad_env(fix, monkeypatch):
+    with monkeypatch.context() as m:
+        m.delenv("PREFIX_BUILD", raising=False)
+        all_ports = {"foo-1.2.3": {"requires": "bar>=1.1.1"}, "bar-2.0.0": {}}
+        to_build = {"ports": [{"name": "foo"}]}
 
-    all_ports = {"foo-1.2.3": {"requires": "bar>=1.1.1"}, "bar-2.0.0": {}}
-    to_build = {"ports": [{"name": "foo"}]}
+        with pytest.raises(EnvironmentError) as ex:
+            run_dry_build(all_ports, to_build)
+        assert ex.value.args[0] == "PREFIX_BUILD undefined"
 
-    with pytest.raises(EnvironmentError) as ex:
-        run_dry_build(all_ports, to_build)
-    assert ex.value.args[0] == "PREFIX_BUILD undefined"
+    with monkeypatch.context() as m:
+        m.delenv("PREFIX_BUILD_VERSIONED", raising=False)
 
-    os.environ["PREFIX_BUILD"] = PREFIX_BUILD
-
-    del os.environ["PREFIX_BUILD_VERSIONED"]
-
-    all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.1.1"},
-        "bar-2.0.0": {"conflicts": "barng>=0.0"},
-    }
-    to_build = {"ports": [{"name": "foo"}]}
-    with pytest.raises(EnvironmentError) as ex:
-        run_dry_build(all_ports, to_build)
-    assert ex.value.args[0] == "PREFIX_BUILD_VERSIONED undefined"
-
-    os.environ["PREFIX_BUILD_VERSIONED"] = PREFIX_BUILD_VERSIONED
+        all_ports = {
+            "foo-1.2.3": {"requires": "bar>=1.1.1"},
+            "bar-2.0.0": {"conflicts": "barng>=0.0"},
+        }
+        to_build = {"ports": [{"name": "foo"}]}
+        with pytest.raises(EnvironmentError) as ex:
+            run_dry_build(all_ports, to_build)
+        assert ex.value.args[0] == "PREFIX_BUILD_VERSIONED undefined"
 
 
 def test_ports_to_build_override(fix):
