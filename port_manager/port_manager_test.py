@@ -11,6 +11,7 @@
 
 import pytest
 import os
+import tempfile
 
 from resolvelib.resolvers import (
     ResolutionImpossible,
@@ -19,6 +20,7 @@ from resolvelib.resolvers import (
 from port_manager.port_manager import PortManager
 from port_manager.version import PhxVersion
 from port_manager.logger import LogLevel, logger
+from port_manager import build_layer
 
 PREFIX_BUILD = "normal_port_install_dir"
 PREFIX_BUILD_VERSIONED = "versioned_port_install_dir"
@@ -368,3 +370,34 @@ def test_ports_to_build_disable_bad_format(fix):
         with pytest.raises(SystemExit) as exc:
             run_dry_build(all_ports, to_build)
         assert exc.value.code == 1
+
+
+def assert_port_yaml_parsing(
+    port_yaml_contents: str, expected_dict: build_layer.PortsToBuildDict | None
+):
+    with tempfile.NamedTemporaryFile(mode="w+") as f:
+        f.write(port_yaml_contents)
+        f.seek(0)
+        assert build_layer.get_ports_to_build(f.name) == expected_dict
+
+
+def test_port_yaml_jinja_bool_parsing(fix, monkeypatch):
+    yaml = "var: {{ bool(env.VAR) }}"
+
+    for true_str in ["y", "yes", "1", "true", "True"]:
+        with monkeypatch.context() as m:
+            m.setenv("VAR", true_str)
+            assert_port_yaml_parsing(yaml, {"var": True})
+
+    for false_str in ["n", "no", "0", "false", "False"]:
+        with monkeypatch.context() as m:
+            m.setenv("VAR", false_str)
+            assert_port_yaml_parsing(yaml, {"var": False})
+
+    # Undefined variable passed to bool() should default to false
+    with monkeypatch.context() as m:
+        m.delenv("VAR", raising=False)
+        assert_port_yaml_parsing(
+            yaml,
+            {"var": False},
+        )
