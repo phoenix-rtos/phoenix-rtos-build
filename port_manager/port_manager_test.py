@@ -55,7 +55,7 @@ def build_find_ports(dct):
 
 
 def build_get_ports_to_build(dct):
-    def closure(port_yamls):
+    def closure(ports_yamls):
         return dct
 
     return closure
@@ -369,32 +369,95 @@ def test_ports_to_build_disable_bad_format(fix):
         assert exc.value.code == 1
 
 
-def assert_port_yaml_parsing(
-    port_yaml_contents: str, expected_dict: build_layer.PortsToBuildDict | None
+def assert_ports_yaml_parsing(
+    ports_yaml_contents: str, expected_dict: build_layer.PortsToBuildDict | None
 ):
     with tempfile.NamedTemporaryFile(mode="w+") as f:
-        f.write(port_yaml_contents)
+        f.write(ports_yaml_contents)
         f.seek(0)
         assert build_layer.get_ports_to_build(f.name) == expected_dict
 
 
-def test_port_yaml_jinja_bool_parsing(fix, monkeypatch):
+def dry_build_from_yaml(ports_yaml_contents, all_ports):
+    with tempfile.NamedTemporaryFile(mode="w+") as f:
+        f.write(ports_yaml_contents)
+        f.seek(0)
+
+        pm = PortManager(
+            [],
+            find_ports=build_find_ports(all_ports),
+            dry=True,
+            ports_yamls=f.name,
+            ports_dir="some_path",
+        )
+        pm.cmd_build()
+        return pm
+
+
+def test_ports_yaml_jinja_bool_parsing(fix, monkeypatch):
     yaml = "var: {{ bool(env.VAR) }}"
 
     for true_str in ["y", "yes", "1", "true", "True"]:
         with monkeypatch.context() as m:
             m.setenv("VAR", true_str)
-            assert_port_yaml_parsing(yaml, {"var": True})
+            assert_ports_yaml_parsing(yaml, {"var": True})
 
     for false_str in ["n", "no", "0", "false", "False"]:
         with monkeypatch.context() as m:
             m.setenv("VAR", false_str)
-            assert_port_yaml_parsing(yaml, {"var": False})
+            assert_ports_yaml_parsing(yaml, {"var": False})
 
     # Undefined variable passed to bool() should default to false
     with monkeypatch.context() as m:
         m.delenv("VAR", raising=False)
-        assert_port_yaml_parsing(
+        assert_ports_yaml_parsing(
             yaml,
             {"var": False},
         )
+
+
+def test_ports_yaml_jinja_bool_parsing_build(fix, monkeypatch):
+    all_ports = {
+        "foo-1.2.3": {},
+    }
+
+    yaml = """
+ports:
+- name: foo
+  if: {{ bool(env.BUILD_FOO) }}
+"""
+
+    for build_foo in ["y", "n"]:
+        with monkeypatch.context() as m:
+            m.setenv("BUILD_FOO", build_foo)
+            pm = dry_build_from_yaml(yaml, all_ports)
+            assert_version_mapping(pm, {"foo-1.2.3": {}} if build_foo == "y" else {})
+
+
+def test_ports_yaml_should_fail_when_str_in_bool_fields(fix):
+    all_ports = {
+        "foo-1.2.3": {},
+    }
+
+    yamls = [
+        """
+        ports:
+        - name: foo
+          if: 'False'
+        """,
+        """
+        tests: 'True'
+        ports:
+        - name: foo
+        """,
+        """
+        ports:
+        - name: foo
+          tests: 'True'
+        """,
+    ]
+
+    for yaml in yamls:
+        with pytest.raises(SystemExit) as exc:
+            dry_build_from_yaml(yaml, all_ports)
+        assert exc.value.code == 1
