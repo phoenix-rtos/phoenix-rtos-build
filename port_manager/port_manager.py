@@ -11,7 +11,7 @@
 #
 
 from __future__ import annotations
-from typing import TypeVar
+from typing import Any, TypeVar
 from collections.abc import Callable
 from collections.abc import Sequence, Generator
 
@@ -61,6 +61,14 @@ def parse_namever(namever: str) -> Constraint:
     if len(elems) != 2:
         raise ValueError(f"bad name-ver - expected NAME-VERSION, got '{namever}'")
     return (elems[0], PhxVersion(elems[1]))
+
+
+def require_bool(dct: dict[str, Any], key: str, default: bool) -> bool:
+    val = dct.get(key, default)
+    if not isinstance(val, bool):
+        logger.error(f"'{key}' should be bool but got {val} ({val.__class__})")
+        sys.exit(1)
+    return val
 
 
 class PortManager:
@@ -167,26 +175,32 @@ class PortManager:
             result = resolver.resolve([ureq])
             self.mapping[namever] = result.mapping
 
-    def read_ports_yaml(self) -> tuple[list[InstallableCandidate], list[str]]:
+    def read_ports_yaml(self) -> tuple[list[InstallableCandidate], set[str]]:
         ports_dict = self.get_ports_to_build(self.args.ports_yamls)
 
         if not ports_dict:
             logger.warning("No port requirements for target. Nothing to do")
             sys.exit(0)
 
-        enable_tests = ports_dict.get("tests", True)
+        enable_tests = require_bool(ports_dict, "tests", True)
 
         if "ports" not in ports_dict or not ports_dict["ports"]:
             logger.error("no ports to install? (`ports:` not present in ports.yaml)")
             sys.exit(1)
 
+        if not isinstance(ports_dict["ports"], list):
+            logger.error("'ports' should be a list")
+            sys.exit(1)
+
         cands: dict[str, InstallableCandidate] = dict()
 
-        disabled_ports = ports_dict.get("disabled-ports", [])
-        if not isinstance(disabled_ports, list) or any(not isinstance(i, str) for i in disabled_ports):
+        disabled_ports_list = ports_dict.get("disabled-ports", [])
+        if not isinstance(disabled_ports_list, list) or any(
+            not isinstance(i, str) for i in disabled_ports_list
+        ):
             logger.error("'disabled-ports' should be a list of port names (strings)")
             sys.exit(1)
-        disabled_ports = set(disabled_ports)
+        disabled_ports = set(disabled_ports_list)
 
         for port in ports_dict["ports"]:
             if isinstance(port, str):
@@ -224,11 +238,11 @@ class PortManager:
                 )[0]
 
             if isinstance(port, dict):
-                if not build_layer.str_to_bool(port.get("if", True)):
+                if not require_bool(port, "if", True):
                     cands.pop(str(cand), None)
                     continue
 
-                cand.build_tests = port.get("tests", False) and enable_tests
+                cand.build_tests = require_bool(port, "tests", False) and enable_tests
 
                 use_flags = port.get("use", None)
                 if use_flags:
