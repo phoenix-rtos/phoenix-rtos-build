@@ -224,12 +224,15 @@ def prepare_cand(
     with os.fdopen(r_fd) as r:
         env_output = r.read()
 
+    # port_prepare outputs sanitized environment for future build_cand invocation
+    build_env = dict()
+
     for line in env_output.split("\0"):
         if "=" in line:
             key, value = line.split("=", 1)
-            env[key] = value
+            build_env[key] = value
 
-    return env
+    return build_env
 
 
 def build_cand(cand: Candidate, env: dict[str, str], roll_logs: bool):
