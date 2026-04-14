@@ -42,6 +42,10 @@ if [ -z "${source}" ]; then
 	: "${git_source?}"
 else
 	: "${archive_filename?}"
+
+	if ((${#archive_filename[@]} > 2)); then
+		b_die "archive_filename must have at most 2 elements, got ${#archive_filename[@]}"
+	fi
 fi
 
 : "${sha256?}"

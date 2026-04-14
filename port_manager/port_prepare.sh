@@ -79,7 +79,7 @@ if [ ! -d "${PREFIX_PORT_WORKDIR}" ]; then
 		check_size_sha256 "${actual_size}" "${actual_sha256}"
 	else
 		# shellcheck disable=2154 # archive_filename loaded from port.def.sh
-		b_port_download "${source}/" "${archive_filename}"
+		b_port_download "${source}/" "${archive_filename[@]}"
 
 		archive_path="${PREFIX_PORT}/${archive_filename}"
 		actual_size="$(wc -c <"${archive_path}")"
