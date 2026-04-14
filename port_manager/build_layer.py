@@ -81,7 +81,7 @@ def find_ports(ports_dir: str) -> Generator[tuple[dict[str, str], Path]]:
         )
 
         if result.returncode != 0:
-            logger.error(f"during loading of {port_def}:\n", result.stderr)
+            logger.error(f"during loading of {port_def}:\n{result.stdout}")
             sys.exit(1)
 
         dct = json.loads(result.stdout)
