@@ -25,7 +25,6 @@ LDFLAGS := -Wl,-z,max-page-size=0x10
 
 ifeq ($(KERNEL), 1)
   CFLAGS += -ffixed-r9
-  LDFLAGS += -Tbss=10014000 -Tdata=10014000
   STRIP := $(CROSS)strip
 else
   CFLAGS += -fpic -fpie -msingle-pic-base -mno-pic-data-is-text-relative
