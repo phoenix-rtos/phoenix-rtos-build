@@ -76,7 +76,8 @@ def find_ports(ports_dir: str) -> Generator[tuple[dict[str, str], Path]]:
     for port_def in Path(ports_dir).rglob("*.def.sh"):
         result = subprocess.run(
             ["bash", PORT_MGMT_DIR / "port_def_to_json.sh", port_def],
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
             text=True,
         )
 
