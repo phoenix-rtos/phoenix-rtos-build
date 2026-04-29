@@ -22,7 +22,8 @@ def main() -> None:
         pm = PortManager(sys.argv)
         pm.run_cmd()
     except resolvelib.resolvers.ResolverException:
-        pass
+        # handled already, just exit (thrown for test purposes)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
