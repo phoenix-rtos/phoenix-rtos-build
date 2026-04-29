@@ -100,6 +100,13 @@ def test_port_resolution_conflicts_itself(fix):
         run_dry_build(all_ports, to_build)
 
 
+def test_port_resolution_conflicts_older_version(fix):
+    all_ports = {"foo-1.2.3": {"conflicts": "foo!=1.2.3"}}
+    to_build = {"ports": [{"name": "foo"}]}
+
+    run_dry_build(all_ports, to_build)
+
+
 def assert_version_mapping(pm, port_mappings, phoenix_ver=PHOENIX_VER):
     deps_to_install = 0
 

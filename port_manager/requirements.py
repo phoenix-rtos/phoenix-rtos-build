@@ -48,6 +48,8 @@ def constraint_satisfied(candidate_version: PhxVersion, constraint: Constraint) 
             op = operator.gt
         case "<":
             op = operator.lt
+        case "!=":
+            op = operator.ne
         case _:
             sys.exit(f"invalid/unsupported relation: '{relation}'")
     return op(candidate_version, constraint_version)
@@ -93,7 +95,13 @@ class ConflictRequirement(BaseRequirement):
         return self._cname
 
     def is_satisfied_by(self, candidate: Candidate) -> bool:
-        return self._cname != candidate.name
+        """
+        Checks if a candidate is compatible with this conflict requirement.
+
+        NOTE: This is a negation of the parent's method. It returns True if
+        the candidate does NOT fall into the conflicting version range.
+        """
+        return not super().is_satisfied_by(candidate)
 
 
 class OptionalRequirement(BaseRequirement):

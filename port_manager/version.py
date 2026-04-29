@@ -76,7 +76,7 @@ class PhxVersionGrammar:
     no_version = (
         pp.Empty().set_name("version").set_parse_action(lambda: PhxVersion("0.0"))
     )
-    version_op = pp.one_of(">= <= == > <")
+    version_op = pp.one_of(">= <= == > < !=")
     e1 = pp.Group(package + version_op + version) ^ pp.Group(
         package + no_version_op + no_version
     )

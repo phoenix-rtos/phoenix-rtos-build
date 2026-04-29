@@ -140,14 +140,15 @@ class PhxProvider(resolvelib.AbstractProvider):
             logger.debug(candidate, "conflict list:", candidate.iter_conflicts())
             for conflict in candidate.iter_conflicts():
                 if conflict.cname in requirements:
-                    logger.debug(
-                        candidate,
-                        "conflicts with",
-                        conflict.cname,
-                        "but it is in requirements",
-                    )
-                    good = False
-                    break
+                    if identifier != conflict.cname or not conflict.is_satisfied_by(candidate):
+                        logger.debug(
+                            candidate,
+                            "conflicts with",
+                            conflict.cname,
+                            "but it is in requirements",
+                        )
+                        good = False
+                        break
             for requirement in requirements[identifier]:
                 if not requirement.is_satisfied_by(candidate):
                     logger.debug(candidate, "doesn't satisfy", requirement)
