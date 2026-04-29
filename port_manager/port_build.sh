@@ -30,7 +30,7 @@ export PREFIX_H="${PREFIX_PORT_INSTALL}/include"
 export PREFIX_A="${PREFIX_PORT_INSTALL}/lib"
 
 # TODO: p_clean() ?
-# [[ $(type -t p_common) == function ]] && p_common # definition is optional
+[[ $(type -t p_common) == function ]] && p_common # definition is optional
 
 p_build
 
