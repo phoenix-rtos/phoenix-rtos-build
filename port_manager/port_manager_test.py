@@ -44,9 +44,10 @@ def build_find_ports(dct):
 
             port_def.setdefault("supports", "phoenix>=3.3")
             port_def.setdefault("iuse", "")
+            port_def.setdefault("required_use", "")
             port_def.setdefault("desc", "")
 
-            for field in ["requires", "optional", "conflicts"]:
+            for field in ["requires", "conflicts"]:
                 port_def.setdefault(field, [])
 
             yield (port_def, os.path.join("somedir", name))
@@ -77,18 +78,6 @@ def run_dry_build(all_ports, to_build):
 def test_port_resolution_simple(fix):
     all_ports = {"foo-1.2.3": {"requires": "bar>=1.1.1"}, "bar-2.0.0": {}}
     to_build = {"ports": [{"name": "foo"}]}
-    run_dry_build(all_ports, to_build)
-
-
-def test_port_resolution_depends_optional(fix):
-    all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.1.1", "optional": "baz>=3.2.1"},
-        "bar-2.0.0": {},
-    }
-    to_build = {"ports": [{"name": "foo"}]}
-    run_dry_build(all_ports, to_build)
-
-    all_ports["baz-3.2.1"] = {}
     run_dry_build(all_ports, to_build)
 
 
@@ -340,27 +329,9 @@ def test_ports_to_build_disable_required_dependency(fix):
         run_dry_build(all_ports, to_build)
 
 
-def test_ports_to_build_disable_optional_dependency(fix):
-    all_ports = {
-        "foo-1.2.3": {"optional": "bar>=1.1.1"},
-        "bar-2.0.0": {},
-    }
-    to_build = {
-        "ports": [
-            {"name": "foo"},
-        ],
-        "disabled-ports": [
-            "bar",
-        ],
-    }
-
-    pm = run_dry_build(all_ports, to_build)
-    assert_version_mapping(pm, {"foo-1.2.3": {}})
-
-
 def test_ports_to_build_disable_bad_format(fix):
     all_ports = {
-        "foo-1.2.3": {"optional": "bar>=1.1.1"},
+        "foo-1.2.3": {"requires": "bar>=1.1.1"},
         "bar-2.0.0": {},
     }
 
@@ -468,3 +439,365 @@ def test_ports_yaml_should_fail_when_str_in_bool_fields(fix):
         with pytest.raises(SystemExit) as exc:
             dry_build_from_yaml(yaml, all_ports)
         assert exc.value.code == 1
+
+
+def test_conditional_dep_flag_enabled(fix):
+    """When the USE flag is enabled, the conditional dependency should be resolved."""
+    all_ports = {
+        "foo-1.2.3": {"requires": "ssl ? ( bar>=1.1.1 )", "iuse": "ssl"},
+        "bar-2.0.0": {},
+    }
+    to_build = {"ports": [{"name": "foo", "use": ["ssl"]}]}
+    pm = run_dry_build(all_ports, to_build)
+    assert_version_mapping(pm, {"foo-1.2.3": {"bar": "2.0.0"}})
+
+
+def test_conditional_dep_flag_disabled(fix):
+    """When the USE flag is not enabled, the conditional dependency should be skipped."""
+    all_ports = {
+        "foo-1.2.3": {"requires": "ssl ? ( bar>=1.1.1 )", "iuse": "ssl"},
+        "bar-2.0.0": {},
+    }
+    to_build = {"ports": [{"name": "foo"}]}
+    pm = run_dry_build(all_ports, to_build)
+    assert_version_mapping(pm, {"foo-1.2.3": {}})
+
+
+def test_conditional_dep_missing_when_enabled(fix):
+    """When the USE flag is enabled but the conditional dep is unavailable, resolution should fail."""
+    all_ports = {
+        "foo-1.2.3": {"requires": "ssl ? ( bar>=1.1.1 )", "iuse": "ssl"},
+    }
+    to_build = {"ports": [{"name": "foo", "use": ["ssl"]}]}
+    with pytest.raises(ResolutionImpossible):
+        run_dry_build(all_ports, to_build)
+
+
+def test_use_flag_propagation(fix):
+    """USE flags should be propagated to the dependency."""
+    all_ports = {
+        "foo-1.2.3": {"requires": "bar>=1.1.1[crypto]"},
+        "bar-2.0.0": {"iuse": "crypto"},
+    }
+    to_build = {"ports": [{"name": "foo"}]}
+    pm = run_dry_build(all_ports, to_build)
+    assert_version_mapping(pm, {"foo-1.2.3": {"bar": "2.0.0"}})
+
+    # Check that 'crypto' flag was propagated to bar
+    bar_cand = pm.mapping["foo-1.2.3"]["bar"]
+    assert "crypto" in bar_cand.use_flags
+
+
+def test_use_flag_propagation_bad_flag(fix):
+    """Propagating a USE flag not in the dependency's iuse should fail."""
+    all_ports = {
+        "foo-1.2.3": {"requires": "bar>=1.1.1[nonexistent]"},
+        "bar-2.0.0": {"iuse": "crypto"},
+    }
+    to_build = {"ports": [{"name": "foo"}]}
+    with pytest.raises(SystemExit):
+        run_dry_build(all_ports, to_build)
+
+
+def test_conditional_dep_with_use_propagation(fix):
+    """Conditional dep with USE flag propagation: ssl ? ( bar>=1.1.1[crypto] )."""
+    all_ports = {
+        "foo-1.2.3": {"requires": "ssl ? ( bar>=1.1.1[crypto] )", "iuse": "ssl"},
+        "bar-2.0.0": {"iuse": "crypto"},
+    }
+    to_build = {"ports": [{"name": "foo", "use": ["ssl"]}]}
+    pm = run_dry_build(all_ports, to_build)
+    assert_version_mapping(pm, {"foo-1.2.3": {"bar": "2.0.0"}})
+
+    bar_cand = pm.mapping["foo-1.2.3"]["bar"]
+    assert "crypto" in bar_cand.use_flags
+
+
+def test_conditional_dep_with_use_propagation_flag_disabled(fix):
+    """When the condition flag is disabled, the dep (and its USE propagation) should be skipped."""
+    all_ports = {
+        "foo-1.2.3": {"requires": "ssl ? ( bar>=1.1.1[crypto] )", "iuse": "ssl"},
+        "bar-2.0.0": {"iuse": "crypto"},
+    }
+    to_build = {"ports": [{"name": "foo"}]}
+    pm = run_dry_build(all_ports, to_build)
+    assert_version_mapping(pm, {"foo-1.2.3": {}})
+
+
+def test_mixed_conditional_and_unconditional(fix):
+    """Mix of conditional and unconditional deps in the same requires string."""
+    all_ports = {
+        "foo-1.2.3": {"requires": "baz>=1.0 ssl ? ( bar>=1.1.1 )", "iuse": "ssl"},
+        "bar-2.0.0": {},
+        "baz-1.5.0": {},
+    }
+    to_build = {"ports": [{"name": "foo", "use": ["ssl"]}]}
+    pm = run_dry_build(all_ports, to_build)
+    assert_version_mapping(pm, {"foo-1.2.3": {"bar": "2.0.0", "baz": "1.5.0"}})
+
+    # Without ssl flag
+    to_build_no_ssl = {"ports": [{"name": "foo"}]}
+    pm2 = run_dry_build(all_ports, to_build_no_ssl)
+    assert_version_mapping(pm2, {"foo-1.2.3": {"baz": "1.5.0"}})
+
+
+def test_use_flag_additive_propagation(fix):
+    """foo requests bar[ssl], baz also depends on bar (no flags). ssl should still be set."""
+    all_ports = {
+        "foo-1.2.3": {"requires": "bar>=1.0[ssl]"},
+        "baz-1.0.0": {"requires": "bar>=1.0"},
+        "bar-2.0.0": {"iuse": "ssl"},
+    }
+    to_build = {"ports": [{"name": "foo"}, {"name": "baz"}]}
+    pm = run_dry_build(all_ports, to_build)
+
+    bar_from_foo = pm.mapping["foo-1.2.3"]["bar"]
+    assert "ssl" in bar_from_foo.use_flags
+
+
+def test_required_use_at_most_one_conflict(fix):
+    """?? ( x1 x2 ): foo requests bar[x1], baz requests bar[x2] -> error."""
+    all_ports = {
+        "foo-1.2.3": {"requires": "bar>=1.0[x1]"},
+        "baz-1.0.0": {"requires": "bar>=1.0[x2]"},
+        "bar-2.0.0": {"iuse": "x1 x2", "required_use": "?? ( x1 x2 )"},
+    }
+    to_build = {"ports": [{"name": "foo"}, {"name": "baz"}]}
+    with pytest.raises(SystemExit):
+        run_dry_build(all_ports, to_build)
+
+
+def test_required_use_at_most_one_no_conflict(fix):
+    """?? ( x1 x2 ): foo requests bar[x1], baz requests bar[x3] -> ok."""
+    all_ports = {
+        "foo-1.2.3": {"requires": "bar>=1.0[x1]"},
+        "baz-1.0.0": {"requires": "bar>=1.0[x3]"},
+        "bar-2.0.0": {"iuse": "x1 x2 x3", "required_use": "?? ( x1 x2 )"},
+    }
+    to_build = {"ports": [{"name": "foo"}, {"name": "baz"}]}
+    pm = run_dry_build(all_ports, to_build)
+
+    bar_from_foo = pm.mapping["foo-1.2.3"]["bar"]
+    assert "x1" in bar_from_foo.use_flags
+    assert "x3" in bar_from_foo.use_flags
+
+
+def test_required_use_at_most_one_none_set(fix):
+    """?? ( x1 x2 ): no flags set -> ok (zero is fine)."""
+    all_ports = {
+        "foo-1.2.3": {"requires": "bar>=1.0"},
+        "bar-2.0.0": {"iuse": "x1 x2", "required_use": "?? ( x1 x2 )"},
+    }
+    to_build = {"ports": [{"name": "foo"}]}
+    pm = run_dry_build(all_ports, to_build)
+    assert_version_mapping(pm, {"foo-1.2.3": {"bar": "2.0.0"}})
+
+
+def test_required_use_exactly_one(fix):
+    """^^ ( x1 x2 ): exactly one must be set."""
+    all_ports = {
+        "bar-2.0.0": {"iuse": "x1 x2", "required_use": "^^ ( x1 x2 )"},
+    }
+    # One set -> ok
+    to_build = {"ports": [{"name": "bar", "use": ["x1"]}]}
+    pm = run_dry_build(all_ports, to_build)
+    assert "x1" in pm.mapping["bar-2.0.0"]["bar"].use_flags
+
+
+def test_required_use_exactly_one_none(fix):
+    """^^ ( x1 x2 ): none set -> error."""
+    all_ports = {
+        "bar-2.0.0": {"iuse": "x1 x2", "required_use": "^^ ( x1 x2 )"},
+    }
+    to_build = {"ports": [{"name": "bar"}]}
+    with pytest.raises(SystemExit):
+        run_dry_build(all_ports, to_build)
+
+
+def test_required_use_exactly_one_both(fix):
+    """^^ ( x1 x2 ): both set -> error."""
+    all_ports = {
+        "bar-2.0.0": {"iuse": "x1 x2", "required_use": "^^ ( x1 x2 )"},
+    }
+    to_build = {"ports": [{"name": "bar", "use": ["x1", "x2"]}]}
+    with pytest.raises(SystemExit):
+        run_dry_build(all_ports, to_build)
+
+
+def test_required_use_any_of(fix):
+    """|| ( x1 x2 ): at least one must be set."""
+    all_ports = {
+        "bar-2.0.0": {"iuse": "x1 x2", "required_use": "|| ( x1 x2 )"},
+    }
+    # One set -> ok
+    to_build = {"ports": [{"name": "bar", "use": ["x2"]}]}
+    pm = run_dry_build(all_ports, to_build)
+    assert "x2" in pm.mapping["bar-2.0.0"]["bar"].use_flags
+
+    # Both set -> also ok
+    to_build_both = {"ports": [{"name": "bar", "use": ["x1", "x2"]}]}
+    pm2 = run_dry_build(all_ports, to_build_both)
+    assert "x1" in pm2.mapping["bar-2.0.0"]["bar"].use_flags
+
+
+def test_required_use_any_of_none(fix):
+    """|| ( x1 x2 ): none set -> error."""
+    all_ports = {
+        "bar-2.0.0": {"iuse": "x1 x2", "required_use": "|| ( x1 x2 )"},
+    }
+    to_build = {"ports": [{"name": "bar"}]}
+    with pytest.raises(SystemExit):
+        run_dry_build(all_ports, to_build)
+
+
+def test_required_use_conditional_positive(fix):
+    """ssl? ( crypto ): if ssl is set, crypto must be set."""
+    all_ports = {
+        "bar-2.0.0": {"iuse": "ssl crypto", "required_use": "ssl? ( crypto )"},
+    }
+    # ssl + crypto -> ok
+    to_build = {"ports": [{"name": "bar", "use": ["ssl", "crypto"]}]}
+    pm = run_dry_build(all_ports, to_build)
+    assert "ssl" in pm.mapping["bar-2.0.0"]["bar"].use_flags
+    assert "crypto" in pm.mapping["bar-2.0.0"]["bar"].use_flags
+
+    # no ssl -> ok (constraint doesn't apply)
+    to_build2 = {"ports": [{"name": "bar"}]}
+    run_dry_build(all_ports, to_build2)
+
+
+def test_required_use_conditional_positive_violated(fix):
+    """ssl? ( crypto ): ssl set but crypto not -> error."""
+    all_ports = {
+        "bar-2.0.0": {"iuse": "ssl crypto", "required_use": "ssl? ( crypto )"},
+    }
+    to_build = {"ports": [{"name": "bar", "use": ["ssl"]}]}
+    with pytest.raises(SystemExit):
+        run_dry_build(all_ports, to_build)
+
+
+def test_required_use_conditional_negated(fix):
+    """!minimal? ( extras ): if minimal is NOT set, extras must be set."""
+    all_ports = {
+        "bar-2.0.0": {"iuse": "minimal extras", "required_use": "!minimal? ( extras )"},
+    }
+    # minimal not set, extras set -> ok
+    to_build = {"ports": [{"name": "bar", "use": ["extras"]}]}
+    pm = run_dry_build(all_ports, to_build)
+    assert "extras" in pm.mapping["bar-2.0.0"]["bar"].use_flags
+
+    # minimal set -> ok (constraint doesn't apply)
+    to_build2 = {"ports": [{"name": "bar", "use": ["minimal"]}]}
+    run_dry_build(all_ports, to_build2)
+
+
+def test_required_use_conditional_negated_violated(fix):
+    """!minimal? ( extras ): minimal NOT set, extras NOT set -> error."""
+    all_ports = {
+        "bar-2.0.0": {"iuse": "minimal extras", "required_use": "!minimal? ( extras )"},
+    }
+    to_build = {"ports": [{"name": "bar"}]}
+    with pytest.raises(SystemExit):
+        run_dry_build(all_ports, to_build)
+
+
+def test_required_use_conditional_negative_child(fix):
+    """ssl? ( !gnutls ): if ssl is set, gnutls must be disabled."""
+    all_ports = {
+        "bar-2.0.0": {"iuse": "ssl gnutls", "required_use": "ssl? ( !gnutls )"},
+    }
+    # ssl without gnutls -> ok
+    to_build = {"ports": [{"name": "bar", "use": ["ssl"]}]}
+    pm = run_dry_build(all_ports, to_build)
+    assert "ssl" in pm.mapping["bar-2.0.0"]["bar"].use_flags
+
+    # ssl with gnutls -> error
+    to_build2 = {"ports": [{"name": "bar", "use": ["ssl", "gnutls"]}]}
+    with pytest.raises(SystemExit):
+        run_dry_build(all_ports, to_build2)
+
+
+def test_required_use_multiple_exprs(fix):
+    """Multiple expressions: ^^ ( a b ) ssl? ( crypto )."""
+    all_ports = {
+        "bar-2.0.0": {
+            "iuse": "a b ssl crypto",
+            "required_use": "^^ ( a b ) ssl? ( crypto )",
+        },
+    }
+    # a set, ssl+crypto -> ok
+    to_build = {"ports": [{"name": "bar", "use": ["a", "ssl", "crypto"]}]}
+    pm = run_dry_build(all_ports, to_build)
+    bar = pm.mapping["bar-2.0.0"]["bar"]
+    assert set(bar.use_flags) == {"a", "ssl", "crypto"}
+
+    # a set, no ssl -> ok (conditional doesn't apply)
+    to_build2 = {"ports": [{"name": "bar", "use": ["b"]}]}
+    run_dry_build(all_ports, to_build2)
+
+    # both a and b set -> error (^^ violated)
+    to_build3 = {"ports": [{"name": "bar", "use": ["a", "b"]}]}
+    with pytest.raises(SystemExit):
+        run_dry_build(all_ports, to_build3)
+
+    # a set, ssl without crypto -> error (conditional violated)
+    to_build4 = {"ports": [{"name": "bar", "use": ["a", "ssl"]}]}
+    with pytest.raises(SystemExit):
+        run_dry_build(all_ports, to_build4)
+
+
+def test_required_use_propagation_conflict(fix):
+    """Propagated flags must also satisfy the dep's REQUIRED_USE.
+    foo->bar[x1], baz->bar[x2], bar has ?? ( x1 x2 ) -> error."""
+    all_ports = {
+        "foo-1.2.3": {"requires": "bar>=1.0[x1]"},
+        "baz-1.0.0": {"requires": "bar>=1.0[x2]"},
+        "bar-2.0.0": {"iuse": "x1 x2", "required_use": "?? ( x1 x2 )"},
+    }
+    to_build = {"ports": [{"name": "foo"}, {"name": "baz"}]}
+    with pytest.raises(SystemExit):
+        run_dry_build(all_ports, to_build)
+
+
+def test_use_flag_origin_tracking(fix):
+    """USE flag origins should be recorded for traceability."""
+    all_ports = {
+        "foo-1.2.3": {"requires": "bar>=1.0[crypto]"},
+        "bar-2.0.0": {"iuse": "crypto"},
+    }
+    to_build = {"ports": [{"name": "foo"}]}
+    pm = run_dry_build(all_ports, to_build)
+
+    bar_cand = pm.mapping["foo-1.2.3"]["bar"]
+    assert "crypto" in bar_cand.use_flags
+    assert "crypto" in bar_cand.use_flags_origins
+    assert "foo-1.2.3" in bar_cand.use_flags_origins["crypto"]
+
+
+def test_use_flag_origin_user(fix):
+    """Flags set in ports.yaml should have origin 'user'."""
+    all_ports = {
+        "foo-1.2.3": {"iuse": "debug"},
+    }
+    to_build = {"ports": [{"name": "foo", "use": ["debug"]}]}
+    pm = run_dry_build(all_ports, to_build)
+
+    foo_cand = pm.mapping["foo-1.2.3"]["foo"]
+    assert "debug" in foo_cand.use_flags
+    assert "user" in foo_cand.use_flags_origins["debug"]
+
+
+def test_use_flag_multiple_origins(fix):
+    """When both user and a parent propagate the same flag, both origins should be recorded."""
+    all_ports = {
+        "foo-1.2.3": {"requires": "bar>=1.0[ssl]"},
+        "baz-1.0.0": {"requires": "bar>=1.0[ssl]"},
+        "bar-2.0.0": {"iuse": "ssl"},
+    }
+    to_build = {"ports": [{"name": "foo"}, {"name": "baz"}]}
+    pm = run_dry_build(all_ports, to_build)
+
+    bar_from_foo = pm.mapping["foo-1.2.3"]["bar"]
+    assert "ssl" in bar_from_foo.use_flags
+    assert "foo-1.2.3" in bar_from_foo.use_flags_origins["ssl"]
+    assert "baz-1.0.0" in bar_from_foo.use_flags_origins["ssl"]

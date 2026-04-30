@@ -59,11 +59,14 @@ class PhxVersionGrammar:
     Grammar for parsing dependency requirement strings.
 
     Examples:
-        >>> PhxVersionGrammar.parse_string("foo>=1.1 bar<2.0")
+        >>> PhxVersionGrammar.parse_string("foo>=1.1 bar<2.0").as_list()
         [['foo', '>=', <Version('1.1')>], ['bar', '<', <Version('2.0')>]]
 
-        >>> PhxVersionGrammar.parse_string("foo>3")
+        >>> PhxVersionGrammar.parse_string("foo>3").as_list()
         [['foo', '>', <Version('3')>]]
+
+        >>> PhxVersionGrammar.parse_string("foo ? (foo >=1.1) bar==3").as_list()
+        [['foo', [['foo', '>=', <Version('1.1')>]]], ['bar', '==', <Version('3')>]]
     """
 
     package = pp.Word(pp.alphanums + "_")
@@ -77,12 +80,35 @@ class PhxVersionGrammar:
         pp.Empty().set_name("version").set_parse_action(lambda: PhxVersion("0.0"))
     )
     version_op = pp.one_of(">= <= == > < !=")
-    e1 = pp.Group(package + version_op + version) ^ pp.Group(
-        package + no_version_op + no_version
+
+    # USE flag propagation: dep>=ver[flag1,flag2]
+    use_flag = pp.Word(pp.alphanums + "_")
+    use_flags = pp.Suppress("[") + pp.delimited_list(use_flag) + pp.Suppress("]")
+    opt_use_flags = pp.Group(use_flags)("use_flags") | pp.Empty().set_parse_action(lambda: [])("use_flags")
+
+    # Base dependency expression (with optional USE flags)
+    dep_with_ver = pp.Group(package + version_op + version + opt_use_flags)
+    dep_without_ver = pp.Group(package + no_version_op + no_version + opt_use_flags)
+    dep_expr = dep_with_ver ^ dep_without_ver
+
+    # Conditional dependency: flag ? ( dep_expr ... )
+    cond_flag = pp.Word(pp.alphanums + "_")
+    cond_expr = pp.Group(
+        cond_flag("cond_flag") + pp.Suppress("?") + pp.Suppress("(") +
+        pp.Group(pp.OneOrMore(dep_expr))("cond_deps") +
+        pp.Suppress(")")
     )
-    e0 = e1 + pp.ZeroOrMore(e1)
+
+    e0 = pp.ZeroOrMore(cond_expr("conditional*") | dep_expr)
 
     @staticmethod
-    def parse_string(s: str) -> list[tuple[str, str, PhxVersion]]:
-        ret = PhxVersionGrammar.e0.parse_string(s)
-        return ret.as_list()
+    def parse_string(s: str) -> pp.ParseResults:
+        """Parse a requirement string.
+
+        Returns a pyparsing.ParseResults object. Each element is either:
+        - [name, op, version, use_flags] for unconditional deps
+        - Has 'cond_flag' and 'cond_deps' attributes for conditional deps where
+          each dep from cond_deps has a structure like the uncoditional dep
+          element.
+        """
+        return PhxVersionGrammar.e0.parse_string(s)

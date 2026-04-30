@@ -90,17 +90,6 @@ b_install_host() {
 	done
 }
 
-# shellcheck disable=2317 # may be used in p_* functions
-# b_optional_dir(dep_name)
-#  Returns installation directory of an optional dependency named ${dep_name}.
-#  This directory is a root to `lib` and `include` directories containing
-#  dependency libraries and headers. If optional dependency is not installed,
-#  returns empty string.
-b_optional_dir() {
-	local dependency_name_env_name="PORT_DEP_${1?dependency_name}"
-	echo "${!dependency_name_env_name}"
-}
-
 # shellcheck disable=2317 # as above
 # b_dependency_dir(dep_name)
 #  Returns installation directory of a required dependency named ${dep_name}.
@@ -109,9 +98,10 @@ b_optional_dir() {
 #  installed, returns empty string (but if this happens, your port.def.sh is
 #  wrong!).
 b_dependency_dir() {
-	local res, dependency_name
+	local res dependency_name dependency_name_env_name
 	dependency_name="${1?}"
-	res="$(b_optional_dir "${dependency_name}")"
+	dependency_name_env_name="PORT_DEP_${dependency_name}"
+	res="${!dependency_name_env_name}"
 	if [[ -z "$res" ]]; then
 		b_die "dependency for ${dependency_name} required but not installed!"
 	fi
@@ -137,4 +127,4 @@ b_use_ensure() {
 # TODO: add more USE flag helpers
 
 export -f b_port_download b_port_apply_patches b_install_host \
-	b_optional_dir b_dependency_dir b_use b_use_ensure
+	b_dependency_dir b_use b_use_ensure

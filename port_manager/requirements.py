@@ -57,16 +57,24 @@ def constraint_satisfied(candidate_version: PhxVersion, constraint: Constraint) 
 
 class BaseRequirement(Requirement):
     """Expresses requirement for given dependency versions, e.g. that version of
-    A must be >=1.0 and <=3.0"""
+    A must be >=1.0 and <=3.0
 
-    def __init__(self, name: str, constraints: Iterable[Constraint]) -> None:
+    Optionally carries propagated_use_flags: USE flags to enable on the
+    dependency candidate when it is installed."""
+
+    def __init__(self, name: str, constraints: Iterable[Constraint],
+                 propagated_use_flags: list[str] | None = None) -> None:
         self._name = name
         self.constraints = constraints
+        self.propagated_use_flags = propagated_use_flags or []
 
     def __repr__(self) -> str:
-        return self._name + ",".join(
+        base = self._name + ",".join(
             [rel + str(ver) for (rel, ver) in self.constraints]
         )
+        if self.propagated_use_flags:
+            return f"{base}[{','.join(self.propagated_use_flags)}]"
+        return base
 
     @property
     def name(self) -> str:
@@ -104,9 +112,14 @@ class ConflictRequirement(BaseRequirement):
         return not super().is_satisfied_by(candidate)
 
 
-class OptionalRequirement(BaseRequirement):
-    """Expresses optional requirement for given dependency versions. Can be
-    dropped by the resolver if unsatisfiable"""
+class ConditionalRequirement(BaseRequirement):
+    """A requirement that is only active when a specific USE flag is enabled
+    on the parent candidate."""
+
+    def __init__(self, name: str, constraints: Iterable[Constraint], use_flag: str,
+                 propagated_use_flags: list[str] | None = None) -> None:
+        super().__init__(name, constraints, propagated_use_flags)
+        self.use_flag = use_flag
 
     def __repr__(self) -> str:
-        return "[o]" + super().__repr__()
+        return f"{self.use_flag}? ({super().__repr__()})"

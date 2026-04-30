@@ -19,7 +19,8 @@ import sys
 
 from pathlib import Path
 
-from .requirements import OptionalRequirement, ConflictRequirement, Requirement
+from .requirements import ConflictRequirement, ConditionalRequirement, Requirement
+from .required_use import RequiredUseExpr, validate_required_use
 from .version import PhxVersion
 from .logger import logger
 from . import build_layer
@@ -37,6 +38,7 @@ class Candidate:
         definition_path: str,
         exposed_use_flags: list[str],
         desc: str = "",
+        required_use: list[RequiredUseExpr] | None = None,
     ) -> None:
         self._name = name
         self._version = version
@@ -51,6 +53,8 @@ class Candidate:
         self.build_tests = False
         self.exposed_use_flags = exposed_use_flags
         self.use_flags: list[str] = []
+        self.use_flags_origins: dict[str, list[str]] = {}
+        self.required_use: list[RequiredUseExpr] = required_use or []
         self.desc = desc
 
     @property
@@ -69,15 +73,45 @@ class Candidate:
     def __repr__(self) -> str:
         return f"{self.name}-{self.version}"
 
-    def set_use_flags(self, flags: Collection[str]) -> None:
+    def set_use_flags(self, flags: Collection[str], origin: str = "user") -> None:
         diff = list(set(flags) - set(self.exposed_use_flags))
         if diff:
             logger.error(f"unrecognized flags for {self}:", diff)
             sys.exit(1)
-        self.use_flags = list(flags)
+
+        new_flags = set(self.use_flags) | set(flags)
+
+        valid, err = validate_required_use(self.required_use, new_flags)
+        if not valid:
+            # Build origin trace for the conflicting flags
+            origins = dict(self.use_flags_origins)
+            for f in flags:
+                origins.setdefault(f, [])
+                if origin not in origins[f]:
+                    origins[f].append(origin)
+            trace = ", ".join(
+                f"+{f} (by {', '.join(o)})" for f, o in sorted(origins.items()) if f in new_flags
+            )
+            logger.error(f"REQUIRED_USE violated on {self}: {err}\n  Flag origins: {trace}")
+            sys.exit(1)
+
+        self.use_flags = list(new_flags)
+
+        for flag in flags:
+            if flag not in self.use_flags_origins:
+                self.use_flags_origins[flag] = []
+            if origin not in self.use_flags_origins[flag]:
+                self.use_flags_origins[flag].append(origin)
 
     def iter_dependencies(self) -> Iterable[Requirement]:
-        return self._requirements
+        """Returns an iterable with requirements that model the required
+        dependencies of the candidate. The iterable will contain
+        a ConditionalRequirement only if the candidate has enabled
+        the corresponding flag."""
+        return (
+            r for r in self._requirements
+            if not isinstance(r, ConditionalRequirement) or r.use_flag in self.use_flags
+        )
 
     def iter_conflicts(self) -> Iterable[ConflictRequirement]:
         return self._conflicts
@@ -88,22 +122,13 @@ class Candidate:
                 return True
         return False
 
-    def is_optional(self, candidate: Candidate) -> bool:
-        for req in self._requirements:
-            if (
-                req.name == candidate.name
-                and req.is_satisfied_by(candidate)
-                and isinstance(req, OptionalRequirement)
-            ):
-                return True
-        return False
-
     def to_dict(self, ports_dir: str) -> dict[str, str | list[str]]:
         return {
             "version": str(self.version),
-            "requirements": [str(r) for r in self.iter_dependencies()],
+            "requirements": [str(r) for r in self._requirements],
             "conflicts": [str(r) for r in self.iter_conflicts()],
             "port_def_path": str(Path(self.definition_path).relative_to(ports_dir)),
+            "required_use": [str(ru) for ru in self.required_use],
             "iuse": self.exposed_use_flags,
             "desc": self.desc,
         }
@@ -112,10 +137,7 @@ class Candidate:
         self, mapping: dict[str, Candidate]
     ) -> Generator[InstallableCandidate]:
         for dep in self.iter_dependencies():
-            if dep.name not in mapping:
-                # this is an optional dependency, otherwise resolver would
-                # raise resolution error earlier
-                continue
+            assert dep.name in mapping, "mapping should be a superset of iter_dependencies()"
             cand = mapping[dep.name]
             if not isinstance(cand, InstallableCandidate):
                 continue
@@ -137,7 +159,7 @@ class OsCandidate(Candidate):
     """
 
     def __init__(self, name: str, version: PhxVersion) -> None:
-        super().__init__(name, version, [], [], "", [])
+        super().__init__(name, version, [], [], "", [], required_use=[])
 
     def __repr__(self) -> str:
         return f"OS:{self.name}-{self.version}"
@@ -166,8 +188,11 @@ class InstallableCandidate(Candidate):
         dep_of: Candidate | None = None,
         **kwargs,
     ) -> None:
-        if self.installed:
-            return
+        # Validate REQUIRED_USE before installing (set_use_flags may not be called)
+        valid, err = validate_required_use(self.required_use, set(self.use_flags))
+        if not valid:
+            logger.error(f"REQUIRED_USE violated on {self}: {err}")
+            sys.exit(1)
 
         dry = kwargs.get("dry", False)
         roll_logs = kwargs.get("roll_logs", False)
@@ -198,6 +223,11 @@ class InstallableCandidate(Candidate):
 
         logger.nest(self.name)
 
+        if self.installed:
+            logger.info("Already installed")
+            logger.unnest()
+            return
+
         start = time.time()
 
         port_env["PREFIX_PORT_INSTALL"] = self.install_path
@@ -209,14 +239,8 @@ class InstallableCandidate(Candidate):
                 logger.info("-> Build deps")
                 deps_info_emitted = True
 
-            if self.is_optional(dep_cand):
-                logger.warning(
-                    f"{dep_cand} is an optional dependency and must be explicitly enabled first. Skipping"
-                )
-            else:
-                if not dep_cand.installed:
-                    dep_cand.install(mapping, dep_of=self, **kwargs)
-                dep_cand.needed_by.append(self)
+            dep_cand.install(mapping, dep_of=self, **kwargs)
+            dep_cand.needed_by.append(self)
 
         lib_path_set = set()
         pkg_config_path_set = set()

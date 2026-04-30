@@ -73,17 +73,17 @@ fi
 jq -n \
 	--arg namever "${name}-${version}" \
 	--arg requires "${depends}" \
-	--arg optional "${optional}" \
 	--arg conflicts "${conflicts}" \
 	--arg iuse "${iuse}" \
+	--arg required_use "${required_use}" \
 	--arg supports "${supports}" \
 	--arg desc "${desc}" \
 	'{
     namever: $namever,
     requires: $requires,
-    optional: $optional,
     conflicts: $conflicts,
     iuse: $iuse,
+    required_use: $required_use,
     supports: $supports,
     desc: $desc,
   }'

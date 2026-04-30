@@ -66,13 +66,12 @@ load_port_def() {
 	unset src_path
 
 	unset conflicts
-
 	unset depends
-	unset optional
 
 	unset supports
 
 	unset iuse
+	unset required_use
 
 	unset p_common
 	unset p_prepare

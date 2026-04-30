@@ -30,7 +30,7 @@ from resolvelib.resolvers import Result
 
 from .logger import logger
 from .candidates import Candidate
-from .requirements import Requirement, BaseRequirement, OptionalRequirement
+from .requirements import Requirement, BaseRequirement
 from .version import PhxVersion
 
 if Version(resolvelib.__version__) >= Version("1.1.1"):
@@ -82,14 +82,9 @@ CandidatesDict = dict[str, dict[str, Candidate]]
 class PhxProvider(resolvelib.AbstractProvider):
     def __init__(self, all_candidates: CandidatesDict) -> None:
         self.all_candidates = all_candidates
-        self.masked_requirements: set[OptionalRequirement] = set()
 
     def identify(self, requirement_or_candidate: Requirement | Candidate) -> str:
         return requirement_or_candidate.name
-
-    def mask_optional(self, req: OptionalRequirement) -> None:
-        logger.debug("masking the optional", req)
-        self.masked_requirements.add(req)
 
     def narrow_requirement_selection(
         self,
@@ -175,25 +170,10 @@ class PhxProvider(resolvelib.AbstractProvider):
         return requirement.is_satisfied_by(candidate)
 
     def get_dependencies(self, candidate: Candidate) -> Iterable[Requirement]:
-        return (
-            r
-            for r in candidate.iter_dependencies()
-            if r is not None
-            if r not in self.masked_requirements
-        )
+        return candidate.iter_dependencies()
 
 
 class MyReporter(resolvelib.BaseReporter):
-    _redo = False
-
-    def __init__(self, provider) -> None:
-        self.provider = provider
-
-    def redo_with_masked_optional(self) -> bool:
-        res = self._redo
-        self._redo = False
-        return res
-
     def ending(self, state: State[RT, CT, KT]) -> None:
         logger.debug("ending", state)
 
@@ -203,41 +183,30 @@ class MyReporter(resolvelib.BaseReporter):
     def rejecting_candidate(self, criterion: Criterion[RT, CT], candidate: CT) -> None:
         for req_info in criterion.information:
             req, parent = req_info.requirement, req_info.parent
-            if isinstance(req, OptionalRequirement):
-                logger.debug(
-                    f"{parent} optional requirement for {req} unsatisfiable, dropping"
-                )
-                self._redo = True
-                self.provider.mask_optional(req)
-            else:
-                logger.debug(f"{parent} requirement for {req} unsatisfiable")
+            logger.debug(f"{parent} requirement for {req} unsatisfiable")
 
 
 class PhxResolver:
     def __init__(self, all_candidates: CandidatesDict) -> None:
         self.provider = PhxProvider(all_candidates)
-        self.reporter = MyReporter(self.provider)
+        self.reporter = MyReporter()
         self.resolver = resolvelib.Resolver(self.provider, self.reporter)
 
     def resolve(self, reqs: list[BaseRequirement]) -> Result[BaseRequirement, Candidate, KT]:
-        while True:
-            try:
-                return self.resolver.resolve(reqs)
-            except resolvelib.resolvers.ResolutionTooDeep as e:
-                logger.error(
-                    f"Requirements unsatisfiable despite {e.round_count} attempts"
+        try:
+            return self.resolver.resolve(reqs)
+        except resolvelib.resolvers.ResolutionTooDeep as e:
+            logger.error(
+                f"Requirements unsatisfiable despite {e.round_count} attempts"
+            )
+            # NOTE: rethrow resolution exceptions instead of sys.exit(1)
+            # to catch exact resolution failures in resolver tests
+            raise
+        except resolvelib.resolvers.ResolutionImpossible as e:
+            causes_strs = []
+            for cause in e.causes:
+                causes_strs.append(
+                    f"-> {cause.requirement} required by {cause.parent}"
                 )
-                # NOTE: rethrow resolution exceptions instead of sys.exit(1)
-                # to catch exact resolution failures in resolver tests
-                raise
-            except resolvelib.resolvers.ResolutionImpossible as e:
-                causes_strs = []
-                for cause in e.causes:
-                    causes_strs.append(
-                        f"-> {cause.requirement} required by {cause.parent}"
-                    )
-                logger.error("Requirements unsatisfiable:\n" + "\n".join(causes_strs))
-                if self.reporter.redo_with_masked_optional():
-                    logger.debug("Redoing resolution with masked optional")
-                else:
-                    raise
+            logger.error("Requirements unsatisfiable:\n" + "\n".join(causes_strs))
+            raise

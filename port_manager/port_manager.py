@@ -10,6 +10,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+# TODO: rebuild on use flags change in ports yaml (whole dependant chain should
+# also be rebuilt)
+
 from __future__ import annotations
 from typing import Any, TypeVar
 from collections.abc import Callable
@@ -27,31 +30,34 @@ from .version import PhxVersion, PhxVersionGrammar
 from .logger import logger, LogLevel
 from .requirements import (
     BaseRequirement,
-    OptionalRequirement,
     ConflictRequirement,
+    ConditionalRequirement,
     Constraint,
 )
 from .candidates import Candidate, OsCandidate, InstallableCandidate
 from .resolver import PhxResolver, CandidatesDict
+from .required_use import parse_required_use
 from . import build_layer
 
 T = TypeVar("T")
 
 
-def parse_requirements(s: str, f: Callable[[str, list[Constraint]], T]) -> list[T]:
+def parse_requirements(s: str, req_constructor: Callable[[str, list[Constraint]], T]) -> list[T]:
     requirements_objects = []
     if s:
-        requirements_tuples: dict[str, list[Constraint]] = dict()
-
-        res = PhxVersionGrammar.parse_string(s)
-        for rname, rel, ver in res:
-            if rname not in requirements_tuples:
-                requirements_tuples[rname] = []
-            requirements_tuples[rname].append((rel, ver))
-
-        for rname, constraints in requirements_tuples.items():
-            logger.debug(constraints)
-            requirements_objects.append(f(rname, constraints))
+        for elem in PhxVersionGrammar.parse_string(s):
+            if "cond_flag" in elem:
+                cond_flag = elem.cond_flag
+                for dep in elem.cond_deps:
+                    flags = list(dep.use_flags)
+                    requirements_objects.append(
+                        ConditionalRequirement(dep[0], [(dep[1], dep[2])], cond_flag, flags)
+                    )
+            else:
+                flags = list(elem.use_flags)
+                req = req_constructor(elem[0], [(elem[1], elem[2])])
+                req.propagated_use_flags = flags
+                requirements_objects.append(req)
 
     return requirements_objects
 
@@ -134,7 +140,6 @@ class PortManager:
             name, version = parse_namever(port["namever"])
 
             req = parse_requirements(port["requires"], BaseRequirement)
-            req += parse_requirements(port["optional"], OptionalRequirement)
             req += parse_requirements(port["supports"], BaseRequirement)
 
             conflicts = parse_requirements(
@@ -147,6 +152,11 @@ class PortManager:
 
             available_flags = port["iuse"].split()
 
+            # Parse REQUIRED_USE: Gentoo-like USE flag constraint expressions
+            # e.g. "^^ ( x1 x2 )" or "ssl? ( crypto )" or "?? ( a b c )"
+            required_use_str = port.get("required_use", "")
+            required_use_exprs = parse_required_use(required_use_str)
+
             self.add_candidate(
                 InstallableCandidate(
                     name,
@@ -156,8 +166,33 @@ class PortManager:
                     str(def_path),
                     available_flags,
                     port["desc"],
+                    required_use=required_use_exprs,
                 )
             )
+
+    def propagate_use_flags(self) -> None:
+        """Propagate USE flags from requirements to dependency candidates.
+
+        Iterates to a fixed point since newly propagated flags may activate
+        conditional dependencies that carry further propagations."""
+        changed = True
+        while changed:
+            # WARN: For now, the flag state is monotonic, so the fixed point is
+            # always reachable. This won't be the case once the flag negations
+            # (or any other monotonicity-breaking feature) are implemented.
+            changed = False
+            for mapping in self.mapping.values():
+                for cand in mapping.values():
+                    for req in cand.iter_dependencies():
+                        if not req.propagated_use_flags:
+                            continue
+                        if req.name not in mapping:
+                            continue
+                        dep_cand = mapping[req.name]
+                        new_flags = set(req.propagated_use_flags) - set(dep_cand.use_flags)
+                        dep_cand.set_use_flags(req.propagated_use_flags, origin=str(cand))
+                        if new_flags:
+                            changed = True
 
     def resolve(self, cands: list[InstallableCandidate]):
         user_requirements = dict()
@@ -264,7 +299,16 @@ class PortManager:
                 reasons.append("U")
             if port.needed_by:
                 reasons += [f"D:{p}" for p in port.needed_by]
-            ports_str += "\n * " + f"{port} ({', '.join(reasons)})"
+
+            flags_info = ""
+            if port.use_flags:
+                flag_details = []
+                for flag in port.use_flags:
+                    origins = port.use_flags_origins.get(flag, ["unknown"])
+                    flag_details.append(f"+{flag} (by {', '.join(origins)})")
+                flags_info = " [" + ", ".join(flag_details) + "]"
+
+            ports_str += "\n * " + f"{port} ({', '.join(reasons)}){flags_info}"
         logger.info(
             "Install summary:",
             ports_str,
@@ -292,6 +336,7 @@ class PortManager:
             )
 
         self.resolve(cands)
+        self.propagate_use_flags()
 
         for cand in cands:
             cand.user_required = True
