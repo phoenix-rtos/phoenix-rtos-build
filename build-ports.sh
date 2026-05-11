@@ -20,9 +20,6 @@ if [ "$RAW_LOG" != 1 ]; then
   PORT_MANAGER_FLAGS+=("-r")
 fi
 
-DUMMY_VERSION="v3.3.1-0-g"
-GIT_DESC="$(cd "./phoenix-rtos-build" && git describe --tags --abbrev=0 --match "v[[:digit:]].[[:digit:]]*.[[:digit:]]*" 2> /dev/null || echo "${DUMMY_VERSION}")"
-
 b_log "Installing ports"
 
-PHOENIX_VER="${GIT_DESC}" port_manager build "${PORTS_CONFIG}" "${PREFIX_PROJECT}/phoenix-rtos-ports"
+PHOENIX_VER="$(tr -d "\n" <"${PREFIX_PROJECT}/VERSION")" port_manager build "${PORTS_CONFIG}" "${PREFIX_PROJECT}/phoenix-rtos-ports"
