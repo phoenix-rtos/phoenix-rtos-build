@@ -247,9 +247,9 @@ def test_install_bad_env(fix, monkeypatch):
         all_ports = {"foo-1.2.3": {"requires": "bar>=1.1.1"}, "bar-2.0.0": {}}
         to_build = {"ports": [{"name": "foo"}]}
 
-        with pytest.raises(EnvironmentError) as ex:
+        with pytest.raises(KeyError) as ex:
             run_dry_build(all_ports, to_build)
-        assert ex.value.args[0] == "PREFIX_BUILD undefined"
+        assert ex.value.args[0] == "PREFIX_BUILD"
 
     with monkeypatch.context() as m:
         m.delenv("PREFIX_BUILD_VERSIONED", raising=False)
@@ -259,9 +259,9 @@ def test_install_bad_env(fix, monkeypatch):
             "bar-2.0.0": {"conflicts": "barng>=0.0"},
         }
         to_build = {"ports": [{"name": "foo"}]}
-        with pytest.raises(EnvironmentError) as ex:
+        with pytest.raises(KeyError) as ex:
             run_dry_build(all_ports, to_build)
-        assert ex.value.args[0] == "PREFIX_BUILD_VERSIONED undefined"
+        assert ex.value.args[0] == "PREFIX_BUILD_VERSIONED"
 
 
 def test_ports_to_build_override(fix):

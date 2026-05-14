@@ -130,7 +130,7 @@ class PortManager:
         """
         if not self.os_candidates_added:
             # ignore any abbrevs that may possibly be emitted if version is taken with `git describe`
-            phoenix_ver = build_layer.ensure_getenv("PHOENIX_VER").split("-", 1)[0]
+            phoenix_ver = os.environ["PHOENIX_VER"].split("-", 1)[0]
 
             self.add_candidate(OsCandidate("phoenix", PhxVersion(phoenix_ver)))
             self.add_candidate(OsCandidate("host", PhxVersion("0")))
@@ -199,7 +199,7 @@ class PortManager:
         if self._state_dir:
             return self._state_dir
         if not self.dry:
-            return Path(build_layer.ensure_getenv("PREFIX_BUILD")) / ".port_state"
+            return Path(os.environ["PREFIX_BUILD"]) / ".port_state"
         return None
 
     @staticmethod
@@ -422,6 +422,9 @@ class PortManager:
         self.resolve(cands)
         self.propagate_use_flags()
         self.clean_stale_ports()
+
+        # Erase prepare.log as it can grow pretty quickly across several rebuilds
+        build_layer.erase_prepare_log(os.environ)
 
         for cand in cands:
             cand.user_required = True

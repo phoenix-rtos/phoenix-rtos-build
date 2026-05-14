@@ -175,11 +175,11 @@ class InstallableCandidate(Candidate):
     def install_path(self) -> str:
         if self._conflicts:
             # If port is conflictable, it has a special installation directory
-            prefix = build_layer.ensure_getenv("PREFIX_BUILD_VERSIONED")
+            prefix = os.environ["PREFIX_BUILD_VERSIONED"]
             return os.path.join(prefix, f"{self.name}-{str(self.version)}")
         else:
             # Otherwise, it is treated like normal libs
-            prefix = build_layer.ensure_getenv("PREFIX_BUILD")
+            prefix = os.environ["PREFIX_BUILD"]
             return f"{prefix}"
 
     def install(

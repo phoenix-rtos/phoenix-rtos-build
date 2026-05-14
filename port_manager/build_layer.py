@@ -64,13 +64,6 @@ def create_log_panel(log_lines: Sequence[str], border_style: str = "white", titl
     return Panel(text, border_style=border_style, box=box.SIMPLE, title=title)
 
 
-def ensure_getenv(var: str):
-    prefix = os.getenv(var)
-    if prefix is None:
-        raise OSError(f"{var} undefined")
-    return prefix
-
-
 def find_ports(ports_dir: str) -> Generator[tuple[dict[str, str], Path]]:
     """Invokes port_def_to_json.sh on *.def.sh files found under ports_dir"""
     for port_def in Path(ports_dir).rglob("*.def.sh"):
@@ -192,12 +185,41 @@ def run_process(
     return proc
 
 
+def clear_file_if_exists(path: str):
+    if os.path.exists(path):
+        with open(path, "w"):
+            pass
+
+
+def erase_prepare_log(env: os._Environ[str] | dict[str, str]) -> None:
+    """Erases prepare.log file if exists"""
+    log_file_path = get_prepare_log_path(env)
+    clear_file_if_exists(log_file_path)
+
+
+def get_prepare_log_path(env: os._Environ[str] | dict[str, str]) -> str:
+    """Returns path to target-global prepare.log file"""
+    return os.path.join(env["PREFIX_BUILD"], "prepare.log")
+
+
+def init_build_log_path(env: dict[str, str]) -> str:
+    """
+    Returns path to per-port build.log file
+
+    NOTE: Erases the file across invocations if exists.
+    """
+    log_file_path = os.path.join(env["PREFIX_PORT_BUILD"], "build.log")
+    clear_file_if_exists(log_file_path)
+    return log_file_path
+
+
 def prepare_cand(
     cand: Candidate, env: dict[str, str], roll_logs: bool
 ) -> dict[str, str]:
     """Invokes port_prepare.sh on a candidate. Captures the resulting shell
     environment"""
-    log_file_path = os.path.join(env["PREFIX_BUILD"], "prepare.log")
+    log_file_path = get_prepare_log_path(env)
+
     r_fd, w_fd = os.pipe()
 
     logger.info("-> Prepare")
@@ -252,7 +274,7 @@ def clean_cand(cand: Candidate, env: dict[str, str]):
 
 def build_cand(cand: Candidate, env: dict[str, str], roll_logs: bool):
     """Invokes port_build.sh on a candidate"""
-    log_file_path = os.path.join(env["PREFIX_PORT_BUILD"], "build.log")
+    log_file_path = init_build_log_path(env)
 
     # TODO: rebuild on changed patches
     logger.info("-> Build")
