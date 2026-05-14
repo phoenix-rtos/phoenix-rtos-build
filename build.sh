@@ -151,10 +151,19 @@ elif [ -z "$INTERCEPT_BUILD_TARGET_DIR" ] && [ -z "$INTERCEPT_REPORT_COMMAND" ];
 	fi
 fi
 
+: "${PHOENIX_ASK_BEFORE_CLEAN:=n}"
+
 #
 # Clean if requested
 #
 if [ "$B_CLEAN" = "y" ]; then
+	if [ "$PHOENIX_ASK_BEFORE_CLEAN" = "y" ] && [ -t 0 ]; then
+		read -r -p "Clean build dirs? [y/N] " response
+		if [[ ! "$response" =~ ^[Yy]$ ]]; then
+			exit 1
+		fi
+	fi
+
 	b_log "Cleaning build dirs"
 	rm -rf "$PREFIX_BUILD" "$PREFIX_BUILD_HOST"
 	rm -rf "$PREFIX_FS"
