@@ -20,18 +20,11 @@ from pathlib import Path
 
 import subprocess
 
-from collections import deque
-
 import json
 import jinja2
 import yaml
 
-from rich.live import Live
-from rich.panel import Panel
-from rich.text import Text
-from rich import box
-
-from .logger import logger
+from .logger import logger, render_process_log
 
 if TYPE_CHECKING:
     from .candidates import Candidate
@@ -48,20 +41,6 @@ def str_to_bool(v: str | bool) -> bool:
     if isinstance(v, bool):
         return v
     return v.lower() not in ("", "no", "false", "n", "0")
-
-
-def get_term_width() -> int:
-    try:
-        term_width = os.get_terminal_size().columns if sys.stdout.isatty() else 80
-    except (OSError, ValueError):
-        term_width = 80
-    return term_width
-
-
-def create_log_panel(log_lines: Sequence[str], border_style: str = "white", title: str = ""):
-    """Takes the current log lines and formats them into a rich-text panel"""
-    text = Text("\n".join(list(log_lines)), no_wrap=True, overflow="ellipsis")
-    return Panel(text, border_style=border_style, box=box.SIMPLE, title=title)
 
 
 def find_ports(ports_dir: str) -> Generator[tuple[dict[str, str], Path]]:
@@ -138,8 +117,6 @@ def run_process(
     env: dict[str, str],
     pass_fds: Collection[int] = (),
     buf_lines: int = 5,
-    border_style: str = "white",
-    log_title: str = "",
     roll_logs: bool = False,
     skip: int = 0,
 ) -> subprocess.Popen:
@@ -162,25 +139,8 @@ def run_process(
         text=True,
     )
 
-    last_lines: deque[str] = deque(maxlen=buf_lines)
-
     if proc.stdout:
-        try:
-            for _ in range(skip + 1):
-                first_log = next(proc.stdout)
-                last_lines.append(first_log)
-        except StopIteration:
-            return proc
-
-        with Live(refresh_per_second=60) as live:
-            for text in proc.stdout:
-                for line in text.splitlines():
-                    last_lines.append(line)
-                    live.update(
-                        create_log_panel(
-                            last_lines, border_style=border_style, title=log_title
-                        )
-                    )
+        render_process_log(proc.stdout, buf_lines, skip)
 
     return proc
 

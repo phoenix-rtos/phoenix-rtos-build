@@ -13,6 +13,20 @@ from __future__ import annotations
 
 import sys
 from enum import Enum
+from collections.abc import Sequence
+
+import re
+
+from collections import deque
+
+from rich.console import Group
+from rich.live import Live
+from rich.panel import Panel
+from rich.text import Text
+from rich import box
+
+
+from typing import IO
 
 
 class LogLevel(Enum):
@@ -29,10 +43,75 @@ class Color:
     GREEN = "\033[0;32m"
     YELLOW = "\033[1;33m"
     RED = "\033[0;31m"
+
+    BOLD = "\033[1m"
     END = "\033[0m"
+
+    BOLD_RED = "\033[1;31m"
+    BOLD_CYAN = "\033[1;36m"
+    BOLD_MAGENTA = "\033[1;35m"
 
 
 logger_instance = None
+
+
+def create_log_panel(log_lines: Sequence[str], title: str = "", no_wrap=True):
+    """Takes the current log lines and formats them into a rich-text panel"""
+    text = Text("\n".join(log_lines), no_wrap=no_wrap, overflow="ellipsis")
+    return Panel(text, box=box.SIMPLE, title=title)
+
+
+gcc_diag_pattern = re.compile(
+    r'^(.*?):(\d+):(?:(\d+):)?\s+'
+    r'(warning|error|fatal error|note):\s+'
+    r'(.*?)(?:\s*\[(-W[^\]]+)\])?$'
+)
+
+
+gcc_diag_colors = {
+    "warning": Color.BOLD_MAGENTA,
+    "error": Color.BOLD_RED,
+    "fatal error": Color.BOLD_RED,
+    "note": Color.BOLD_CYAN,
+}
+
+
+def render_process_log(stdout: IO[str], max_last_lines: int, skip: int = 0):
+    last_lines: deque[str] = deque(maxlen=max_last_lines)
+    err_lines: deque[str] = deque(maxlen=20)
+
+    try:
+        for _ in range(skip + 1):
+            first_log = next(stdout)
+            last_lines.append(first_log)
+    except StopIteration:
+        return
+
+    with Live(refresh_per_second=60) as live:
+        for line in stdout:
+            line = line.rstrip()
+            m = gcc_diag_pattern.match(line)
+            if m:
+                file, line_no, col_no, level, msg, flag = m.groups()
+
+                color = gcc_diag_colors.get(level, "")
+                flag = f"[{color}{flag}{Color.END}]" if flag else ""
+
+                colorized = (
+                    f"{Color.BOLD}{file}:{line_no}:{col_no or ''} "
+                    f"{color}{level}:{Color.END} {msg} {flag}"
+                )
+
+                err_lines.append(colorized)
+            else:
+                last_lines.append(line)
+
+            panels = []
+            if err_lines:
+                panels.append(create_log_panel(err_lines, no_wrap=False))
+            if last_lines:
+                panels.append(create_log_panel(last_lines))
+            live.update(Group(*panels))
 
 
 class Logger:
