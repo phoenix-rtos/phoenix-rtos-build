@@ -1,0 +1,14 @@
+scripts/image_builder.py
+  h_fc26ad17182140 15,134-135,422-446
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.4.8",
+  "base_commit_sha": "ec0afa0b079ccd10ce53d35ce735840a39ad3749",
+  "prompts": {},
+  "humans": {
+    "h_fc26ad17182140": {
+      "author": "Lukasz Leczkowski <lukasz.leczkowski@phoenix-rtos.com>"
+    }
+  }
+}
