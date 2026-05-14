@@ -60,6 +60,9 @@ export PREFIX_PORT
 # shellcheck disable=2154 # name, version loaded from port.def.sh
 export PREFIX_PORT_BUILD="${PREFIX_PORTS_BUILD_ROOT?}/${name}-${version}"
 
+export PREFIX_PORT_PATCHES="${PREFIX_PORT}/patches/"
+export PREFIX_BUILD_MARKERS="${PREFIX_PORT_BUILD}/_markers/"
+
 # # shellcheck disable=1091
 source "${source_dir}/port.subr"
 
@@ -67,6 +70,8 @@ source "${source_dir}/port.subr"
 export PREFIX_PORT_WORKDIR="${PREFIX_PORT_BUILD?}/${src_path}"
 
 if [ ! -d "${PREFIX_PORT_WORKDIR}" ]; then
+	[ -d "${PREFIX_BUILD_MARKERS}" ] && rm -r "${PREFIX_BUILD_MARKERS}"
+
 	if [ -z "${source}" ]; then
 		# shellcheck disable=2154 # git_rev, git_source loaded from port.def.sh
 		git clone -b "${git_rev}" --depth 1 "${git_source}" "${PREFIX_PORT_WORKDIR}"
