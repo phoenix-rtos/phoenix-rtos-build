@@ -12,6 +12,7 @@ import logging
 import os
 import sys
 import subprocess
+import zlib
 from collections import defaultdict
 from enum import Enum, IntEnum
 from pathlib import Path
@@ -130,6 +131,8 @@ class PloCmdFactory:
             return PloCmdApp(*cmd_args, **kwargs)
         if cmd_name in ("call"):
             return PloCmdCall(*cmd_args, **kwargs)
+        if cmd_name in ("verify-crc32"):
+            return PloCmdVerifyCRC32(*cmd_args, **kwargs)
 
         # TODO: add compile-time checks for scripts validity (eg. memory regions cross-check)?
 
@@ -413,6 +416,33 @@ class PloCmdCall(PloCmdBase):
             raise NotImplementedError(f"PloScriptEncoding {enc.value} not implemented")
 
         # call doesn't change the payload offset nor write anything to the target partition
+        return payload_offs, None
+
+
+@dataclass
+class PloCmdVerifyCRC32(PloCmdBase):
+    """Support for verify-crc32 command:
+        verify-crc32 <program> <expected_crc32>
+    """
+    NAME: ClassVar = "verify-crc32"
+    program: str
+
+    def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
+        prog_path = PREFIX_PROG_STRIPPED / self.program
+        if not prog_path.exists():
+            raise ValueError(f"Program '{self.program}' not found in {PREFIX_PROG_STRIPPED}")
+
+        # calculate CRC32 of the program and write the verify command
+        with open(prog_path, "rb") as f:
+            expected_crc32 = zlib.crc32(f.read()) & 0xffffffff
+
+        if enc == PloScriptEncoding.DEBUG_ASDICT:
+            file.write(str(asdict(self)) + "\n")
+        elif enc == PloScriptEncoding.STRING_MAGIC_V1:
+            file.write(f"verify-crc32 {self.program} {expected_crc32:#x}\n")
+        else:
+            raise NotImplementedError(f"PloScriptEncoding {enc.value} not implemented")
+        
         return payload_offs, None
 
 
