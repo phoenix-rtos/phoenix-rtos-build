@@ -219,7 +219,7 @@ class PloCmdAlias(PloCmdBase):
 @dataclass
 class PloCmdKernel(PloCmdBase):
     """Kernel is a special type of 'app' due to kernelimg command subtype:
-        kernel[img] <device>
+        kernel[img] [-v <crc>] <device>
         kernel flash0
     """
     NAME: ClassVar = "kernel"
@@ -230,8 +230,14 @@ class PloCmdKernel(PloCmdBase):
     size: int = field(init=False)
     filename: str = field(init=False)
     abspath: Path = field(init=False)
+    verify_crc: bool = field(default=False, init=False)
 
     def __post_init__(self, extra_flags: str = ''):
+        if extra_flags == "-v":
+            if self.name == "kernelimg":
+                raise ValueError("-v flag is not supported in the kernelimg command")
+            self.verify_crc = True
+
         if self.name == "kernelimg":
             self.suffix = "bin"
 
@@ -247,7 +253,12 @@ class PloCmdKernel(PloCmdBase):
             file.write(str(asdict(self)) + "\n")
         elif enc == PloScriptEncoding.STRING_MAGIC_V1:
             if self.name == "kernel":
-                file.write(f"{self.name} {self.device}\n")
+                if self.verify_crc:
+                    with open(self.abspath, "rb") as f:
+                        crc = zlib.crc32(f.read()) & 0xffffffff
+                    file.write(f"{self.name} -v {crc:#x} {self.device}\n")
+                else:
+                    file.write(f"{self.name} {self.device}\n")
             else:  # kernelimg
                 tbeg, tsz, dbeg, dsz = get_elf_sizes(self.abspath.with_suffix(".elf"))
                 file.write(f"{self.name} {self.device} {self.filename} {tbeg:#x} {tsz:#x} {dbeg:#x} {dsz:#x}\n")
@@ -429,7 +440,7 @@ class PloCmdVerifyCRC32(PloCmdBase):
 
     def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
         prog_path = PREFIX_PROG_STRIPPED / self.program
-        if not prog_path.exists():
+        if not prog_path.is_file():
             raise ValueError(f"Program '{self.program}' not found in {PREFIX_PROG_STRIPPED}")
 
         # calculate CRC32 of the program and write the verify command
