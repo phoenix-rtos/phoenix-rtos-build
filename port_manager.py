@@ -14,7 +14,7 @@ from __future__ import annotations
 import sys
 import resolvelib
 
-from .port_manager import PortManager
+from port_manager import PortManager
 
 
 def main() -> None:

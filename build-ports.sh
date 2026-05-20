@@ -13,7 +13,7 @@ PORT_MANAGER_FLAGS=(
 
 function port_manager() {
 	cd "${PREFIX_PROJECT}/phoenix-rtos-build/" || exit
-	python3 -m "port_manager.main" "${PORT_MANAGER_FLAGS[@]}" "${@}"
+	python3 ./port_manager.py "${PORT_MANAGER_FLAGS[@]}" "${@}"
 }
 
 if [ "$RAW_LOG" != 1 ] && [ -t 1 ]; then
