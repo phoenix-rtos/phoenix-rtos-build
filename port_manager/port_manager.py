@@ -22,7 +22,7 @@ import os
 
 from pathlib import Path
 
-from argparse import Namespace, ArgumentParser
+from argparse import Namespace, ArgumentParser, RawDescriptionHelpFormatter
 
 from .version import PhxVersion, PhxVersionGrammar
 from .logger import logger, LogLevel
@@ -93,6 +93,7 @@ class PortManager:
 
         self.mapping: CandidatesDict = dict()
         self.roll_logs = False
+        self.build_all = False
         self.dry = dry  # self.dry may be overwritten by _parse_arguments
         self.args = self._parse_arguments(argv)
 
@@ -409,7 +410,13 @@ class PortManager:
 
         self.discover_ports()
 
-        cands, disabled_ports = self.read_ports_yaml()
+        if self.build_all:
+            cands, disabled_ports = list(
+                [cand for ver in self.discovered_ports.values() for cand in
+                    ver.values() if isinstance(cand, InstallableCandidate)]), set()
+            logger.info("Building all ports")
+        else:
+            cands, disabled_ports = self.read_ports_yaml()
 
         if disabled_ports:
             for disabled_port_name in disabled_ports:
@@ -452,12 +459,16 @@ class PortManager:
             default=lambda o: o.to_dict(self.args.ports_dir),
         )
         logger.info(
-            f"[Total {stop - start:.2f} s] Validated {len(self.discovered_ports)} ports",
+            f"[Total {stop - start:.2f} s] Validated {len(self.discovered_ports)} ports"
         )
         print(cand_str)
 
     def _build_argument_parser(self) -> ArgumentParser:
-        parser = ArgumentParser()
+        parser = ArgumentParser(epilog="""
+environment variables:
+  RAW_LOG - if true, disables log rolling
+  BUILD_ALL_PORTS - if true, build all discovered ports (note: optional dependencies are treated as required)
+""", formatter_class=RawDescriptionHelpFormatter)
 
         parser.add_argument(
             "--dry",
@@ -465,12 +476,6 @@ class PortManager:
             help="don't build ports, just mark them as installed",
         )
         parser.add_argument("-v", action="store_true")
-        parser.add_argument(
-            "-r",
-            action="store_true",
-            default=False,
-            help="roll build logs (i.e. for interactive environment)",
-        )
         parser.add_argument("--quiet", action="store_true")
 
         subparsers = parser.add_subparsers(title="subcommands")
@@ -502,8 +507,10 @@ class PortManager:
             logger.set_level(LogLevel.VERBOSE)
         if args.quiet:
             logger.set_level(LogLevel.NONE)
-        if args.r:
+        if sys.stdout.isatty() and not build_layer.env_to_bool("RAW_LOG"):
             self.roll_logs = True
+        if build_layer.env_to_bool("BUILD_ALL_PORTS"):
+            self.build_all = True
         if args.dry:
             logger.warning("Dry run")
             self.dry = True

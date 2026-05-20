@@ -43,6 +43,12 @@ def str_to_bool(v: str | bool) -> bool:
     return v.lower() not in ("", "no", "false", "n", "0")
 
 
+def env_to_bool(env: str) -> bool:
+    if env not in os.environ:
+        return False
+    return str_to_bool(os.environ[env])
+
+
 def find_ports(ports_dir: str) -> Generator[tuple[dict[str, str], Path]]:
     """Invokes port_def_to_json.sh on *.def.sh files found under ports_dir"""
     for port_def in Path(ports_dir).rglob("*.def.sh"):

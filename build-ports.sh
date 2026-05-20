@@ -8,17 +8,10 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-PORT_MANAGER_FLAGS=(
-)
-
 function port_manager() {
 	cd "${PREFIX_PROJECT}/phoenix-rtos-build/" || exit
-	python3 ./port_manager.py "${PORT_MANAGER_FLAGS[@]}" "${@}"
+	python3 ./port_manager.py "${@}"
 }
-
-if [ "$RAW_LOG" != 1 ] && [ -t 1 ]; then
-	PORT_MANAGER_FLAGS+=("-r")
-fi
 
 DUMMY_VERSION="v3.3.1-0-g"
 GIT_DESC="$(cd "./phoenix-rtos-build" && git describe --tags --abbrev=0 --match "v[[:digit:]].[[:digit:]]*.[[:digit:]]*" 2>/dev/null || echo "${DUMMY_VERSION}")"
