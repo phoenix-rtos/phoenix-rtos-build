@@ -16,7 +16,7 @@ function port_manager() {
   python3 -m "port_manager.main" "${PORT_MANAGER_FLAGS[@]}" "${@}"
 }
 
-if [ "$RAW_LOG" != 1 ]; then
+if [ "$RAW_LOG" != 1 ] && [ -t 1 ]; then
   PORT_MANAGER_FLAGS+=("-r")
 fi
 
