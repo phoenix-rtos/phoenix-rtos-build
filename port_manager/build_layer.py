@@ -236,11 +236,25 @@ def prepare_cand(
     return build_env
 
 
+def clean_cand(cand: Candidate, env: dict[str, str]):
+    """Invokes port_clean.sh on a candidate"""
+    result = subprocess.run(
+        ["bash", str(PORT_MGMT_DIR / "port_clean.sh"), cand.definition_path],
+        env=env,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+    )
+    if result.returncode != 0:
+        logger.error(f"Failed to clean {cand}:\n{result.stdout}")
+        sys.exit(1)
+
+
 def build_cand(cand: Candidate, env: dict[str, str], roll_logs: bool):
     """Invokes port_build.sh on a candidate"""
     log_file_path = os.path.join(env["PREFIX_PORT_BUILD"], "build.log")
 
-    # TODO: rebuild on ports.yaml (port-local) change and patches changes
+    # TODO: rebuild on changed patches
     logger.info("-> Build")
 
     proc = run_process(

@@ -10,9 +10,6 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
-# TODO: rebuild on use flags change in ports yaml (whole dependant chain should
-# also be rebuilt)
-
 from __future__ import annotations
 from typing import Any, TypeVar
 from collections.abc import Callable
@@ -21,6 +18,7 @@ from collections.abc import Sequence, Generator
 import sys
 import time
 import json
+import os
 
 from pathlib import Path
 
@@ -88,6 +86,7 @@ class PortManager:
         | None = None,
         get_ports_to_build: Callable[[str], build_layer.PortsToBuildDict | None]
         | None = None,
+        state_dir: str | None = None,
     ) -> None:
         self.discovered_ports: CandidatesDict = dict()
         self.os_candidates_added = False
@@ -111,6 +110,8 @@ class PortManager:
 
         self.ports_installed: list[Candidate] = []
         self.ports_skipped: list[str] = []
+        self._state_dir = Path(state_dir) if state_dir else None
+        self.stale_ports: set[str] = set()
 
     def add_candidate(self, candidate: Candidate) -> None:
         name = candidate.name
@@ -193,6 +194,89 @@ class PortManager:
                         dep_cand.set_use_flags(req.propagated_use_flags, origin=str(cand))
                         if new_flags:
                             changed = True
+
+    def _get_state_dir(self) -> Path | None:
+        if self._state_dir:
+            return self._state_dir
+        if not self.dry:
+            return Path(build_layer.ensure_getenv("PREFIX_BUILD")) / ".port_state"
+        return None
+
+    @staticmethod
+    def _build_state(cand: InstallableCandidate) -> dict:
+        return {"use_flags": sorted(cand.use_flags), "tests": cand.build_tests}
+
+    def clean_stale_ports(self) -> None:
+        """Compare current USE flag state with the saved state from the last
+        build.  If any port's state changed, clean it and all transitive
+        dependents so they are rebuilt from scratch."""
+        state_dir = self._get_state_dir()
+        if state_dir is None:
+            return
+
+        # Collect all unique InstallableCandidate objects across mappings
+        all_cands: dict[str, InstallableCandidate] = {
+            str(c): c
+            for mapping in self.mapping.values()
+            for c in mapping.values()
+            if isinstance(c, InstallableCandidate)
+        }
+
+        # Find directly stale candidates (saved state differs from current)
+        for nv, c in all_cands.items():
+            state_file = state_dir / f"{nv}.json"
+            if not state_file.exists():
+                continue
+            with open(state_file, encoding="utf-8") as f:
+                saved = json.load(f)
+            if saved != self._build_state(c):
+                self.stale_ports.add(nv)
+
+        if not self.stale_ports:
+            return
+
+        # Build reverse dependency graph: dep -> set of dependents
+        rdeps: dict[str, set[str]] = {nv: set() for nv in all_cands}
+        for mapping in self.mapping.values():
+            for c in mapping.values():
+                if not isinstance(c, InstallableCandidate):
+                    continue
+                for dep_c in c.iter_installable_dep_cands(mapping):
+                    rdeps[str(dep_c)].add(str(c))
+
+        # Propagate staleness transitively to dependents
+        queue = list(self.stale_ports)
+        while queue:
+            nv = queue.pop()
+            for dep_nv in rdeps.get(nv, []):
+                if dep_nv not in self.stale_ports:
+                    self.stale_ports.add(dep_nv)
+                    queue.append(dep_nv)
+
+        # Clean all stale candidates
+        for nv in sorted(self.stale_ports):
+            c = all_cands[nv]
+            logger.info(f"Build state changed for {c}, cleaning")
+            if not self.dry:
+                env = os.environ.copy()
+                env["PREFIX_PORT_INSTALL"] = c.install_path
+                build_layer.clean_cand(c, env)
+            # Remove saved state so it is re-saved after rebuild
+            state_file = state_dir / f"{nv}.json"
+            state_file.unlink(missing_ok=True)
+
+    def save_build_state(self) -> None:
+        """Persist build state for all installed ports."""
+        state_dir = self._get_state_dir()
+        if state_dir is None:
+            return
+        state_dir.mkdir(parents=True, exist_ok=True)
+        for cand in self.ports_installed:
+            if not isinstance(cand, InstallableCandidate):
+                continue
+            state_file = state_dir / f"{cand}.json"
+            with open(state_file, "w", encoding="utf-8") as f:
+                json.dump(self._build_state(cand), f)
 
     def resolve(self, cands: list[InstallableCandidate]):
         user_requirements = dict()
@@ -337,6 +421,7 @@ class PortManager:
 
         self.resolve(cands)
         self.propagate_use_flags()
+        self.clean_stale_ports()
 
         for cand in cands:
             cand.user_required = True
@@ -346,6 +431,8 @@ class PortManager:
                 dry=self.dry,
                 ports_installed=self.ports_installed,
             )
+
+        self.save_build_state()
 
         stop = time.time()
 

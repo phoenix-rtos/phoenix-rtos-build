@@ -62,7 +62,7 @@ def build_get_ports_to_build(dct):
     return closure
 
 
-def run_dry_build(all_ports, to_build):
+def run_dry_build(all_ports, to_build, state_dir=None):
     pm = PortManager(
         [],
         get_ports_to_build=build_get_ports_to_build(to_build),
@@ -70,6 +70,7 @@ def run_dry_build(all_ports, to_build):
         dry=True,
         ports_yamls="yaml1:yaml2",
         ports_dir="some_path",
+        state_dir=str(state_dir) if state_dir else None,
     )
     pm.cmd_build()
     return pm
@@ -801,3 +802,125 @@ def test_use_flag_multiple_origins(fix):
     assert "ssl" in bar_from_foo.use_flags
     assert "foo-1.2.3" in bar_from_foo.use_flags_origins["ssl"]
     assert "baz-1.0.0" in bar_from_foo.use_flags_origins["ssl"]
+
+
+def test_build_state_saved(fix, tmp_path):
+    """After a dry build with state_dir, state files should be written."""
+    all_ports = {"foo-1.2.3": {"iuse": "ssl"}}
+    to_build = {"ports": [{"name": "foo", "use": ["ssl"]}]}
+    run_dry_build(all_ports, to_build, state_dir=tmp_path)
+
+    state_file = tmp_path / "foo-1.2.3.json"
+    assert state_file.exists()
+
+    import json
+
+    state = json.loads(state_file.read_text())
+    assert state == {"use_flags": ["ssl"], "tests": False}
+
+
+def test_no_stale_when_flags_unchanged(fix, tmp_path):
+    """Second build with same flags should detect no stale ports."""
+    all_ports = {"foo-1.2.3": {"iuse": "ssl"}}
+    to_build = {"ports": [{"name": "foo", "use": ["ssl"]}]}
+    run_dry_build(all_ports, to_build, state_dir=tmp_path)
+
+    pm = run_dry_build(all_ports, to_build, state_dir=tmp_path)
+    assert not pm.stale_ports
+
+
+def test_stale_on_flag_add(fix, tmp_path):
+    """Adding a USE flag should mark the port as stale."""
+    all_ports = {"foo-1.2.3": {"iuse": "ssl crypto"}}
+
+    run_dry_build(all_ports, {"ports": [{"name": "foo", "use": ["ssl"]}]}, state_dir=tmp_path)
+    pm = run_dry_build(
+        all_ports, {"ports": [{"name": "foo", "use": ["ssl", "crypto"]}]}, state_dir=tmp_path
+    )
+    assert "foo-1.2.3" in pm.stale_ports
+
+
+def test_stale_on_flag_remove(fix, tmp_path):
+    """Removing a USE flag should mark the port as stale."""
+    all_ports = {"foo-1.2.3": {"iuse": "ssl crypto"}}
+
+    run_dry_build(
+        all_ports, {"ports": [{"name": "foo", "use": ["ssl", "crypto"]}]}, state_dir=tmp_path
+    )
+    pm = run_dry_build(
+        all_ports, {"ports": [{"name": "foo", "use": ["ssl"]}]}, state_dir=tmp_path
+    )
+    assert "foo-1.2.3" in pm.stale_ports
+
+
+def test_stale_propagates_to_dependents(fix, tmp_path):
+    """If a dep's flags change, all ports depending on it are also stale."""
+    all_ports = {
+        "foo-1.2.3": {"requires": "bar>=1.0"},
+        "bar-2.0.0": {"iuse": "ssl"},
+    }
+
+    run_dry_build(
+        all_ports, {"ports": [{"name": "foo"}, {"name": "bar", "use": ["ssl"]}]},
+        state_dir=tmp_path,
+    )
+    pm = run_dry_build(
+        all_ports, {"ports": [{"name": "foo"}, {"name": "bar"}]},
+        state_dir=tmp_path,
+    )
+    # bar changed (ssl removed), foo depends on bar -> both stale
+    assert "bar-2.0.0" in pm.stale_ports
+    assert "foo-1.2.3" in pm.stale_ports
+
+
+def test_stale_state_file_updated_after_rebuild(fix, tmp_path):
+    """After a stale port is rebuilt, its state file should reflect the new flags."""
+    all_ports = {"foo-1.2.3": {"iuse": "ssl crypto"}}
+
+    run_dry_build(all_ports, {"ports": [{"name": "foo", "use": ["ssl"]}]}, state_dir=tmp_path)
+    run_dry_build(
+        all_ports, {"ports": [{"name": "foo", "use": ["ssl", "crypto"]}]}, state_dir=tmp_path
+    )
+
+    import json
+
+    state = json.loads((tmp_path / "foo-1.2.3.json").read_text())
+    assert state == {"use_flags": ["crypto", "ssl"], "tests": False}
+
+
+def test_stale_via_propagated_flags(fix, tmp_path):
+    """Propagated flag change triggers stale detection."""
+    all_ports = {
+        "foo-1.2.3": {"requires": "bar>=1.0[ssl]"},
+        "bar-2.0.0": {"iuse": "ssl crypto"},
+    }
+    run_dry_build(all_ports, {"ports": [{"name": "foo"}]}, state_dir=tmp_path)
+
+    # Now foo propagates both ssl and crypto
+    all_ports2 = {
+        "foo-1.2.3": {"requires": "bar>=1.0[ssl,crypto]"},
+        "bar-2.0.0": {"iuse": "ssl crypto"},
+    }
+    pm = run_dry_build(all_ports2, {"ports": [{"name": "foo"}]}, state_dir=tmp_path)
+
+    # bar's flags changed (gained crypto) -> bar and foo are stale
+    assert "bar-2.0.0" in pm.stale_ports
+    assert "foo-1.2.3" in pm.stale_ports
+
+
+def test_first_build_no_stale(fix, tmp_path):
+    """First build (no saved state) should not mark anything as stale."""
+    all_ports = {"foo-1.2.3": {"iuse": "ssl"}}
+    pm = run_dry_build(all_ports, {"ports": [{"name": "foo", "use": ["ssl"]}]}, state_dir=tmp_path)
+    assert not pm.stale_ports
+
+
+def test_stale_on_tests_flag_change(fix, tmp_path):
+    """Changing the tests flag should also trigger a rebuild."""
+    all_ports = {"foo-1.2.3": {}}
+
+    run_dry_build(all_ports, {"ports": [{"name": "foo"}]}, state_dir=tmp_path)
+    pm = run_dry_build(
+        all_ports, {"ports": [{"name": "foo", "tests": True}]}, state_dir=tmp_path
+    )
+    assert "foo-1.2.3" in pm.stale_ports
