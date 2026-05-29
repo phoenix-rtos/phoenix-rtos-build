@@ -924,3 +924,42 @@ def test_stale_on_tests_flag_change(fix, tmp_path):
         all_ports, {"ports": [{"name": "foo", "tests": True}]}, state_dir=tmp_path
     )
     assert "foo-1.2.3" in pm.stale_ports
+
+
+def test_propagation_resolves_activated_dep(fix):
+    """If flag propagation activates a conditional dep, it should get resolved."""
+    all_ports = {
+        "baz-1.0.0": {"requires": "foo>=1.0[ssl]"},
+        "foo-1.2.3": {"requires": "ssl ? ( bar>=1.0 )", "iuse": "ssl"},
+        "bar-2.0.0": {},
+    }
+    to_build = {"ports": [{"name": "baz"}]}
+    pm = run_dry_build(all_ports, to_build)
+    # bar was not in the initial resolution but got resolved after propagation
+    assert "bar" in pm.mapping["baz-1.0.0"]
+    assert pm.mapping["baz-1.0.0"]["bar"].version == PhxVersion("2.0.0")
+
+
+def test_propagation_activated_dep_unavailable(fix):
+    """If propagation activates a dep that can't be resolved, resolution fails."""
+    all_ports = {
+        "baz-1.0.0": {"requires": "foo>=1.0[ssl]"},
+        "foo-1.2.3": {"requires": "ssl ? ( bar>=1.0 )", "iuse": "ssl"},
+        # bar is NOT in discovered ports
+    }
+    to_build = {"ports": [{"name": "baz"}]}
+    with pytest.raises((ResolutionImpossible, ResolutionTooDeep)):
+        run_dry_build(all_ports, to_build)
+
+
+def test_propagation_no_issue_when_dep_already_resolved(fix):
+    """If the conditional dep's target is already in the mapping, no extra resolution needed."""
+    all_ports = {
+        "baz-1.0.0": {"requires": "foo>=1.0[ssl] bar>=1.0"},
+        "foo-1.2.3": {"requires": "ssl ? ( bar>=1.0 )", "iuse": "ssl"},
+        "bar-2.0.0": {},
+    }
+    to_build = {"ports": [{"name": "baz"}]}
+    pm = run_dry_build(all_ports, to_build)
+    # bar is resolved because baz also requires it directly
+    assert "bar" in pm.mapping["baz-1.0.0"]

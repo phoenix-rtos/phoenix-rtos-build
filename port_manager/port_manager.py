@@ -196,6 +196,40 @@ class PortManager:
                         if new_flags:
                             changed = True
 
+    def resolve_propagated_deps(self) -> None:
+        """Re-resolve mappings until all propagation-activated deps are present.
+
+        After flag propagation, candidates may have new active conditional deps
+        whose targets are missing from the mapping. This redos the full resolution
+        for each affected mapping entry so the resolver can consider all constraints
+        together."""
+
+        self.propagate_use_flags()
+
+        resolver = PhxResolver(self.discovered_ports)
+
+        while True:
+            re_resolved = False
+            for namever, mapping in list(self.mapping.items()):
+                has_missing = any(
+                    req.name not in mapping
+                    for cand in mapping.values()
+                    if isinstance(cand, InstallableCandidate)
+                    for req in cand.iter_dependencies()
+                )
+                if not has_missing:
+                    continue
+
+                # Re-resolve from the root requirement for this self.mapping entry
+                self.resolve_for_namever(resolver, namever)
+                re_resolved = True
+
+            if not re_resolved:
+                break
+
+            # Newly resolved deps may carry propagated flags
+            self.propagate_use_flags()
+
     def _get_state_dir(self) -> Path | None:
         if self._state_dir:
             return self._state_dir
@@ -279,21 +313,17 @@ class PortManager:
             with open(state_file, "w", encoding="utf-8") as f:
                 json.dump(self._build_state(cand), f)
 
+    def resolve_for_namever(self, resolver: PhxResolver, namever: str):
+        name, version = parse_namever(namever)
+        ureq = BaseRequirement(name, [("==", version)])
+        result = resolver.resolve([ureq])
+        self.mapping[namever] = result.mapping
+
     def resolve(self, cands: list[InstallableCandidate]):
-        user_requirements = dict()
-
-        for cand in cands:
-            user_requirements[str(cand)] = BaseRequirement(
-                cand.name, [("==", cand.version)]
-            )
-
         self.add_os_candidates()
-
         resolver = PhxResolver(self.discovered_ports)
-
-        for namever, ureq in user_requirements.items():
-            result = resolver.resolve([ureq])
-            self.mapping[namever] = result.mapping
+        for cand in cands:
+            self.resolve_for_namever(resolver, str(cand))
 
     def read_ports_yaml(self) -> tuple[list[InstallableCandidate], set[str]]:
         ports_dict = self.get_ports_to_build(self.args.ports_yamls)
@@ -427,7 +457,7 @@ class PortManager:
             )
 
         self.resolve(cands)
-        self.propagate_use_flags()
+        self.resolve_propagated_deps()
         self.clean_stale_ports()
 
         # Erase prepare.log as it can grow pretty quickly across several rebuilds
