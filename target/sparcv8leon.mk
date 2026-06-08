@@ -26,7 +26,8 @@ ifeq ($(TARGET_SUBFAMILY), gr716)
   CFLAGS += -msoft-float
 
   ifeq ($(KERNEL), 1)
-    LDFLAGS += -Wl,-z,max-page-size=0x200 -Tbss=40001a00 -Tdata=40001a00 -Wl,--section-start=.rodata=40000000
+    # On GR716 RAM is split into IRAM and DRAM, kernel data must be put into DRAM
+    LDFLAGS += -Wl,-z,max-page-size=0x200 -Tbss=40001c00 -Tdata=40001c00 -Wl,--section-start=.rodata=40000000
     STRIP := $(CROSS)strip
     CPPFLAGS += -DLEON_USE_PWR
   else
