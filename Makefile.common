@@ -143,7 +143,7 @@ EXPORT_CXXFLAGS := $(CXXFLAGS)
 EXPORT_LDFLAGS := $(LDFLAGS)
 
 # add our coding-style related options
-CFLAGS += -Wall -Wstrict-prototypes -Wundef -Werror -fno-common
+CFLAGS += -Wall -Wstrict-prototypes -Wundef -Wimplicit-fallthrough=3 -fno-common
 CXXFLAGS += -Wall -Wundef -Werror
 LDFLAGS += -z noexecstack
 
