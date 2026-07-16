@@ -49,6 +49,23 @@ def env_to_bool(env: str) -> bool:
     return str_to_bool(os.environ[env])
 
 
+def parse_env(buf, null_terminated=False) -> dict:
+    env = dict()
+    for line in buf.split("\0" if null_terminated else "\n"):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" in line:
+            key, value = line.split("=", 1)
+            env[key.strip()] = value.strip("'\" ")
+    return env
+
+
+def load_ports_env() -> dict:
+    with open(PORT_MGMT_DIR / "ports.env", "r", encoding="utf-8") as f:
+        return parse_env(f.read())
+
+
 def find_ports(ports_dir: str) -> Generator[tuple[dict[str, str], Path]]:
     """Invokes port_def_to_json.sh on *.def.sh files found under ports_dir"""
     for port_def in Path(ports_dir).rglob("*.def.sh"):
@@ -182,8 +199,7 @@ def init_build_log_path(env: dict[str, str]) -> str:
 def prepare_cand(
     cand: InstallableCandidate, env: dict[str, str], roll_logs: bool
 ) -> dict[str, str]:
-    """Invokes port_prepare.sh on a candidate. Captures the resulting shell
-    environment"""
+    """Invokes port_prepare.sh on a candidate. Returns the shell environment for the port build phase"""
     log_file_path = get_prepare_log_path(env)
 
     r_fd, w_fd = os.pipe()
@@ -211,17 +227,7 @@ def prepare_cand(
 
     os.close(w_fd)
     with os.fdopen(r_fd) as r:
-        env_output = r.read()
-
-    # port_prepare outputs sanitized environment for future build_cand invocation
-    build_env = dict()
-
-    for line in env_output.split("\0"):
-        if "=" in line:
-            key, value = line.split("=", 1)
-            build_env[key] = value
-
-    return build_env
+        return parse_env(r.read(), null_terminated=True)
 
 
 def clean_cand(cand: InstallableCandidate, env: dict[str, str]):

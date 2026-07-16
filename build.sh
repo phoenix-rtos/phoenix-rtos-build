@@ -95,7 +95,7 @@ unset PHOENIX_VER_INFO key value
 #
 if [ $# -lt 1 ]; then
 	echo "Build options should be specified!"
-	echo "Usage: build.sh [clean] [all] [host] [fs] [core] [test] [runtest] [ports] [project] [image] [env]"
+	echo "Usage: build.sh [clean] [all] [host] [fs] [core] [test] [runtest] [ports] [project] [image] [env] [sbom]"
 	echo
 	echo "  test     build and install the unit tests, runtest - execute them"
 	echo "  env      spawn a shell with the build environment of TARGET set up, so"
@@ -113,6 +113,7 @@ B_IMAGE="n"
 B_TEST="n"
 B_RUN_TEST="n"
 B_ENV="n"
+B_SBOM="n"
 
 # GA CI passes all params as quoted first param - split on ' ' if necessary
 ARGS=("$@")
@@ -141,6 +142,9 @@ for arg in "${ARGS[@]}"; do
 			B_IMAGE="y";;
 		env)
 			B_ENV="y";;
+	sbom)
+		B_SBOM="y"
+		;;
 		all)
 			B_FS="y"; B_CORE="y"; B_HOST="y"; B_PORTS="y"; B_PROJECT="y"; B_IMAGE="y";;
 		*)
@@ -289,6 +293,10 @@ if [ "${B_CORE}" = "y" ]; then
 	"./phoenix-rtos-build/build-core-${TARGET_FAMILY}-${TARGET_SUBFAMILY}.sh"
 fi
 
+DUMMY_VERSION="v3.3.1-0-g"
+GIT_DESC="$(cd "./phoenix-rtos-build" && git describe --tags --abbrev=0 --match "v[[:digit:]].[[:digit:]]*.[[:digit:]]*" 2>/dev/null || echo "${DUMMY_VERSION}")"
+export PHOENIX_VER="${GIT_DESC}"
+
 #
 # Build ports
 #
@@ -313,8 +321,16 @@ fi
 #
 # Build final filesystems
 #
+
+# Record what was put into the image (used for SBOM generation):
+export IMAGE_MANIFEST="${PREFIX_BUILD}/image-manifest.jsonl"
+IMAGE_ROOTFS_SNAPSHOT="${PREFIX_BUILD}/image-rootfs.sha256"
 if [ "${B_IMAGE}" = "y" ]; then
+	rm -f "${IMAGE_MANIFEST}" "${IMAGE_ROOTFS_SNAPSHOT}"
 	b_image
+	if [ -d "${PREFIX_ROOTFS}" ]; then
+		(cd "${PREFIX_ROOTFS}" && find . -type f -exec sha256sum {} +) > "${IMAGE_ROOTFS_SNAPSHOT}"
+	fi
 fi
 
 #
@@ -324,6 +340,35 @@ fi
 #
 if [ "${B_RUN_TEST}" = "y" ]; then
 	b_run_test
+fi
+
+#
+# Generate SBOM
+#
+# Optional project variables:
+#  - SBOM_PRODUCT - product for the firmware (default: TARGET), e.g. the same for all targets of a project
+#  - SBOM_SCOPE - "image" (default): components found in the image and their dependencies, "build": all built components
+#  - SBOM_ROOTFS - set to "n" if PREFIX_ROOTFS is not part of the image
+#  - SBOM_IMAGE_FILES - space-separated image files in PREFIX_BOOT (default: all files except hostutils)
+#  - SBOM_PRIMARY_IMAGE - image file in PREFIX_BOOT identifying the firmware (default: the only *.disk file)
+#
+if [ "${B_SBOM}" = "y" ]; then
+	b_log "Generating SBOM"
+	SBOM_ARGS=(--manifest "${IMAGE_MANIFEST}" --property "product=${SBOM_PRODUCT:-${TARGET}}")
+	SBOM_ARGS+=(--property "family=${TARGET_FAMILY}" --property "subfamily=${TARGET_SUBFAMILY}")
+	SBOM_ARGS+=(--property "project=${TARGET_PROJECT}")
+	SBOM_ARGS+=(--property "mmu=$(make -f phoenix-rtos-build/Makefile.common export-have-mmu)")
+	if [ "${SBOM_ROOTFS:-y}" != "n" ]; then
+		SBOM_ARGS+=(--rootfs "${PREFIX_ROOTFS}" --rootfs-snapshot "${IMAGE_ROOTFS_SNAPSHOT}")
+	fi
+	python3 ./phoenix-rtos-build/generate_sbom.py \
+		--build-dir "${PREFIX_BUILD}" \
+		--boot-dir "${PREFIX_BOOT}" \
+		--target "${TARGET}" \
+		--phoenix-version "${PHOENIX_VER}" \
+		--output "${PREFIX_BOOT}/phoenix.cdx.json" \
+		--exclude "${HOSTUTILS[@]}" \
+		"${SBOM_ARGS[@]}"
 fi
 
 # vim:noexpandtab:ts=2:sw=2

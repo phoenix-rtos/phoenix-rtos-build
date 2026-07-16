@@ -16,6 +16,7 @@ from collections.abc import Iterable, Generator, Collection
 import os
 import time
 import sys
+import contextlib
 
 from pathlib import Path
 from enum import IntEnum
@@ -151,6 +152,31 @@ class OsCandidate(Candidate):
         return f"OS:{self.name}-{self.version}"
 
 
+@contextlib.contextmanager
+def track_added_files(directory: str | Path, pattern: str):
+    """Context manager to track files created or rebuilt during an operation."""
+    base_path = Path(directory)
+    added: list[Path] = []
+
+    def snapshot() -> dict[Path, int]:
+        snap = {}
+        for p in base_path.rglob(pattern):
+            try:
+                snap[p] = p.stat().st_mtime_ns
+            except OSError as e:
+                logger.warning(f"Could not stat {p}: {e}")
+                pass
+        return snap
+
+    before = snapshot()
+    try:
+        yield added
+    finally:
+        for path, mtime in snapshot().items():
+            if path not in before or mtime > before[path]:
+                added.append(path)
+
+
 class InstallableCandidate(Candidate):
     """
     A candidate that is installable either to PREFIX_BUILD or
@@ -161,6 +187,10 @@ class InstallableCandidate(Candidate):
         self,
         *args,
         definition_path: str,
+        license: str,
+        sha256: str,
+        sources: dict[str, dict[str, str]],
+        cpe23: str,
         **kwargs,
     ) -> None:
         super().__init__(*args, **kwargs)
@@ -168,8 +198,15 @@ class InstallableCandidate(Candidate):
         self.installed = False
         self.build_tests = False
         self.user_required = False
+        self.built_libs: list[Path] = []
+        self.built_progs: list[Path] = []
 
         self.definition_path = definition_path
+        self.license = license
+        self.license_path: str | None = None
+        self.sha256 = sha256
+        self.sources = sources
+        self.cpe23 = cpe23
 
     @property
     def install_path(self) -> str:
@@ -181,6 +218,13 @@ class InstallableCandidate(Candidate):
             # Otherwise, it is treated like normal libs
             prefix = os.environ["PREFIX_BUILD"]
             return f"{prefix}"
+
+    @property
+    def origin_source(self) -> str:
+        if "tarball" in self.sources:
+            return self.sources["tarball"]["origin"]
+        else:
+            return self.sources["git"]["source"]
 
     def install(
         self,
@@ -210,6 +254,9 @@ class InstallableCandidate(Candidate):
                 port_env[f"PORT_USE_{use_flag}"] = "y"
 
             extras_info.append("+USE flags: " + " ".join(self.use_flags))
+
+        # TODO: manipulations on port_env should be moved to build_layer, as
+        # they break the abstraction
 
         if self.build_tests:
             port_env["PORT_BUILD_TESTS"] = "y"
@@ -269,8 +316,18 @@ class InstallableCandidate(Candidate):
 
             port_env = build_layer.prepare_cand(self, port_env, roll_logs)
 
+            self.license_path = port_env["license_file_path"]
+
         if dry == DryMode.OFF:
-            build_layer.build_cand(self, port_env, roll_logs)
+            with (
+                track_added_files(Path(self.install_path) / "lib", "*.a") as new_libs,
+                track_added_files(os.environ["PREFIX_PROG_STRIPPED"], "*") as new_progs,
+                track_added_files(os.environ["PREFIX_ROOTFS"], "*") as new_rootfs_files,
+            ):
+                build_layer.build_cand(self, port_env, roll_logs)
+
+            self.built_libs = new_libs
+            self.built_progs = [p for p in new_progs + new_rootfs_files if p.is_file() and not p.is_symlink()]
 
         stop = time.time()
         logger.info(f"Installed ({stop - start:.2f} s)", end_tree=True)
@@ -285,4 +342,7 @@ class InstallableCandidate(Candidate):
     def to_dict(self, ports_dir: str) -> dict[str, str | list | dict]:
         return super().to_dict(ports_dir) | {
             "port_def_path": str(Path(self.definition_path).relative_to(ports_dir)),
+            "license": self.license,
+            "sha256": self.sha256,
+            "sources": self.sources,
         }

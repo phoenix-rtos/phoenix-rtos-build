@@ -38,8 +38,14 @@ from .candidates import DryMode, Candidate, OsCandidate, InstallableCandidate
 from .resolver import PhxResolver, CandidatesDict
 from .required_use import parse_required_use
 from . import build_layer
+from . import sbom
 
 T = TypeVar("T")
+
+
+def get_phoenix_ver() -> str:
+    # ignore any abbrevs that may possibly be emitted if version is taken with `git describe`
+    return os.environ["PHOENIX_VER"].split("-", 1)[0]
 
 
 def parse_requirements(s: str, req_constructor: Callable[[str, list[Constraint]], T]) -> list[T]:
@@ -141,6 +147,8 @@ class PortManager:
             self.os_candidates_added = True
 
     def discover_ports(self):
+        ports_env = build_layer.load_ports_env()
+
         for port, def_path in self.find_ports(self.args.ports_dir):
             name, version = parse_namever(port["namever"])
 
@@ -162,6 +170,19 @@ class PortManager:
             required_use_str = port.get("required_use", "")
             required_use_exprs = parse_required_use(required_use_str)
 
+            if "source" in port:
+                archive_filenames = port["archive_filenames"].split()
+                sources = {
+                    "tarball": {
+                        "origin": f"{port['source']}/{archive_filenames[-1]}",
+                        "mirror": f"{ports_env['PORTS_MIRROR_BASEURL']}/{archive_filenames[0]}",
+                    }
+                }
+            else:
+                sources = {
+                    "git": {"rev": port["git_rev"], "source": port["git_source"]}
+                }
+
             self.add_candidate(
                 InstallableCandidate(
                     name,
@@ -172,6 +193,11 @@ class PortManager:
                     port["desc"],
                     required_use_exprs,
                     definition_path=str(def_path),
+                    license=port["license"],
+                    sha256=port["sha256"],
+                    sources=sources,
+                    cpe23=port["cpe23"],
+                    # TODO: add purl?
                 )
             )
 
@@ -485,6 +511,9 @@ class PortManager:
 
         logger.info(f"Done ({stop - start:.2f} s)")
         self.print_install_summary()
+
+        if self.dry == DryMode.OFF:
+            sbom.write_fragments(self.ports_installed, self.stale_ports)
 
     def cmd_validate(self) -> None:
         start = time.time()

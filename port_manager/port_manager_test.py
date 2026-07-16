@@ -51,6 +51,14 @@ def build_find_ports(dct):
             port_def.setdefault("iuse", "")
             port_def.setdefault("required_use", "")
             port_def.setdefault("desc", "")
+            port_def.setdefault("source", "foo")
+            port_def.setdefault("archive_filenames", "bar.tar.gz")
+            port_def.setdefault("license", "MIT")
+            port_def.setdefault(
+                "sha256",
+                "bac3ab15fa3e656eb35f4b7df700147d95777285af29e32f2145cb8cebd938bc",
+            )
+            port_def.setdefault("cpe23", f"cpe:2.3:a:{name}:{name}:42:*:*:*:*:*:*:*")
 
             for field in ["depends", "conflicts"]:
                 port_def.setdefault(field, [])

@@ -37,18 +37,6 @@ namever="${name?}-${version?}"
 : "${version?}"
 : "${desc?}"
 
-if [ -z "${source}" ]; then
-	# if tarball source not provided, expect git rev/source
-	: "${git_rev?}"
-	: "${git_source?}"
-else
-	: "${archive_filename?}"
-
-	if ((${#archive_filename[@]} > 2)); then
-		b_die "archive_filename must have at most 2 elements, got ${#archive_filename[@]}"
-	fi
-fi
-
 : "${sha256?}"
 : "${size?}"
 
@@ -73,7 +61,26 @@ vars=(
 	required_use
 	supports
 	desc
+	sha256
+	license
+	cpe23
 )
+
+if [ -z "${source}" ]; then
+	# if tarball source not provided, expect git rev/source
+	: "${git_rev?}"
+	: "${git_source?}"
+	vars+=(git_rev git_source)
+else
+	: "${archive_filename?}"
+	# shellcheck disable=2034 # used in vars
+	archive_filenames="${archive_filename[*]}"
+	vars+=(source archive_filenames)
+
+	if ((${#archive_filename[@]} > 2)); then
+		b_die "archive_filename must have at most 2 elements, got ${#archive_filename[@]}"
+	fi
+fi
 
 # TODO: add host dependencies fields?
 

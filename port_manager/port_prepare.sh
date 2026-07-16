@@ -97,8 +97,9 @@ if [ ! -d "${PREFIX_PORT_WORKDIR}" ]; then
 	fi
 fi
 
+# exported - used by port_manager
 # shellcheck disable=2154 # license_file loaded from port.def.sh
-license_file_path="${PREFIX_PORT_WORKDIR}/${license_file}"
+export license_file_path="${PREFIX_PORT_WORKDIR}/${license_file}"
 if [ ! -f "${license_file_path}" ]; then
 	b_die "license not found under ${license_file_path}"
 fi
