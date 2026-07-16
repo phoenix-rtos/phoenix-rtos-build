@@ -9,6 +9,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+import json
+import subprocess
+import textwrap
 import pytest
 import os
 import tempfile
@@ -975,3 +978,121 @@ def test_propagation_no_issue_when_dep_already_resolved(fix):
     pm = run_dry_build(all_ports, to_build)
     # bar is resolved because baz also depends it directly
     assert "bar" in pm.mapping["baz-1.0.0"]
+
+
+# --- port_def_to_json.sh tests ---
+
+_PORT_DEF_TO_JSON_SH = build_layer.PORT_MGMT_DIR / "port_def_to_json.sh"
+
+
+def _run_port_def_to_json(def_file):
+    return subprocess.run(
+        ["bash", str(_PORT_DEF_TO_JSON_SH), str(def_file)],
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_port_def_to_json_tarball_source(tmp_path):
+    """port_def_to_json.sh correctly emits all fields for a tarball-sourced port"""
+    name = "testport"
+    version = "1.2.3"
+    desc = "A test port"
+    source = "https://example.com/releases/"
+    sha256 = "a" * 64
+    license_ = "MIT"
+    depends = "libfoo>=1.0"
+    supports = "phoenix>=3.3"
+    cpe23 = f"cpe:2.3:a:{name}:{name}:{version}:*:*:*:*:*:*:*"
+    archive_filename = f"{name}-{version}.tar.gz"
+
+    def_file = tmp_path / "port.def.sh"
+    def_file.write_text(textwrap.dedent(f"""\
+        #!/usr/bin/env bash
+        :
+        {{
+            ports_api=1
+            name="{name}"
+            version="{version}"
+            desc="{desc}"
+            source="{source}"
+            archive_filename="{archive_filename}"
+            src_path="{name}-{version}/"
+            sha256="{sha256}"
+            size="12345"
+            license="{license_}"
+            license_file="LICENSE"
+            conflicts=""
+            depends="{depends}"
+            supports="{supports}"
+            cpe23="{cpe23}"
+        }}
+        p_prepare() {{ :; }}
+        p_build() {{ :; }}
+    """))
+
+    result = _run_port_def_to_json(def_file)
+    assert result.returncode == 0, result.stderr
+
+    data = json.loads(result.stdout)
+    assert data["namever"] == f"{name}-{version}"
+    assert data["desc"] == desc
+    assert data["license"] == license_
+    assert data["sha256"] == sha256
+    assert data["cpe23"] == cpe23
+    assert data["supports"] == supports
+    assert data["depends"] == depends
+    assert data["conflicts"] == ""
+    assert data["source"] == source
+    assert data["archive_filenames"] == archive_filename
+    assert "git_rev" not in data
+    assert "git_source" not in data
+
+
+def test_port_def_to_json_git_source(tmp_path):
+    """port_def_to_json.sh correctly emits all fields for a git-sourced port"""
+    name = "gitport"
+    version = "0.5.0"
+    desc = "A git-sourced test port"
+    git_rev = "v0.5.0"
+    git_source = "https://github.com/example/gitport.git"
+    sha256 = "b" * 64
+    license_ = "Apache-2.0"
+    supports = "phoenix>=3.3"
+
+    def_file = tmp_path / "port.def.sh"
+    def_file.write_text(textwrap.dedent(f"""\
+        #!/usr/bin/env bash
+        :
+        {{
+            ports_api=1
+            name="{name}"
+            version="{version}"
+            desc="{desc}"
+            git_rev="{git_rev}"
+            git_source="{git_source}"
+            src_path="{name}-{git_rev}"
+            sha256="{sha256}"
+            size="99999"
+            license="{license_}"
+            license_file="LICENSE"
+            conflicts=""
+            depends=""
+            supports="{supports}"
+        }}
+        p_prepare() {{ :; }}
+        p_build() {{ :; }}
+    """))
+
+    result = _run_port_def_to_json(def_file)
+    assert result.returncode == 0, result.stderr
+
+    data = json.loads(result.stdout)
+    assert data["namever"] == f"{name}-{version}"
+    assert data["desc"] == desc
+    assert data["license"] == license_
+    assert data["sha256"] == sha256
+    assert data["git_rev"] == git_rev
+    assert data["git_source"] == git_source
+    assert "source" not in data
+    assert "archive_filenames" not in data
