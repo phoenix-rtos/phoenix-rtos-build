@@ -19,6 +19,7 @@
 # Global variables (not reset by this script):
 # - ROOTFS_INSTALL_UNSTRIPPED - if non-empty - install binaries into rootfs from PREFIX_PROG (instead of _STRIPPED)
 
+$(NAME) $(NAME)-clean: SBOM_MAKEFILE_PATH := $(abspath $(lastword $(wordlist 2, $(words $(MAKEFILE_LIST)), x $(MAKEFILE_LIST))))
 
 # directory with current Makefile - relative to the repository root
 # filter-out all Makefiles outside of TOPDIR
@@ -128,9 +129,16 @@ $(NAME) $(NAME)-clean: NAME:=$(NAME)
 ALL_COMPONENTS += $(NAME)
 
 include $(MAKES_PATH)/check-ports.mk
+SBOM_ARTIFACT := $(PREFIX_PROG_STRIPPED)$(NAME)
+$(NAME) $(NAME)-clean: SBOM_TYPE := binary
+include $(MAKES_PATH)/generate-sbom.mk
 
 # cleaning vars to avoid strange errors
 NAME :=
+CPE :=
+VERSION :=
+LICENSE :=
+SBOM_ARTIFACT :=
 LOCAL_SRCS :=
 undefine LOCAL_DIR # need to treat LOCAL_DIR="" as a valid (set-extenally) value
 LOCAL_HEADERS :=

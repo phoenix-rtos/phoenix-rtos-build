@@ -82,14 +82,13 @@ EXPORT_STRIP="$(make -f phoenix-rtos-build/Makefile.common export-strip)"
 
 export EXPORT_CFLAGS EXPORT_CXXFLAGS EXPORT_LDFLAGS EXPORT_STRIP
 
-
 #
 # Parse command line
 #
 if [ $# -lt 1 ]; then
 	echo "Build options should be specified!"
-	echo "Usage: build.sh [clean] [all] [host] [fs] [core] [test] [ports] [project] [image]";
-	exit 1;
+	echo "Usage: build.sh [clean] [all] [host] [fs] [core] [test] [ports] [project] [image] [sbom]"
+	exit 1
 fi
 
 B_CLEAN="n"
@@ -100,36 +99,54 @@ B_PORTS="n"
 B_PROJECT="n"
 B_IMAGE="n"
 B_TEST="n"
+B_SBOM="n"
 
 # GA CI passes all params as quoted first param - split on ' ' if necessary
 ARGS=("$@")
-[ "$#" -eq 1 ] && read -ra ARGS <<< "$1"
+[ "$#" -eq 1 ] && read -ra ARGS <<<"$1"
 
 for arg in "${ARGS[@]}"; do
-	case "$arg"
-	in
-		clean)
-			B_CLEAN="y";;
-		fs)
-			B_FS="y";;
-		core)
-			B_CORE="y";;
-		host)
-			B_HOST="y";;
-		test|tests)
-			B_TEST="y";;
-		ports)
-			B_PORTS="y";;
-		project)
-			B_PROJECT="y";;
-		image)
-			B_IMAGE="y";;
-		all)
-			B_FS="y"; B_CORE="y"; B_HOST="y"; B_PORTS="y"; B_PROJECT="y"; B_IMAGE="y";;
-		*)
-			echo "Unknown build option: \"$arg\"."
-			exit 1;;
-	esac;
+	case "$arg" in
+	clean)
+		B_CLEAN="y"
+		;;
+	fs)
+		B_FS="y"
+		;;
+	core)
+		B_CORE="y"
+		;;
+	host)
+		B_HOST="y"
+		;;
+	test | tests)
+		B_TEST="y"
+		;;
+	ports)
+		B_PORTS="y"
+		;;
+	project)
+		B_PROJECT="y"
+		;;
+	image)
+		B_IMAGE="y"
+		;;
+	sbom)
+		B_SBOM="y"
+		;;
+	all)
+		B_FS="y"
+		B_CORE="y"
+		B_HOST="y"
+		B_PORTS="y"
+		B_PROJECT="y"
+		B_IMAGE="y"
+		;;
+	*)
+		echo "Unknown build option: \"$arg\"."
+		exit 1
+		;;
+	esac
 done
 
 ### autogenerate compile_commands.json using bear ###
@@ -258,10 +275,18 @@ if [ "${B_TEST}" = "y" ]; then
 	b_build_test
 fi
 
+DUMMY_VERSION="v3.3.1-0-g"
+GIT_DESC="$(cd "./phoenix-rtos-build" && git describe --tags --abbrev=0 --match "v[[:digit:]].[[:digit:]]*.[[:digit:]]*" 2>/dev/null || echo "${DUMMY_VERSION}")"
+export PHOENIX_VER="${GIT_DESC}"
+
 #
 # Build ports
 #
+export PORTS_SBOM_PATH="${PREFIX_BUILD}/ports.spdx.json"
 if [ "${B_PORTS}" = "y" ] && [ -d phoenix-rtos-ports ]; then
+	if [ "${B_SBOM}" = "y" ]; then
+		export SBOM=1
+	fi
 	PORTS_CONFIG="${PORTS_CONFIG}" ./phoenix-rtos-build/build-ports.sh
 fi
 
@@ -277,6 +302,14 @@ fi
 #
 if [ "${B_IMAGE}" = "y" ]; then
 	b_image
+fi
+
+#
+# Generate SBOM
+#
+if [ "${B_SBOM}" = "y" ]; then
+	export PHOENIX_SBOM_PATH="${PREFIX_BUILD}/phoenix.spdx.json"
+	python3 ./phoenix-rtos-build/generate_sbom.py "${PREFIX_BUILD}" "${PHOENIX_VER}" "${PHOENIX_SBOM_PATH}" -p "${PORTS_SBOM_PATH}"
 fi
 
 # vim:noexpandtab:ts=2:sw=2
