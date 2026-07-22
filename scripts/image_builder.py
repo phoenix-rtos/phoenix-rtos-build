@@ -303,6 +303,9 @@ class PloCmdApp(PloCmdBase):
     size: int = field(init=False)
     abspath: Path = field(init=False)
 
+    # static fields
+    emitted_aliases = dict()
+
     @staticmethod
     def _resolve_filename(filename: str) -> Tuple[str, Path]:
         if filename.startswith("/"):
@@ -352,8 +355,14 @@ class PloCmdApp(PloCmdBase):
                 raise TypeError(f"Required attribute '{req_val_name}' not present/empty")
 
     def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
-        alias = PloCmdAlias(self.filename, self.size)
-        new_offs, prog_info = alias.emit(file, enc, payload_offs, is_relative)
+        if self.filename in self.emitted_aliases:
+            prog_info = self.emitted_aliases[self.filename]
+            new_offs = payload_offs
+        else:
+            alias = PloCmdAlias(self.filename, self.size)
+            new_offs, prog_info = alias.emit(file, enc, payload_offs, is_relative)
+            self.emitted_aliases[self.filename] = prog_info
+
         prog_info.path = self.abspath
 
         if enc == PloScriptEncoding.DEBUG_ASDICT:
