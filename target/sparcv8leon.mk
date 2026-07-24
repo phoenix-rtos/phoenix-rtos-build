@@ -24,6 +24,7 @@ ifeq ($(TARGET_SUBFAMILY), gr716)
   VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
 
   CFLAGS += -msoft-float
+  LIBM_USE_HW=n
 
   ifeq ($(KERNEL), 1)
     # On GR716 RAM is split into IRAM and DRAM, kernel data must be put into DRAM
