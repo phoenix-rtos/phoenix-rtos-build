@@ -24,6 +24,7 @@ ifeq ($(TARGET_FAMILY), armv8m55)
   CPPFLAGS += -DKERNEL_FPU_SUPPORT=1
 else ifeq ($(TARGET_FAMILY), armv8m33)
   CFLAGS += -mfloat-abi=soft
+  LIBM_USE_HW=n
   ifeq ($(MCX_USE_CPU1), y)
     CFLAGS += -mcpu=cortex-m33+nodsp
   else
@@ -31,6 +32,7 @@ else ifeq ($(TARGET_FAMILY), armv8m33)
   endif
 else
   CFLAGS += -mfloat-abi=soft
+  LIBM_USE_HW=n
 endif
 
 VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
