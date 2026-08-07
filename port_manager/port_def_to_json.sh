@@ -32,21 +32,10 @@ if [ ! "${found}" ]; then
 	b_die "bad ports_api: ${ports_api} (supported: ${ports_apis[*]})"
 fi
 
-: "${name?}"
+# shellcheck disable=2034 # used in vars
+namever="${name?}-${version?}"
 : "${version?}"
 : "${desc?}"
-
-if [ -z "${source}" ]; then
-	# if tarball source not provided, expect git rev/source
-	: "${git_rev?}"
-	: "${git_source?}"
-else
-	: "${archive_filename?}"
-
-	if ((${#archive_filename[@]} > 2)); then
-		b_die "archive_filename must have at most 2 elements, got ${#archive_filename[@]}"
-	fi
-fi
 
 : "${sha256?}"
 : "${size?}"
@@ -64,26 +53,43 @@ fi
 : "${conflicts?}"
 : "${depends?}"
 
+vars=(
+	namever
+	depends
+	conflicts
+	iuse
+	required_use
+	supports
+	desc
+	sha256
+	license
+	cpe23
+)
+
+if [ -z "${source}" ]; then
+	# if tarball source not provided, expect git rev/source
+	: "${git_rev?}"
+	: "${git_source?}"
+	vars+=(git_rev git_source)
+else
+	: "${archive_filename?}"
+	# shellcheck disable=2034 # used in vars
+	archive_filenames="${archive_filename[*]}"
+	vars+=(source archive_filenames)
+
+	if ((${#archive_filename[@]} > 2)); then
+		b_die "archive_filename must have at most 2 elements, got ${#archive_filename[@]}"
+	fi
+fi
+
 # TODO: add host dependencies fields?
 
 [[ $(type -t p_prepare) == function ]] || b_die "p_prepare undefined"
 [[ $(type -t p_build) == function ]] || b_die "p_build undefined"
 
-# shellcheck disable=2154 # variables loaded from port.def.sh
-jq -n \
-	--arg namever "${name}-${version}" \
-	--arg requires "${depends}" \
-	--arg conflicts "${conflicts}" \
-	--arg iuse "${iuse}" \
-	--arg required_use "${required_use}" \
-	--arg supports "${supports}" \
-	--arg desc "${desc}" \
-	'{
-    namever: $namever,
-    requires: $requires,
-    conflicts: $conflicts,
-    iuse: $iuse,
-    required_use: $required_use,
-    supports: $supports,
-    desc: $desc,
-  }'
+jq_args=()
+for v in "${vars[@]}"; do
+	jq_args+=(--arg "$v" "${!v}")
+done
+
+jq -n "${jq_args[@]}" '$ARGS.named'

@@ -24,20 +24,26 @@ from pathlib import Path
 
 from argparse import Namespace, ArgumentParser, RawDescriptionHelpFormatter
 
+from build_core.logger import logger, LogLevel
+
 from .version import PhxVersion, PhxVersionGrammar
-from .logger import logger, LogLevel
 from .requirements import (
     BaseRequirement,
     ConflictRequirement,
     ConditionalRequirement,
     Constraint,
 )
-from .candidates import Candidate, OsCandidate, InstallableCandidate
+from .candidates import DryMode, Candidate, OsCandidate, InstallableCandidate
 from .resolver import PhxResolver, CandidatesDict
 from .required_use import parse_required_use
 from . import build_layer
 
 T = TypeVar("T")
+
+
+def get_phoenix_ver() -> str:
+    # ignore any abbrevs that may possibly be emitted if version is taken with `git describe`
+    return os.environ["PHOENIX_VER"].split("-", 1)[0]
 
 
 def parse_requirements(s: str, req_constructor: Callable[[str, list[Constraint]], T]) -> list[T]:
@@ -79,7 +85,7 @@ class PortManager:
     def __init__(
         self,
         argv: Sequence[str],
-        dry: bool = False,
+        dry: DryMode = DryMode.OFF,
         ports_dir: str | None = None,
         ports_yamls: str | None = None,
         find_ports: Callable[[str], Generator[tuple[dict[str, str], Path]]]
@@ -94,6 +100,7 @@ class PortManager:
         self.mapping: CandidatesDict = dict()
         self.roll_logs = False
         self.build_all = False
+        self.sbom = False
         self.dry = dry  # self.dry may be overwritten by _parse_arguments
         self.args = self._parse_arguments(argv)
 
@@ -109,7 +116,7 @@ class PortManager:
         )
         self.find_ports = find_ports if find_ports else build_layer.find_ports
 
-        self.ports_installed: list[Candidate] = []
+        self.ports_installed: list[InstallableCandidate] = []
         self.ports_skipped: list[str] = []
         self._state_dir = Path(state_dir) if state_dir else None
         self.stale_ports: set[str] = set()
@@ -138,10 +145,12 @@ class PortManager:
             self.os_candidates_added = True
 
     def discover_ports(self):
+        ports_env = build_layer.load_ports_env()
+
         for port, def_path in self.find_ports(self.args.ports_dir):
             name, version = parse_namever(port["namever"])
 
-            req = parse_requirements(port["requires"], BaseRequirement)
+            req = parse_requirements(port["depends"], BaseRequirement)
             req += parse_requirements(port["supports"], BaseRequirement)
 
             conflicts = parse_requirements(
@@ -159,16 +168,34 @@ class PortManager:
             required_use_str = port.get("required_use", "")
             required_use_exprs = parse_required_use(required_use_str)
 
+            if "source" in port:
+                archive_filenames = port["archive_filenames"].split()
+                sources = {
+                    "tarball": {
+                        "origin": f"{port['source']}/{archive_filenames[-1]}",
+                        "mirror": f"{ports_env['PORTS_MIRROR_BASEURL']}/{archive_filenames[0]}",
+                    }
+                }
+            else:
+                sources = {
+                    "git": {"rev": port["git_rev"], "source": port["git_source"]}
+                }
+
             self.add_candidate(
                 InstallableCandidate(
                     name,
                     version,
                     req,
                     conflicts,
-                    str(def_path),
                     available_flags,
                     port["desc"],
-                    required_use=required_use_exprs,
+                    required_use_exprs,
+                    definition_path=str(def_path),
+                    license=port["license"],
+                    sha256=port["sha256"],
+                    sources=sources,
+                    cpe23=port["cpe23"],
+                    # TODO: add purl?
                 )
             )
 
@@ -191,8 +218,12 @@ class PortManager:
                         if req.name not in mapping:
                             continue
                         dep_cand = mapping[req.name]
-                        new_flags = set(req.propagated_use_flags) - set(dep_cand.use_flags)
-                        dep_cand.set_use_flags(req.propagated_use_flags, origin=str(cand))
+                        new_flags = set(req.propagated_use_flags) - set(
+                            dep_cand.use_flags
+                        )
+                        dep_cand.set_use_flags(
+                            req.propagated_use_flags, origin=str(cand)
+                        )
                         if new_flags:
                             changed = True
 
@@ -387,6 +418,10 @@ class PortManager:
                     port_cands.values(), key=lambda c: c.version, reverse=True
                 )[0]
 
+            if not isinstance(cand, InstallableCandidate):
+                logger.error(f"{cand} is not installable!")
+                sys.exit(1)
+
             if isinstance(port, dict):
                 if not require_bool(port, "if", True):
                     cands.pop(str(cand), None)
@@ -397,10 +432,6 @@ class PortManager:
                 use_flags = port.get("use", None)
                 if use_flags:
                     cand.set_use_flags(use_flags)
-
-            if not isinstance(cand, InstallableCandidate):
-                logger.error(f"{cand} is not installable!")
-                sys.exit(1)
 
             cands[str(cand)] = cand
 
@@ -434,6 +465,12 @@ class PortManager:
                 "Some user requirements were skipped due to disable-ports:",
                 "".join(["\n * " + s for s in self.ports_skipped]),
             )
+
+    def generate_sbom(self):
+        from .sbom import PortsSbom
+        portsSbom = PortsSbom(get_phoenix_ver())
+        output_path = Path(os.environ.get("PORTS_SBOM_PATH", Path(os.environ["PREFIX_BUILD"]) / "ports.spdx.json"))
+        portsSbom.generate(self.ports_installed, output_path)
 
     def cmd_build(self) -> None:
         start = time.time()
@@ -478,6 +515,9 @@ class PortManager:
 
         logger.info(f"Done ({stop - start:.2f} s)")
         self.print_install_summary()
+
+        if self.sbom:
+            self.generate_sbom()
 
     def cmd_validate(self) -> None:
         start = time.time()
@@ -541,9 +581,18 @@ environment variables:
             self.roll_logs = True
         if build_layer.env_to_bool("BUILD_ALL_PORTS"):
             self.build_all = True
+        if build_layer.env_to_bool("SBOM"):
+            self.sbom = True
+
+        # WARN: don't assume any self.dry default, as it could be set in tests
+        # in the PortManager constructor
+        pm_dry = os.getenv("PM_DRY")
+        if pm_dry:
+            self.dry = DryMode(int(pm_dry))
         if args.dry:
-            logger.warning("Dry run")
-            self.dry = True
+            self.dry = args.dry
+        if self.dry != DryMode.OFF:
+            logger.warning(f"Dry run ({self.dry.value}: {self.dry.name})")
 
         return args
 

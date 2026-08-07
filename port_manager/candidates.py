@@ -16,14 +16,23 @@ from collections.abc import Iterable, Generator, Collection
 import os
 import time
 import sys
+import contextlib
 
 from pathlib import Path
+from enum import IntEnum
+
+from build_core.logger import logger
 
 from .requirements import ConflictRequirement, ConditionalRequirement, Requirement
 from .required_use import RequiredUseExpr, validate_required_use
 from .version import PhxVersion
-from .logger import logger
 from . import build_layer
+
+
+class DryMode(IntEnum):
+    OFF = 0
+    UNPACK = 1
+    FULL_DRY = 2
 
 
 class Candidate:
@@ -35,40 +44,19 @@ class Candidate:
         version: PhxVersion,
         requirements: Iterable[Requirement],
         conflicts: Iterable[ConflictRequirement],
-        definition_path: str,
         exposed_use_flags: list[str],
-        desc: str = "",
+        desc: str,
         required_use: list[RequiredUseExpr] | None = None,
     ) -> None:
-        self._name = name
-        self._version = version
-
-        self.installed = False
-        self.needed_by: list[Candidate] = []
-        self.user_required = False
-
+        self.name = name
+        self.version = version
         self._requirements = requirements
         self._conflicts = conflicts
-        self._definition_path = definition_path
-        self.build_tests = False
         self.exposed_use_flags = exposed_use_flags
         self.use_flags: list[str] = []
         self.use_flags_origins: dict[str, list[str]] = {}
         self.required_use: list[RequiredUseExpr] = required_use or []
         self.desc = desc
-
-    @property
-    def name(self) -> str:
-        """The name identifying this candidate in the resolver"""
-        return self._name
-
-    @property
-    def version(self) -> PhxVersion:
-        return self._version
-
-    @property
-    def definition_path(self) -> str:
-        return self._definition_path
 
     def __repr__(self) -> str:
         return f"{self.name}-{self.version}"
@@ -122,12 +110,11 @@ class Candidate:
                 return True
         return False
 
-    def to_dict(self, ports_dir: str) -> dict[str, str | list[str]]:
+    def to_dict(self, ports_dir: str) -> dict[str, str | list | dict]:
         return {
             "version": str(self.version),
             "requirements": [str(r) for r in self._requirements],
             "conflicts": [str(r) for r in self.iter_conflicts()],
-            "port_def_path": str(Path(self.definition_path).relative_to(ports_dir)),
             "required_use": [str(ru) for ru in self.required_use],
             "iuse": self.exposed_use_flags,
             "desc": self.desc,
@@ -159,10 +146,35 @@ class OsCandidate(Candidate):
     """
 
     def __init__(self, name: str, version: PhxVersion) -> None:
-        super().__init__(name, version, [], [], "", [], required_use=[])
+        super().__init__(name, version, [], [], [], "", required_use=[])
 
     def __repr__(self) -> str:
         return f"OS:{self.name}-{self.version}"
+
+
+@contextlib.contextmanager
+def track_added_files(directory: str | Path, pattern: str):
+    """Context manager to track files created or rebuilt during an operation."""
+    base_path = Path(directory)
+    added: list[Path] = []
+
+    def snapshot() -> dict[Path, int]:
+        snap = {}
+        for p in base_path.rglob(pattern):
+            try:
+                snap[p] = p.stat().st_mtime_ns
+            except OSError as e:
+                logger.warning(f"Could not stat {p}: {e}")
+                pass
+        return snap
+
+    before = snapshot()
+    try:
+        yield added
+    finally:
+        for path, mtime in snapshot().items():
+            if path not in before or mtime > before[path]:
+                added.append(path)
 
 
 class InstallableCandidate(Candidate):
@@ -170,6 +182,30 @@ class InstallableCandidate(Candidate):
     A candidate that is installable either to PREFIX_BUILD or
     PREFIX_BUILD_VERSIONED (e.g. ports defined by a port.def.sh)
     """
+
+    def __init__(
+        self,
+        *args,
+        definition_path: str,
+        license: str,
+        sha256: str,
+        sources: dict[str, dict[str, str]],
+        cpe23: str,
+        **kwargs,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.needed_by: list[Candidate] = []
+        self.installed = False
+        self.build_tests = False
+        self.user_required = False
+        self.built_libs: list[Path] = []
+
+        self.definition_path = definition_path
+        self.license = license
+        self.license_path: str | None = None
+        self.sha256 = sha256
+        self.sources = sources
+        self.cpe23 = cpe23
 
     @property
     def install_path(self) -> str:
@@ -181,6 +217,13 @@ class InstallableCandidate(Candidate):
             # Otherwise, it is treated like normal libs
             prefix = os.environ["PREFIX_BUILD"]
             return f"{prefix}"
+
+    @property
+    def origin_source(self) -> str:
+        if "tarball" in self.sources:
+            return self.sources["tarball"]["origin"]
+        else:
+            return self.sources["git"]["source"]
 
     def install(
         self,
@@ -194,7 +237,7 @@ class InstallableCandidate(Candidate):
             logger.error(f"REQUIRED_USE violated on {self}: {err}")
             sys.exit(1)
 
-        dry = kwargs.get("dry", False)
+        dry = kwargs.get("dry", DryMode.OFF)
         roll_logs = kwargs.get("roll_logs", False)
 
         info = f"{self}"
@@ -210,6 +253,9 @@ class InstallableCandidate(Candidate):
                 port_env[f"PORT_USE_{use_flag}"] = "y"
 
             extras_info.append("+USE flags: " + " ".join(self.use_flags))
+
+        # TODO: manipulations on port_env should be moved to build_layer, as
+        # they break the abstraction
 
         if self.build_tests:
             port_env["PORT_BUILD_TESTS"] = "y"
@@ -260,7 +306,7 @@ class InstallableCandidate(Candidate):
                 dep_cand.install_path if dep_cand.installed else "<empty>",
             )
 
-        if not dry:
+        if dry == DryMode.OFF or dry == DryMode.UNPACK:
             port_env["PKG_CONFIG_PATH"] = ":".join(list(pkg_config_path_set))
 
             # export dependency lib directories as a fallback variable to be
@@ -269,7 +315,13 @@ class InstallableCandidate(Candidate):
 
             port_env = build_layer.prepare_cand(self, port_env, roll_logs)
 
-            build_layer.build_cand(self, port_env, roll_logs)
+            self.license_path = port_env["license_file_path"]
+
+        if dry == DryMode.OFF:
+            with track_added_files(Path(self.install_path) / "lib", "*.a") as new_libs:
+                build_layer.build_cand(self, port_env, roll_logs)
+
+            self.built_libs = new_libs
 
         stop = time.time()
         logger.info(f"Installed ({stop - start:.2f} s)", end_tree=True)
@@ -280,3 +332,11 @@ class InstallableCandidate(Candidate):
 
         if "ports_installed" in kwargs:
             kwargs["ports_installed"].append(self)
+
+    def to_dict(self, ports_dir: str) -> dict[str, str | list | dict]:
+        return super().to_dict(ports_dir) | {
+            "port_def_path": str(Path(self.definition_path).relative_to(ports_dir)),
+            "license": self.license,
+            "sha256": self.sha256,
+            "sources": self.sources,
+        }

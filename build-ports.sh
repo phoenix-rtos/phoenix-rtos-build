@@ -13,9 +13,6 @@ function port_manager() {
 	python3 ./port_manager.py "${@}"
 }
 
-DUMMY_VERSION="v3.3.1-0-g"
-GIT_DESC="$(cd "./phoenix-rtos-build" && git describe --tags --abbrev=0 --match "v[[:digit:]].[[:digit:]]*.[[:digit:]]*" 2>/dev/null || echo "${DUMMY_VERSION}")"
-
 b_log "Installing ports"
 
-PHOENIX_VER="${GIT_DESC}" port_manager build "${PORTS_CONFIG}" "${PREFIX_PROJECT}/phoenix-rtos-ports"
+port_manager build "${PORTS_CONFIG}" "${PREFIX_PROJECT}/phoenix-rtos-ports"

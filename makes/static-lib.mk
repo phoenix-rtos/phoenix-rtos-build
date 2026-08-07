@@ -14,7 +14,7 @@
 # - LOCAL_PORTS_VERSIONS - additional ports configuration for current component compilation
 #
 
-
+$(NAME) $(NAME)-clean: SBOM_MAKEFILE_PATH := $(abspath $(lastword $(wordlist 2, $(words $(MAKEFILE_LIST)), x $(MAKEFILE_LIST))))
 
 # directory with current Makefile - relative to the repository root
 # filter-out all Makefiles outside of TOPDIR
@@ -108,9 +108,15 @@ $(NAME) $(NAME)-clean: NAME:=$(NAME)
 ALL_COMPONENTS += $(NAME)
 
 include $(MAKES_PATH)/check-ports.mk
+SBOM_ARTIFACT := $(LIBNAME)
+$(NAME) $(NAME)-clean: SBOM_TYPE := static-lib
+include $(MAKES_PATH)/generate-sbom.mk
 
 # cleaning vars to avoid strange errors
 NAME :=
+CPE :=
+VERSION :=
+SBOM_ARTIFACT :=
 LOCAL_SRCS :=
 undefine LOCAL_DIR # need to treat LOCAL_DIR="" as a valid (set-extenally) value
 LOCAL_HEADERS :=

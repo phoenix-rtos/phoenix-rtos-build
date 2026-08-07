@@ -28,7 +28,8 @@ from functools import cache, cmp_to_key
 
 from resolvelib.resolvers import Result
 
-from .logger import logger
+from build_core.logger import logger
+
 from .candidates import Candidate
 from .requirements import Requirement, BaseRequirement
 from .version import PhxVersion

@@ -24,10 +24,10 @@ import json
 import jinja2
 import yaml
 
-from .logger import logger, render_process_log
+from build_core.logger import logger, render_process_log
 
 if TYPE_CHECKING:
-    from .candidates import Candidate
+    from .candidates import InstallableCandidate
 
 
 PORT_MGMT_DIR = Path(__file__).parent
@@ -47,6 +47,23 @@ def env_to_bool(env: str) -> bool:
     if env not in os.environ:
         return False
     return str_to_bool(os.environ[env])
+
+
+def parse_env(buf, null_terminated=False) -> dict:
+    env = dict()
+    for line in buf.split("\0" if null_terminated else "\n"):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" in line:
+            key, value = line.split("=", 1)
+            env[key.strip()] = value.strip("'\" ")
+    return env
+
+
+def load_ports_env() -> dict:
+    with open(PORT_MGMT_DIR / "ports.env", "r", encoding="utf-8") as f:
+        return parse_env(f.read())
 
 
 def find_ports(ports_dir: str) -> Generator[tuple[dict[str, str], Path]]:
@@ -180,10 +197,9 @@ def init_build_log_path(env: dict[str, str]) -> str:
 
 
 def prepare_cand(
-    cand: Candidate, env: dict[str, str], roll_logs: bool
+    cand: InstallableCandidate, env: dict[str, str], roll_logs: bool
 ) -> dict[str, str]:
-    """Invokes port_prepare.sh on a candidate. Captures the resulting shell
-    environment"""
+    """Invokes port_prepare.sh on a candidate. Returns the shell environment for the port build phase"""
     log_file_path = get_prepare_log_path(env)
 
     r_fd, w_fd = os.pipe()
@@ -211,20 +227,10 @@ def prepare_cand(
 
     os.close(w_fd)
     with os.fdopen(r_fd) as r:
-        env_output = r.read()
-
-    # port_prepare outputs sanitized environment for future build_cand invocation
-    build_env = dict()
-
-    for line in env_output.split("\0"):
-        if "=" in line:
-            key, value = line.split("=", 1)
-            build_env[key] = value
-
-    return build_env
+        return parse_env(r.read(), null_terminated=True)
 
 
-def clean_cand(cand: Candidate, env: dict[str, str]):
+def clean_cand(cand: InstallableCandidate, env: dict[str, str]):
     """Invokes port_clean.sh on a candidate"""
     result = subprocess.run(
         ["bash", str(PORT_MGMT_DIR / "port_clean.sh"), cand.definition_path],
@@ -238,7 +244,7 @@ def clean_cand(cand: Candidate, env: dict[str, str]):
         sys.exit(1)
 
 
-def build_cand(cand: Candidate, env: dict[str, str], roll_logs: bool):
+def build_cand(cand: InstallableCandidate, env: dict[str, str], roll_logs: bool):
     """Invokes port_build.sh on a candidate"""
     log_file_path = init_build_log_path(env)
 

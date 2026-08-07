@@ -9,6 +9,9 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+import json
+import subprocess
+import textwrap
 import pytest
 import os
 import tempfile
@@ -17,9 +20,11 @@ from resolvelib.resolvers import (
     ResolutionImpossible,
     ResolutionTooDeep,
 )
-from port_manager.port_manager import PortManager
+
+from build_core.logger import LogLevel, logger
+
+from port_manager.port_manager import PortManager, DryMode
 from port_manager.version import PhxVersion
-from port_manager.logger import LogLevel, logger
 from port_manager import build_layer
 
 PREFIX_BUILD = "normal_port_install_dir"
@@ -46,8 +51,16 @@ def build_find_ports(dct):
             port_def.setdefault("iuse", "")
             port_def.setdefault("required_use", "")
             port_def.setdefault("desc", "")
+            port_def.setdefault("source", "foo")
+            port_def.setdefault("archive_filenames", "bar.tar.gz")
+            port_def.setdefault("license", "MIT")
+            port_def.setdefault(
+                "sha256",
+                "bac3ab15fa3e656eb35f4b7df700147d95777285af29e32f2145cb8cebd938bc",
+            )
+            port_def.setdefault("cpe23", f"cpe:2.3:a:{name}:{name}:42:*:*:*:*:*:*:*")
 
-            for field in ["requires", "conflicts"]:
+            for field in ["depends", "conflicts"]:
                 port_def.setdefault(field, [])
 
             yield (port_def, os.path.join("somedir", name))
@@ -67,7 +80,7 @@ def run_dry_build(all_ports, to_build, state_dir=None):
         [],
         get_ports_to_build=build_get_ports_to_build(to_build),
         find_ports=build_find_ports(all_ports),
-        dry=True,
+        dry=DryMode.FULL_DRY,
         ports_yamls="yaml1:yaml2",
         ports_dir="some_path",
         state_dir=str(state_dir) if state_dir else None,
@@ -77,7 +90,7 @@ def run_dry_build(all_ports, to_build, state_dir=None):
 
 
 def test_port_resolution_simple(fix):
-    all_ports = {"foo-1.2.3": {"requires": "bar>=1.1.1"}, "bar-2.0.0": {}}
+    all_ports = {"foo-1.2.3": {"depends": "bar>=1.1.1"}, "bar-2.0.0": {}}
     to_build = {"ports": [{"name": "foo"}]}
     run_dry_build(all_ports, to_build)
 
@@ -123,10 +136,10 @@ def assert_version_mapping(pm, port_mappings, phoenix_ver=PHOENIX_VER):
 
 def test_port_resolution_independent_conflicts_simple(fix):
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.1.1"},
+        "foo-1.2.3": {"depends": "bar>=1.1.1"},
         "bar-2.0.0": {"conflicts": "barng>=0.0"},
         "barng-2.2.0": {"conflicts": "bar>=0.0"},
-        "baz-3.2.0": {"requires": "barng>=1.1.1"},
+        "baz-3.2.0": {"depends": "barng>=1.1.1"},
     }
 
     to_build = {
@@ -143,12 +156,12 @@ def test_port_resolution_independent_conflicts_simple(fix):
 
 def test_port_resolution_independent_conflicts_alternative(fix):
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.1.1"},
+        "foo-1.2.3": {"depends": "bar>=1.1.1"},
         "bar-2.0.0": {"conflicts": "barng>=0.0"},
         "barng-2.2.0": {"conflicts": "bar>=0.0"},
-        "foo-3.2.0": {"requires": "barng>=1.1.1"},
-        "baz-1.1.1": {"requires": "foo>=1.1.1"},
-        "raz-1.1.1": {"requires": "foo==1.2.3"},
+        "foo-3.2.0": {"depends": "barng>=1.1.1"},
+        "baz-1.1.1": {"depends": "foo>=1.1.1"},
+        "raz-1.1.1": {"depends": "foo==1.2.3"},
     }
 
     to_build = {"ports": [{"name": "baz"}, {"name": "raz"}]}
@@ -166,11 +179,11 @@ def test_port_resolution_independent_conflicts_alternative(fix):
 
 def test_port_resolution_independent_conflicts_choose_alternative(fix):
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.1.1"},
+        "foo-1.2.3": {"depends": "bar>=1.1.1"},
         "bar-2.0.0": {"conflicts": "barng>=0.0"},
         "barng-2.2.0": {"conflicts": "bar>=0.0"},
-        "foo-3.2.0": {"requires": "barng>=1.1.1"},
-        "baz-1.1.1": {"requires": "foo>=1.1.1"},
+        "foo-3.2.0": {"depends": "barng>=1.1.1"},
+        "baz-1.1.1": {"depends": "foo>=1.1.1"},
     }
 
     to_build = {"ports": [{"name": "baz"}]}
@@ -182,11 +195,11 @@ def test_port_resolution_independent_conflicts_choose_alternative(fix):
 
 def test_resolution_conflicting_port_dependencies(fix):
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.1.1"},
+        "foo-1.2.3": {"depends": "bar>=1.1.1"},
         "bar-2.0.0": {"conflicts": "barng>=0.0"},
         "barng-2.2.0": {"conflicts": "bar>=0.0"},
-        "baz-3.2.0": {"requires": "barng>=1.1.1"},
-        "faz-4.2.0": {"requires": "foo>=1.0 baz>=1.0"},
+        "baz-3.2.0": {"depends": "barng>=1.1.1"},
+        "faz-4.2.0": {"depends": "foo>=1.0 baz>=1.0"},
     }
 
     to_build = {"ports": [{"name": "faz"}]}
@@ -196,7 +209,7 @@ def test_resolution_conflicting_port_dependencies(fix):
 
 
 def test_resolution_unsatisfiable_simple(fix):
-    all_ports = {"foo-1.2.3": {"requires": "bar>=1.1.1"}}
+    all_ports = {"foo-1.2.3": {"depends": "bar>=1.1.1"}}
 
     to_build = {"ports": [{"name": "foo"}]}
 
@@ -205,7 +218,7 @@ def test_resolution_unsatisfiable_simple(fix):
 
 
 def test_resolution_unsatisfiable_version(fix):
-    unsatisfiable_bar_requires = [
+    unsatisfiable_bar_depends = [
         "bar>=3.1.1",
         "bar<2.0.1",
         "bar<=2.0.0",
@@ -214,9 +227,9 @@ def test_resolution_unsatisfiable_version(fix):
         "bar==2.0.10",
     ]
 
-    for req in unsatisfiable_bar_requires:
+    for req in unsatisfiable_bar_depends:
         all_ports = {
-            "foo-1.2.3": {"requires": req},
+            "foo-1.2.3": {"depends": req},
             "bar-2.0.1": {},
         }
 
@@ -228,7 +241,7 @@ def test_resolution_unsatisfiable_version(fix):
 
 def test_install_path(fix):
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.1.1"},
+        "foo-1.2.3": {"depends": "bar>=1.1.1"},
         "bar-2.0.0": {"conflicts": "barng>=0.0"},
     }
     to_build = {"ports": [{"name": "foo"}]}
@@ -244,7 +257,7 @@ def test_install_path(fix):
 def test_install_bad_env(fix, monkeypatch):
     with monkeypatch.context() as m:
         m.delenv("PREFIX_BUILD", raising=False)
-        all_ports = {"foo-1.2.3": {"requires": "bar>=1.1.1"}, "bar-2.0.0": {}}
+        all_ports = {"foo-1.2.3": {"depends": "bar>=1.1.1"}, "bar-2.0.0": {}}
         to_build = {"ports": [{"name": "foo"}]}
 
         with pytest.raises(KeyError) as ex:
@@ -255,7 +268,7 @@ def test_install_bad_env(fix, monkeypatch):
         m.delenv("PREFIX_BUILD_VERSIONED", raising=False)
 
         all_ports = {
-            "foo-1.2.3": {"requires": "bar>=1.1.1"},
+            "foo-1.2.3": {"depends": "bar>=1.1.1"},
             "bar-2.0.0": {"conflicts": "barng>=0.0"},
         }
         to_build = {"ports": [{"name": "foo"}]}
@@ -295,7 +308,7 @@ def test_ports_to_build_short_name(fix):
 
 def test_ports_to_build_disabled_ports(fix):
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.1.1"},
+        "foo-1.2.3": {"depends": "bar>=1.1.1"},
         "bar-2.0.0": {},
     }
     to_build = {
@@ -314,7 +327,7 @@ def test_ports_to_build_disabled_ports(fix):
 
 def test_ports_to_build_disable_required_dependency(fix):
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.1.1"},
+        "foo-1.2.3": {"depends": "bar>=1.1.1"},
         "bar-2.0.0": {},
     }
     to_build = {
@@ -332,7 +345,7 @@ def test_ports_to_build_disable_required_dependency(fix):
 
 def test_ports_to_build_disable_bad_format(fix):
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.1.1"},
+        "foo-1.2.3": {"depends": "bar>=1.1.1"},
         "bar-2.0.0": {},
     }
 
@@ -365,7 +378,7 @@ def dry_build_from_yaml(ports_yaml_contents, all_ports):
         pm = PortManager(
             [],
             find_ports=build_find_ports(all_ports),
-            dry=True,
+            dry=DryMode.FULL_DRY,
             ports_yamls=f.name,
             ports_dir="some_path",
         )
@@ -445,7 +458,7 @@ def test_ports_yaml_should_fail_when_str_in_bool_fields(fix):
 def test_conditional_dep_flag_enabled(fix):
     """When the USE flag is enabled, the conditional dependency should be resolved."""
     all_ports = {
-        "foo-1.2.3": {"requires": "ssl ? ( bar>=1.1.1 )", "iuse": "ssl"},
+        "foo-1.2.3": {"depends": "ssl ? ( bar>=1.1.1 )", "iuse": "ssl"},
         "bar-2.0.0": {},
     }
     to_build = {"ports": [{"name": "foo", "use": ["ssl"]}]}
@@ -456,7 +469,7 @@ def test_conditional_dep_flag_enabled(fix):
 def test_conditional_dep_flag_disabled(fix):
     """When the USE flag is not enabled, the conditional dependency should be skipped."""
     all_ports = {
-        "foo-1.2.3": {"requires": "ssl ? ( bar>=1.1.1 )", "iuse": "ssl"},
+        "foo-1.2.3": {"depends": "ssl ? ( bar>=1.1.1 )", "iuse": "ssl"},
         "bar-2.0.0": {},
     }
     to_build = {"ports": [{"name": "foo"}]}
@@ -467,7 +480,7 @@ def test_conditional_dep_flag_disabled(fix):
 def test_conditional_dep_missing_when_enabled(fix):
     """When the USE flag is enabled but the conditional dep is unavailable, resolution should fail."""
     all_ports = {
-        "foo-1.2.3": {"requires": "ssl ? ( bar>=1.1.1 )", "iuse": "ssl"},
+        "foo-1.2.3": {"depends": "ssl ? ( bar>=1.1.1 )", "iuse": "ssl"},
     }
     to_build = {"ports": [{"name": "foo", "use": ["ssl"]}]}
     with pytest.raises(ResolutionImpossible):
@@ -477,7 +490,7 @@ def test_conditional_dep_missing_when_enabled(fix):
 def test_use_flag_propagation(fix):
     """USE flags should be propagated to the dependency."""
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.1.1[crypto]"},
+        "foo-1.2.3": {"depends": "bar>=1.1.1[crypto]"},
         "bar-2.0.0": {"iuse": "crypto"},
     }
     to_build = {"ports": [{"name": "foo"}]}
@@ -492,7 +505,7 @@ def test_use_flag_propagation(fix):
 def test_use_flag_propagation_bad_flag(fix):
     """Propagating a USE flag not in the dependency's iuse should fail."""
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.1.1[nonexistent]"},
+        "foo-1.2.3": {"depends": "bar>=1.1.1[nonexistent]"},
         "bar-2.0.0": {"iuse": "crypto"},
     }
     to_build = {"ports": [{"name": "foo"}]}
@@ -503,7 +516,7 @@ def test_use_flag_propagation_bad_flag(fix):
 def test_conditional_dep_with_use_propagation(fix):
     """Conditional dep with USE flag propagation: ssl ? ( bar>=1.1.1[crypto] )."""
     all_ports = {
-        "foo-1.2.3": {"requires": "ssl ? ( bar>=1.1.1[crypto] )", "iuse": "ssl"},
+        "foo-1.2.3": {"depends": "ssl ? ( bar>=1.1.1[crypto] )", "iuse": "ssl"},
         "bar-2.0.0": {"iuse": "crypto"},
     }
     to_build = {"ports": [{"name": "foo", "use": ["ssl"]}]}
@@ -517,7 +530,7 @@ def test_conditional_dep_with_use_propagation(fix):
 def test_conditional_dep_with_use_propagation_flag_disabled(fix):
     """When the condition flag is disabled, the dep (and its USE propagation) should be skipped."""
     all_ports = {
-        "foo-1.2.3": {"requires": "ssl ? ( bar>=1.1.1[crypto] )", "iuse": "ssl"},
+        "foo-1.2.3": {"depends": "ssl ? ( bar>=1.1.1[crypto] )", "iuse": "ssl"},
         "bar-2.0.0": {"iuse": "crypto"},
     }
     to_build = {"ports": [{"name": "foo"}]}
@@ -526,9 +539,9 @@ def test_conditional_dep_with_use_propagation_flag_disabled(fix):
 
 
 def test_mixed_conditional_and_unconditional(fix):
-    """Mix of conditional and unconditional deps in the same requires string."""
+    """Mix of conditional and unconditional deps in the same depends string."""
     all_ports = {
-        "foo-1.2.3": {"requires": "baz>=1.0 ssl ? ( bar>=1.1.1 )", "iuse": "ssl"},
+        "foo-1.2.3": {"depends": "baz>=1.0 ssl ? ( bar>=1.1.1 )", "iuse": "ssl"},
         "bar-2.0.0": {},
         "baz-1.5.0": {},
     }
@@ -545,8 +558,8 @@ def test_mixed_conditional_and_unconditional(fix):
 def test_use_flag_additive_propagation(fix):
     """foo requests bar[ssl], baz also depends on bar (no flags). ssl should still be set."""
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.0[ssl]"},
-        "baz-1.0.0": {"requires": "bar>=1.0"},
+        "foo-1.2.3": {"depends": "bar>=1.0[ssl]"},
+        "baz-1.0.0": {"depends": "bar>=1.0"},
         "bar-2.0.0": {"iuse": "ssl"},
     }
     to_build = {"ports": [{"name": "foo"}, {"name": "baz"}]}
@@ -559,8 +572,8 @@ def test_use_flag_additive_propagation(fix):
 def test_required_use_at_most_one_conflict(fix):
     """?? ( x1 x2 ): foo requests bar[x1], baz requests bar[x2] -> error."""
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.0[x1]"},
-        "baz-1.0.0": {"requires": "bar>=1.0[x2]"},
+        "foo-1.2.3": {"depends": "bar>=1.0[x1]"},
+        "baz-1.0.0": {"depends": "bar>=1.0[x2]"},
         "bar-2.0.0": {"iuse": "x1 x2", "required_use": "?? ( x1 x2 )"},
     }
     to_build = {"ports": [{"name": "foo"}, {"name": "baz"}]}
@@ -571,8 +584,8 @@ def test_required_use_at_most_one_conflict(fix):
 def test_required_use_at_most_one_no_conflict(fix):
     """?? ( x1 x2 ): foo requests bar[x1], baz requests bar[x3] -> ok."""
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.0[x1]"},
-        "baz-1.0.0": {"requires": "bar>=1.0[x3]"},
+        "foo-1.2.3": {"depends": "bar>=1.0[x1]"},
+        "baz-1.0.0": {"depends": "bar>=1.0[x3]"},
         "bar-2.0.0": {"iuse": "x1 x2 x3", "required_use": "?? ( x1 x2 )"},
     }
     to_build = {"ports": [{"name": "foo"}, {"name": "baz"}]}
@@ -586,7 +599,7 @@ def test_required_use_at_most_one_no_conflict(fix):
 def test_required_use_at_most_one_none_set(fix):
     """?? ( x1 x2 ): no flags set -> ok (zero is fine)."""
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.0"},
+        "foo-1.2.3": {"depends": "bar>=1.0"},
         "bar-2.0.0": {"iuse": "x1 x2", "required_use": "?? ( x1 x2 )"},
     }
     to_build = {"ports": [{"name": "foo"}]}
@@ -751,8 +764,8 @@ def test_required_use_propagation_conflict(fix):
     """Propagated flags must also satisfy the dep's REQUIRED_USE.
     foo->bar[x1], baz->bar[x2], bar has ?? ( x1 x2 ) -> error."""
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.0[x1]"},
-        "baz-1.0.0": {"requires": "bar>=1.0[x2]"},
+        "foo-1.2.3": {"depends": "bar>=1.0[x1]"},
+        "baz-1.0.0": {"depends": "bar>=1.0[x2]"},
         "bar-2.0.0": {"iuse": "x1 x2", "required_use": "?? ( x1 x2 )"},
     }
     to_build = {"ports": [{"name": "foo"}, {"name": "baz"}]}
@@ -763,7 +776,7 @@ def test_required_use_propagation_conflict(fix):
 def test_use_flag_origin_tracking(fix):
     """USE flag origins should be recorded for traceability."""
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.0[crypto]"},
+        "foo-1.2.3": {"depends": "bar>=1.0[crypto]"},
         "bar-2.0.0": {"iuse": "crypto"},
     }
     to_build = {"ports": [{"name": "foo"}]}
@@ -791,8 +804,8 @@ def test_use_flag_origin_user(fix):
 def test_use_flag_multiple_origins(fix):
     """When both user and a parent propagate the same flag, both origins should be recorded."""
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.0[ssl]"},
-        "baz-1.0.0": {"requires": "bar>=1.0[ssl]"},
+        "foo-1.2.3": {"depends": "bar>=1.0[ssl]"},
+        "baz-1.0.0": {"depends": "bar>=1.0[ssl]"},
         "bar-2.0.0": {"iuse": "ssl"},
     }
     to_build = {"ports": [{"name": "foo"}, {"name": "baz"}]}
@@ -856,7 +869,7 @@ def test_stale_on_flag_remove(fix, tmp_path):
 def test_stale_propagates_to_dependents(fix, tmp_path):
     """If a dep's flags change, all ports depending on it are also stale."""
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.0"},
+        "foo-1.2.3": {"depends": "bar>=1.0"},
         "bar-2.0.0": {"iuse": "ssl"},
     }
 
@@ -891,14 +904,14 @@ def test_stale_state_file_updated_after_rebuild(fix, tmp_path):
 def test_stale_via_propagated_flags(fix, tmp_path):
     """Propagated flag change triggers stale detection."""
     all_ports = {
-        "foo-1.2.3": {"requires": "bar>=1.0[ssl]"},
+        "foo-1.2.3": {"depends": "bar>=1.0[ssl]"},
         "bar-2.0.0": {"iuse": "ssl crypto"},
     }
     run_dry_build(all_ports, {"ports": [{"name": "foo"}]}, state_dir=tmp_path)
 
     # Now foo propagates both ssl and crypto
     all_ports2 = {
-        "foo-1.2.3": {"requires": "bar>=1.0[ssl,crypto]"},
+        "foo-1.2.3": {"depends": "bar>=1.0[ssl,crypto]"},
         "bar-2.0.0": {"iuse": "ssl crypto"},
     }
     pm = run_dry_build(all_ports2, {"ports": [{"name": "foo"}]}, state_dir=tmp_path)
@@ -911,7 +924,9 @@ def test_stale_via_propagated_flags(fix, tmp_path):
 def test_first_build_no_stale(fix, tmp_path):
     """First build (no saved state) should not mark anything as stale."""
     all_ports = {"foo-1.2.3": {"iuse": "ssl"}}
-    pm = run_dry_build(all_ports, {"ports": [{"name": "foo", "use": ["ssl"]}]}, state_dir=tmp_path)
+    pm = run_dry_build(
+        all_ports, {"ports": [{"name": "foo", "use": ["ssl"]}]}, state_dir=tmp_path
+    )
     assert not pm.stale_ports
 
 
@@ -929,8 +944,8 @@ def test_stale_on_tests_flag_change(fix, tmp_path):
 def test_propagation_resolves_activated_dep(fix):
     """If flag propagation activates a conditional dep, it should get resolved."""
     all_ports = {
-        "baz-1.0.0": {"requires": "foo>=1.0[ssl]"},
-        "foo-1.2.3": {"requires": "ssl ? ( bar>=1.0 )", "iuse": "ssl"},
+        "baz-1.0.0": {"depends": "foo>=1.0[ssl]"},
+        "foo-1.2.3": {"depends": "ssl ? ( bar>=1.0 )", "iuse": "ssl"},
         "bar-2.0.0": {},
     }
     to_build = {"ports": [{"name": "baz"}]}
@@ -943,8 +958,8 @@ def test_propagation_resolves_activated_dep(fix):
 def test_propagation_activated_dep_unavailable(fix):
     """If propagation activates a dep that can't be resolved, resolution fails."""
     all_ports = {
-        "baz-1.0.0": {"requires": "foo>=1.0[ssl]"},
-        "foo-1.2.3": {"requires": "ssl ? ( bar>=1.0 )", "iuse": "ssl"},
+        "baz-1.0.0": {"depends": "foo>=1.0[ssl]"},
+        "foo-1.2.3": {"depends": "ssl ? ( bar>=1.0 )", "iuse": "ssl"},
         # bar is NOT in discovered ports
     }
     to_build = {"ports": [{"name": "baz"}]}
@@ -955,11 +970,129 @@ def test_propagation_activated_dep_unavailable(fix):
 def test_propagation_no_issue_when_dep_already_resolved(fix):
     """If the conditional dep's target is already in the mapping, no extra resolution needed."""
     all_ports = {
-        "baz-1.0.0": {"requires": "foo>=1.0[ssl] bar>=1.0"},
-        "foo-1.2.3": {"requires": "ssl ? ( bar>=1.0 )", "iuse": "ssl"},
+        "baz-1.0.0": {"depends": "foo>=1.0[ssl] bar>=1.0"},
+        "foo-1.2.3": {"depends": "ssl ? ( bar>=1.0 )", "iuse": "ssl"},
         "bar-2.0.0": {},
     }
     to_build = {"ports": [{"name": "baz"}]}
     pm = run_dry_build(all_ports, to_build)
-    # bar is resolved because baz also requires it directly
+    # bar is resolved because baz also depends it directly
     assert "bar" in pm.mapping["baz-1.0.0"]
+
+
+# --- port_def_to_json.sh tests ---
+
+_PORT_DEF_TO_JSON_SH = build_layer.PORT_MGMT_DIR / "port_def_to_json.sh"
+
+
+def _run_port_def_to_json(def_file):
+    return subprocess.run(
+        ["bash", str(_PORT_DEF_TO_JSON_SH), str(def_file)],
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_port_def_to_json_tarball_source(tmp_path):
+    """port_def_to_json.sh correctly emits all fields for a tarball-sourced port"""
+    name = "testport"
+    version = "1.2.3"
+    desc = "A test port"
+    source = "https://example.com/releases/"
+    sha256 = "a" * 64
+    license_ = "MIT"
+    depends = "libfoo>=1.0"
+    supports = "phoenix>=3.3"
+    cpe23 = f"cpe:2.3:a:{name}:{name}:{version}:*:*:*:*:*:*:*"
+    archive_filename = f"{name}-{version}.tar.gz"
+
+    def_file = tmp_path / "port.def.sh"
+    def_file.write_text(textwrap.dedent(f"""\
+        #!/usr/bin/env bash
+        :
+        {{
+            ports_api=1
+            name="{name}"
+            version="{version}"
+            desc="{desc}"
+            source="{source}"
+            archive_filename="{archive_filename}"
+            src_path="{name}-{version}/"
+            sha256="{sha256}"
+            size="12345"
+            license="{license_}"
+            license_file="LICENSE"
+            conflicts=""
+            depends="{depends}"
+            supports="{supports}"
+            cpe23="{cpe23}"
+        }}
+        p_prepare() {{ :; }}
+        p_build() {{ :; }}
+    """))
+
+    result = _run_port_def_to_json(def_file)
+    assert result.returncode == 0, result.stderr
+
+    data = json.loads(result.stdout)
+    assert data["namever"] == f"{name}-{version}"
+    assert data["desc"] == desc
+    assert data["license"] == license_
+    assert data["sha256"] == sha256
+    assert data["cpe23"] == cpe23
+    assert data["supports"] == supports
+    assert data["depends"] == depends
+    assert data["conflicts"] == ""
+    assert data["source"] == source
+    assert data["archive_filenames"] == archive_filename
+    assert "git_rev" not in data
+    assert "git_source" not in data
+
+
+def test_port_def_to_json_git_source(tmp_path):
+    """port_def_to_json.sh correctly emits all fields for a git-sourced port"""
+    name = "gitport"
+    version = "0.5.0"
+    desc = "A git-sourced test port"
+    git_rev = "v0.5.0"
+    git_source = "https://github.com/example/gitport.git"
+    sha256 = "b" * 64
+    license_ = "Apache-2.0"
+    supports = "phoenix>=3.3"
+
+    def_file = tmp_path / "port.def.sh"
+    def_file.write_text(textwrap.dedent(f"""\
+        #!/usr/bin/env bash
+        :
+        {{
+            ports_api=1
+            name="{name}"
+            version="{version}"
+            desc="{desc}"
+            git_rev="{git_rev}"
+            git_source="{git_source}"
+            src_path="{name}-{git_rev}"
+            sha256="{sha256}"
+            size="99999"
+            license="{license_}"
+            license_file="LICENSE"
+            conflicts=""
+            depends=""
+            supports="{supports}"
+        }}
+        p_prepare() {{ :; }}
+        p_build() {{ :; }}
+    """))
+
+    result = _run_port_def_to_json(def_file)
+    assert result.returncode == 0, result.stderr
+
+    data = json.loads(result.stdout)
+    assert data["namever"] == f"{name}-{version}"
+    assert data["desc"] == desc
+    assert data["license"] == license_
+    assert data["sha256"] == sha256
+    assert data["git_rev"] == git_rev
+    assert data["git_source"] == git_source
+    assert "source" not in data
+    assert "archive_filenames" not in data

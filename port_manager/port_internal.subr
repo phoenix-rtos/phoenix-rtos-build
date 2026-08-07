@@ -35,7 +35,8 @@ reset_env() {
 	STRIP="${EXPORT_STRIP}"
 	export CFLAGS LDFLAGS STRIP
 
-	export PORTS_MIRROR_BASEURL="https://files.phoesys.com/ports/"
+	source "$(dirname "${BASH_SOURCE[0]}")/ports.env"
+	export PORTS_MIRROR_BASEURL
 
 	export PKG_CONFIG="pkg-config --static"
 
