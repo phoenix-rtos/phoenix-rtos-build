@@ -88,9 +88,11 @@ export EXPORT_CFLAGS EXPORT_CXXFLAGS EXPORT_LDFLAGS EXPORT_STRIP
 #
 if [ $# -lt 1 ]; then
 	echo "Build options should be specified!"
-	echo "Usage: build.sh [clean] [all] [host] [fs] [core] [test] [runtest] [ports] [project] [image]"
+	echo "Usage: build.sh [clean] [all] [host] [fs] [core] [test] [runtest] [ports] [project] [image] [env]"
 	echo
 	echo "  test     build and install the unit tests, runtest - execute them"
+	echo "  env      spawn a shell with the build environment of TARGET set up, so"
+	echo "           that single components can be built with 'make -C <dir> <name>'"
 	exit 1
 fi
 
@@ -103,6 +105,7 @@ B_PROJECT="n"
 B_IMAGE="n"
 B_TEST="n"
 B_RUN_TEST="n"
+B_ENV="n"
 
 # GA CI passes all params as quoted first param - split on ' ' if necessary
 ARGS=("$@")
@@ -129,6 +132,8 @@ for arg in "${ARGS[@]}"; do
 			B_PROJECT="y";;
 		image)
 			B_IMAGE="y";;
+		env)
+			B_ENV="y";;
 		all)
 			B_FS="y"; B_CORE="y"; B_HOST="y"; B_PORTS="y"; B_PROJECT="y"; B_IMAGE="y";;
 		*)
@@ -137,8 +142,17 @@ for arg in "${ARGS[@]}"; do
 	esac;
 done
 
+# "env" execs a shell, so anything else requested would never run
+if [ "$B_ENV" = "y" ] && [ "${#ARGS[@]}" -ne 1 ]; then
+	echo "Build option \"env\" cannot be combined with other build options!"
+	exit 1
+fi
+
 ### autogenerate compile_commands.json using bear ###
-if ! command -v bear &> /dev/null; then
+# ("env" is exempt - there is no build to record here, the spawned shell does it)
+if [ "$B_ENV" = "y" ]; then
+	:
+elif ! command -v bear &> /dev/null; then
 	echo "'bear' executable not found. Compilation database will not be built" 1>&2
 elif [ -z "$INTERCEPT_BUILD_TARGET_DIR" ] && [ -z "$INTERCEPT_REPORT_COMMAND" ]; then
 	b_log "Running bear wrapper"
@@ -193,6 +207,16 @@ fi
 
 if declare -f "b_prepare" >/dev/null; then
 	b_prepare
+fi
+
+# placed here because the build dirs and the sysroot have to exist by now
+if [ "$B_ENV" = "y" ]; then
+	b_log "Build environment for TARGET=$TARGET ready, 'exit' to leave"
+	export PHOENIX_BUILD_ENV="$TARGET"
+	# the default Ubuntu/Debian PS1 prefixes the prompt with "($debian_chroot)"
+	# - reuse it to mark the spawned shell (custom prompts can use the variable above instead)
+	export debian_chroot="phoenix:$TARGET"
+	exec "${SHELL:-bash}"
 fi
 
 if command -v git >/dev/null && [ -a ".git" ]; then
