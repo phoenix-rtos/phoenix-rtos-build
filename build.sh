@@ -88,7 +88,9 @@ export EXPORT_CFLAGS EXPORT_CXXFLAGS EXPORT_LDFLAGS EXPORT_STRIP
 #
 if [ $# -lt 1 ]; then
 	echo "Build options should be specified!"
-	echo "Usage: build.sh [clean] [all] [host] [fs] [core] [test] [ports] [project] [image]";
+	echo "Usage: build.sh [clean] [all] [host] [fs] [core] [test] [runtest] [ports] [project] [image]"
+	echo
+	echo "  test     build and install the unit tests, runtest - execute them"
 	exit 1
 fi
 
@@ -100,6 +102,7 @@ B_PORTS="n"
 B_PROJECT="n"
 B_IMAGE="n"
 B_TEST="n"
+B_RUN_TEST="n"
 
 # GA CI passes all params as quoted first param - split on ' ' if necessary
 ARGS=("$@")
@@ -118,6 +121,8 @@ for arg in "${ARGS[@]}"; do
 			B_HOST="y";;
 		test|tests)
 			B_TEST="y";;
+		runtest|runtests)
+			B_RUN_TEST="y";;
 		ports)
 			B_PORTS="y";;
 		project)
@@ -277,6 +282,15 @@ fi
 #
 if [ "${B_IMAGE}" = "y" ]; then
 	b_image
+fi
+
+#
+# Run tests
+# ("test" only builds them; "runtest" executes whatever the target/project
+#  provides - unit tests built on the build host, the test runner, or both)
+#
+if [ "${B_RUN_TEST}" = "y" ]; then
+	b_run_test
 fi
 
 # vim:noexpandtab:ts=2:sw=2
