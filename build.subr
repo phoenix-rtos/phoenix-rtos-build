@@ -37,4 +37,34 @@ b_die() {
 	exit 1
 }
 
-export -f b_log b_install b_die
+# b_make_test(dir ...) - build and install unit tests of the given repositories
+#
+# Which tests take part is decided by the makefiles (DEFAULT_TEST_COMPONENTS) -
+# a repository without any is a no-op.
+b_make_test() {
+	local dir
+	for dir in "$@"; do
+		make -C "$dir" test-install
+	done
+}
+
+# b_make_test_run(dir ...) - build, install and run unit tests of the given
+# repositories
+#
+# Only possible where the build host is the target; cross-built tests are
+# installed into the rootfs and run on the device instead. Every repository is
+# run even if an earlier one failed - a report stopping at the first broken suite
+# is of little use in CI - and the failure is propagated afterwards.
+b_make_test_run() {
+	local dir rc=0
+
+	for dir in "$@"; do
+		make -C "$dir" test-run || rc=$?
+		# ... but a run interrupted from the keyboard should stop right there
+		# rather than start the next repository
+		[ "$rc" -eq 130 ] && break
+	done
+	return $rc
+}
+
+export -f b_log b_install b_die b_make_test b_make_test_run
