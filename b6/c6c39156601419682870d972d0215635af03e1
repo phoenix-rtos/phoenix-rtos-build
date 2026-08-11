@@ -1,0 +1,14 @@
+build.sh
+  h_edab809c32d497 91,94-95,108,135-136,146-149,206-220
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "b6c6c39156601419682870d972d0215635af03e1",
+  "prompts": {},
+  "humans": {
+    "h_edab809c32d497": {
+      "author": "Marek Białowąs <marek.bialowas@phoenix-rtos.com>"
+    }
+  }
+}
