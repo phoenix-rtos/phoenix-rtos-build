@@ -152,7 +152,7 @@ fi
 # ("env" is exempt - there is no build to record here, the spawned shell does it)
 if [ "$B_ENV" = "y" ]; then
 	:
-elif ! command -v bear &> /dev/null; then
+elif ! command -v bear &>/dev/null; then
 	echo "'bear' executable not found. Compilation database will not be built" 1>&2
 elif [ -z "$INTERCEPT_BUILD_TARGET_DIR" ] && [ -z "$INTERCEPT_REPORT_COMMAND" ]; then
 	b_log "Running bear wrapper"

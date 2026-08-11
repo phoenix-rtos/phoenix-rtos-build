@@ -58,6 +58,12 @@ b_make_test() {
 b_make_test_run() {
 	local dir rc=0
 
+	# host builds are sanitized and build.sh re-execs under bear, whose libear
+	# re-injects LD_PRELOAD into every descendant on exec - ASan then finds its
+	# runtime is not first in the library list and refuses to start. The binaries
+	# link it themselves, so only the ordering check is in the way.
+	export ASAN_OPTIONS="verify_asan_link_order=0${ASAN_OPTIONS:+,$ASAN_OPTIONS}"
+
 	for dir in "$@"; do
 		make -C "$dir" test-run || rc=$?
 		# ... but a run interrupted from the keyboard should stop right there
