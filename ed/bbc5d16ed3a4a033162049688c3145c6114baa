@@ -1,0 +1,19 @@
+Makefile.common
+  s_a92fd5c43d1ea2::t_5f8e51a91e5237 238-240,244
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "edbbc5d16ed3a4a033162049688c3145c6114baa",
+  "prompts": {},
+  "sessions": {
+    "s_a92fd5c43d1ea2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fafa4549-8072-4273-a3cf-6ddb203540c5",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Marek Białowąs <marek.bialowas@phoenix-rtos.com>"
+    }
+  }
+}
