@@ -1,0 +1,22 @@
+build.sh
+  s_a92fd5c43d1ea2::t_d28725e99e7e03 91-95
+  s_a92fd5c43d1ea2::t_e1cd397b3884ef 139-142
+  s_a92fd5c43d1ea2::t_a9fa3ff0df571b 151-153
+  s_a92fd5c43d1ea2::t_3191ffbfa1c7e1 108,115-118
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "d386024db31ff4bf4b9792f9acd2fe28c1582040",
+  "prompts": {},
+  "sessions": {
+    "s_a92fd5c43d1ea2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fafa4549-8072-4273-a3cf-6ddb203540c5",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Marek Białowąs <marek.bialowas@phoenix-rtos.com>"
+    }
+  }
+}
