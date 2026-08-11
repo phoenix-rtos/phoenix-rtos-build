@@ -78,6 +78,17 @@ include $(MAKES_PATH)/ports.mk
 # provide template files' paths to external makes
 binary.mk := $(MAKES_PATH)/binary.mk
 static-lib.mk := $(MAKES_PATH)/static-lib.mk
+test-binary.mk := $(MAKES_PATH)/test-binary.mk
+
+# unit tests, registered by test-binary.mk (deliberately not in ALL_COMPONENTS)
+TEST_COMPONENTS :=
+
+# unit tests taking part in the test/test-install/test-run goals - narrow the
+# list down if not all of them build for every TARGET
+DEFAULT_TEST_COMPONENTS = $(TEST_COMPONENTS)
+
+# make pattern selecting a subset, e.g. make test TEST_FILTER=test-libsha256
+TEST_FILTER ?= %
 
 # default path for the programs to be installed in rootfs
 DEFAULT_INSTALL_PATH := /bin
@@ -194,14 +205,52 @@ export-ldflags:
 export-strip:
 	@echo $(STRIP)
 
+#
+# Unit tests (registered by test-binary.mk)
+#
+# The component list is only complete once every component makefile has been
+# read - later than prerequisites are expanded - hence the sub-makes below.
+#
+TEST_SELECTED = $(sort $(filter $(TEST_FILTER),$(DEFAULT_TEST_COMPONENTS)))
+
+.PHONY: test test-install test-run test-clean
+
+# order-only: the goals recurse, so they must not run in parallel with each other
+test-install: | test
+test-run: | test-install
+
+# "test" is the base of the chain above, so it runs exactly once per make
+# invocation - which is where the "nothing selected" note belongs
+test:
+	$(SIL)$(if $(TEST_SELECTED),$(MAKE) $(TEST_SELECTED),echo "$(notdir $(TOPDIR)): no unit tests selected")
+
+test-install:
+	$(SIL)$(if $(TEST_SELECTED),$(MAKE) $(patsubst %,%-install,$(TEST_SELECTED)),:)
+
+# serially, because interleaved output of parallel runs is unreadable, and with
+# -k so that one failing suite does not hide the state of the rest. Forcing -j1
+# in a sub-make disables the jobserver, which make notes with a warning.
+test-run:
+	$(SIL)$(if $(TEST_SELECTED),$(MAKE) --no-print-directory -j1 -k $(patsubst %,%-run,$(TEST_SELECTED)),:)
+
+# tests are not in ALL_COMPONENTS, so hook their cleaning into the repository's own "clean" goal
+.PHONY: clean
+clean: test-clean
+test-clean:
+	$(SIL)$(if $(TEST_COMPONENTS),$(MAKE) $(patsubst %,%-clean,$(TEST_COMPONENTS)),:)
+
 help:
 	$(info DEFAULT_COMPONENTS := $(DEFAULT_COMPONENTS))
 	$(info ALL_COMPONENTS := $(ALL_COMPONENTS))
+	$(info TEST_COMPONENTS := $(TEST_COMPONENTS))
 	@echo
 	@echo "available generic make targets:"
 	@echo "  all             build DEFAULT_COMPONENTS"
 	@echo "  install         install DEFAULT_COMPONENTS into PREFIX_ROOTFS"
-	@echo "  clean           clean ALL_COMPONENTS"
+	@echo "  clean           clean ALL_COMPONENTS and TEST_COMPONENTS"
+	@echo "  test            build DEFAULT_TEST_COMPONENTS (narrow with TEST_FILTER=<pattern>)"
+	@echo "  test-install    install DEFAULT_TEST_COMPONENTS into PREFIX_ROOTFS"
+	@echo "  test-run        run DEFAULT_TEST_COMPONENTS (host targets only)"
 	@echo "  export-cflags   outputs contents of CFLAGS variable"
 	@echo "  export-cxxflags outputs contents of CXXFLAGS variable"
 	@echo "  export-ldflags  outputs contents of LDFLAGS variable"
@@ -212,6 +261,7 @@ help:
 	@echo "  <target>-install  install <target> into PREFIX_ROOTFS"
 	@echo "  <target>-clean    clean <target>"
 	@echo "  <target>-headers  install <target> headers into staging"
+	@echo "  <target>-run      run <target> (unit tests on host targets only)"
 
 
 #
