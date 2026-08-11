@@ -1,0 +1,26 @@
+makes/test-binary.mk
+  s_a92fd5c43d1ea2::t_e08ba219a9b235 1-46
+Makefile.common
+  s_a92fd5c43d1ea2::t_4b67ce12e2033b 222
+  s_a92fd5c43d1ea2::t_80f0cd07705f3d 81-97
+  s_a92fd5c43d1ea2::t_71512f8e67d27e 214-221,223-225,232-249,253,258-261
+  s_a92fd5c43d1ea2::t_24174bbd59a062 272
+build.subr
+  s_a92fd5c43d1ea2::t_afde8c83045870 42-46,47-49,50-54,57,63-72
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "b6a3b1ea4ac636b7a65db8651c9d8b0b6fb0fa44",
+  "prompts": {},
+  "sessions": {
+    "s_a92fd5c43d1ea2": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "fafa4549-8072-4273-a3cf-6ddb203540c5",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Marek Białowąs <marek.bialowas@phoenix-rtos.com>"
+    }
+  }
+}
