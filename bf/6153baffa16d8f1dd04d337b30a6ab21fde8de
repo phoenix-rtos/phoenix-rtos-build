@@ -1,0 +1,19 @@
+build.subr
+  s_cc349fbfe69f06::t_c3ce04af3c000c 65-71
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "bf6153baffa16d8f1dd04d337b30a6ab21fde8de",
+  "prompts": {},
+  "sessions": {
+    "s_cc349fbfe69f06": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cf509191-06bd-4d74-b72e-5b23a7e1abee",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Marek Białowąs <marek.bialowas@phoenix-rtos.com>"
+    }
+  }
+}
