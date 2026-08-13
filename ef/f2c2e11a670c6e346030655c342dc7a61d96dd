@@ -1,0 +1,22 @@
+makes/test-binary.mk
+  s_64038140da5d7d::t_36e1aff6665bbc 13-16
+  s_64038140da5d7d::t_7a867a7dbaf157 10-12
+  s_64038140da5d7d::t_bf0649a5b2691f 17-19
+  s_64038140da5d7d::t_e3784ef61370f5 1-9,20-46
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "eff2c2e11a670c6e346030655c342dc7a61d96dd",
+  "prompts": {},
+  "sessions": {
+    "s_64038140da5d7d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4a492f2e-27d1-493b-8cda-8ac513fde7f4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Marek Białowąs <marek.bialowas@phoenix-rtos.com>"
+    }
+  }
+}
