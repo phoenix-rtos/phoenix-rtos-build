@@ -28,11 +28,9 @@ b_install() {
 	done
 }
 
-
 b_log() {
 	echo -e "\033[1;33m--- $1 ---\033[0m"
 }
-
 
 b_die() {
 	echo -e "\033[1;31mFAILED: $1\033[0m"
