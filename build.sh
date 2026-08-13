@@ -89,7 +89,7 @@ export EXPORT_CFLAGS EXPORT_CXXFLAGS EXPORT_LDFLAGS EXPORT_STRIP
 if [ $# -lt 1 ]; then
 	echo "Build options should be specified!"
 	echo "Usage: build.sh [clean] [all] [host] [fs] [core] [test] [ports] [project] [image]";
-	exit 1;
+	exit 1
 fi
 
 B_CLEAN="n"
@@ -186,15 +186,15 @@ if [ -n "$PREFIX_SYSROOT" ]; then
 	# see sysroot-setup.mk for next steps in sysroot setup
 fi
 
-if declare -f "b_prepare" > /dev/null; then
+if declare -f "b_prepare" >/dev/null; then
 	b_prepare
 fi
 
-if command -v git > /dev/null && [ -a ".git" ]; then
-	echo " $(git rev-parse HEAD) $(basename "$(git rev-parse --show-toplevel)") ($(git describe --always --dirty))" > "${PREFIX_BUILD}/git-version"
-	git submodule status --recursive >> "${PREFIX_BUILD}/git-version"
+if command -v git >/dev/null && [ -a ".git" ]; then
+	echo " $(git rev-parse HEAD) $(basename "$(git rev-parse --show-toplevel)") ($(git describe --always --dirty))" >"${PREFIX_BUILD}/git-version"
+	git submodule status --recursive >>"${PREFIX_BUILD}/git-version"
 else
-	echo "not available" > "${PREFIX_BUILD}/git-version"
+	echo "not available" >"${PREFIX_BUILD}/git-version"
 fi
 
 #
