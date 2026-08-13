@@ -21,7 +21,7 @@
 # WARNING: LOCAL_DIR computation would fail if any Makefile include would be done before including this file
 # if necessary set LOCAL_DIR := $(call my-dir) at the beginning of the Makefile
 ifeq ($(origin LOCAL_DIR), undefined)
-  CLIENT_MAKES := $(filter $(TOPDIR)/%,$(abspath $(MAKEFILE_LIST)))
+  CLIENT_MAKES := $(filter-out %.d,$(filter $(TOPDIR)/%,$(abspath $(MAKEFILE_LIST))))
   LOCAL_DIR := $(patsubst $(TOPDIR)/%,%,$(dir $(lastword $(CLIENT_MAKES))))
 endif
 
