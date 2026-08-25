@@ -1,0 +1,16 @@
+makes/test-binary.mk
+  h_edab809c32d497 26
+Makefile.common
+  h_edab809c32d497 235
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.24",
+  "base_commit_sha": "b730e774e2e396479ab592b3d79bb9529a261085",
+  "prompts": {},
+  "humans": {
+    "h_edab809c32d497": {
+      "author": "Marek Białowąs <marek.bialowas@phoenix-rtos.com>"
+    }
+  }
+}
