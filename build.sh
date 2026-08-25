@@ -219,7 +219,7 @@ if [ "$B_ENV" = "y" ]; then
 	exec "${SHELL:-bash}"
 fi
 
-if command -v git >/dev/null && [ -a ".git" ]; then
+if command -v git >/dev/null && [ -e ".git" ]; then
 	echo " $(git rev-parse HEAD) $(basename "$(git rev-parse --show-toplevel)") ($(git describe --always --dirty))" >"${PREFIX_BUILD}/git-version"
 	git submodule status --recursive >>"${PREFIX_BUILD}/git-version"
 else
