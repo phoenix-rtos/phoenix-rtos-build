@@ -3,6 +3,7 @@ build.sh
   s_a92fd5c43d1ea2::t_cef6b027333107 91
   s_a92fd5c43d1ea2::t_685d13ef67f2d3 122-123
   s_a92fd5c43d1ea2::t_bf27b440a24872 285-293
+  s_cc349fbfe69f06::t_545c54114be6d2 103,122-123,285-293
 ---
 {
   "schema_version": "authorship/3.0.0",
@@ -14,6 +15,14 @@ build.sh
       "agent_id": {
         "tool": "claude",
         "id": "fafa4549-8072-4273-a3cf-6ddb203540c5",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Marek Białowąs <marek.bialowas@phoenix-rtos.com>"
+    },
+    "s_cc349fbfe69f06": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "cf509191-06bd-4d74-b72e-5b23a7e1abee",
         "model": "claude-opus-5"
       },
       "human_author": "Marek Białowąs <marek.bialowas@phoenix-rtos.com>"

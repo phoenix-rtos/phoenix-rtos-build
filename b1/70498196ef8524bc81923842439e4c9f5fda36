@@ -3,12 +3,21 @@ build.sh
   s_a92fd5c43d1ea2::t_e1cd397b3884ef 139-142
   s_a92fd5c43d1ea2::t_a9fa3ff0df571b 151-153
   s_a92fd5c43d1ea2::t_3191ffbfa1c7e1 108,115-118
+Makefile.common
+  h_edab809c32d497 81-82,85-86,89-90,94,214-216,220-221,223-225,229-231,232,234-235,237,239-241,243-249,253,258-261,272
+makes/test-binary.mk
+  h_edab809c32d497 1-2,11-46
 ---
 {
   "schema_version": "authorship/3.0.0",
   "git_ai_version": "1.6.22",
   "base_commit_sha": "b170498196ef8524bc81923842439e4c9f5fda36",
   "prompts": {},
+  "humans": {
+    "h_edab809c32d497": {
+      "author": "Marek Białowąs <marek.bialowas@phoenix-rtos.com>"
+    }
+  },
   "sessions": {
     "s_a92fd5c43d1ea2": {
       "agent_id": {
