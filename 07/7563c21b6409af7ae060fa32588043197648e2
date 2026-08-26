@@ -1,0 +1,21 @@
+makes/static-lib.mk
+  s_64038140da5d7d::t_24bb6f7b7cc85f 24
+makes/binary.mk
+  s_64038140da5d7d::t_24bb6f7b7cc85f 28
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.6.22",
+  "base_commit_sha": "077563c21b6409af7ae060fa32588043197648e2",
+  "prompts": {},
+  "sessions": {
+    "s_64038140da5d7d": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "4a492f2e-27d1-493b-8cda-8ac513fde7f4",
+        "model": "claude-opus-5"
+      },
+      "human_author": "Marek Białowąs <marek.bialowas@phoenix-rtos.com>"
+    }
+  }
+}
