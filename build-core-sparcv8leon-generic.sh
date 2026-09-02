@@ -22,7 +22,7 @@ if [ "$LIBPHOENIX_DEVEL_MODE" = "y" ]; then
 fi
 
 b_log "Building phoenix-rtos-corelibs"
-make -C "phoenix-rtos-corelibs" all
+make -C "phoenix-rtos-corelibs" all install
 
 b_log "Building phoenix-rtos-filesystems"
 make -C "phoenix-rtos-filesystems" all install
