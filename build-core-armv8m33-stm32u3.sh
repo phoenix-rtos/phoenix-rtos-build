@@ -2,7 +2,7 @@
 #
 # Shell script for building Phoenix-RTOS firmware
 #
-# Builder for Phoenix-RTOS Loader on STM32U3
+# Builder for Phoenix-RTOS core components
 #
 # Copyright 2018-2024 Phoenix Systems
 # Copyright 2026 Apator Metrix
@@ -13,4 +13,29 @@
 set -e
 
 b_log "Building phoenix-rtos-kernel"
-make -C "phoenix-rtos-kernel" install-headers
+make -C "phoenix-rtos-kernel" all
+
+if [ "$LIBPHOENIX_DEVEL_MODE" = "y" ]; then
+	make -C "phoenix-rtos-kernel" install-headers
+
+	b_log "Building libphoenix"
+	make -C "libphoenix" all install
+fi
+
+b_log "Building libtty"
+make -C "phoenix-rtos-devices" libtty libtty-install
+
+b_log "Building libposixsrv"
+make -C "phoenix-rtos-posixsrv" libposixsrv libposixsrv-install
+
+b_log "Building phoenix-rtos-corelibs"
+make -C "phoenix-rtos-corelibs" all install
+
+b_log "Building phoenix-rtos-filesystems"
+make -C "phoenix-rtos-filesystems" all install
+
+b_log "Building phoenix-rtos-devices"
+make -C "phoenix-rtos-devices" all install
+
+b_log "Building coreutils"
+make -C "phoenix-rtos-utils" all install
