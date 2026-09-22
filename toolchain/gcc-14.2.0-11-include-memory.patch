@@ -1,0 +1,11 @@
+diff --git a/gcc/system.h b/gcc/system.h
+--- a/gcc/system.h
++++ b/gcc/system.h
+@@ -227,6 +227,7 @@ extern int fprintf_unlocked (FILE *, const char *, ...);
+ # include <new>
+ # include <utility>
+ # include <type_traits>
++# include <memory>
+ #endif
+ 
+ /* There are an extraordinary number of issues with <ctype.h>.
