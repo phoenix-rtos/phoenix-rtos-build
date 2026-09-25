@@ -1,0 +1,63 @@
+# qemu_download - download file to rootfs
+# qemu_load - used to run executable file
+
+proc qemu_load { dest prog args } {
+	global PS_PROJECT
+	set timeout 1800
+	set test_basename [file tail $prog]
+
+	# Copy file to rootfs
+	qemu_download $dest $prog $args
+
+	# Rebuild the image to apply rootfs changes
+	exec /bin/sh -c "cd $PS_PROJECT && TARGET=$dest CONSOLE=serial phoenix-rtos-build/build.sh image 2>/dev/null"
+
+	spawn $PS_PROJECT/scripts/$dest-test.sh
+	set qemu_pid [exp_pid]
+
+	expect {
+		"(psh)%" {}
+		timeout { error "system boot timeout" }
+	}
+
+	send "/root/libstdc++/$test_basename\r"
+
+	expect {
+		"(psh)%" { set output $expect_out(buffer) }
+		timeout { error "test timeout: $test_basename" }
+	}
+
+	send "echo $?\r"
+	expect {
+		-re {(\d+)} {
+			set exit_code $expect_out(1,string)
+		}
+		timeout { error "no exit code" }
+	}
+
+	exec kill $qemu_pid
+	close
+	wait
+
+	set files [glob -nocomplain -directory $PS_PROJECT/_fs/$dest/root/root/libstdc++ *]
+
+	foreach f $files {
+		file delete -force $f
+	}
+
+	if { $exit_code == 0 } {
+		return [list "pass" ""]
+	} else {
+		verbose "$output"
+		return [list "fail" ""]
+	}
+}
+
+proc qemu_download { dest prog args } {
+	global PS_PROJECT
+	set test_basename [file tail $prog]
+
+	# Copy file to rootfs
+	exec mkdir -p $PS_PROJECT/_fs/$dest/root/root/libstdc++
+	exec cp -f $prog $PS_PROJECT/_fs/$dest/root/root/libstdc++/$test_basename
+}
