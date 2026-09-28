@@ -23,6 +23,9 @@ reset_env() {
 	elif [ "$TARGET_FAMILY" = "sparcv8leon" ]; then
 		HOST_TARGET="sparc"
 		HOST="sparc-phoenix"
+	elif [[ "$TARGET_FAMILY" == "aarch64"* ]]; then
+		HOST_TARGET="aarch64"
+		HOST="aarch64-phoenix"
 	else
 		HOST_TARGET="$TARGET_FAMILY"
 		HOST="${TARGET_FAMILY}-phoenix"
