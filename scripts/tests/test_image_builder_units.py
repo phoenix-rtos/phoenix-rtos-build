@@ -253,7 +253,6 @@ class TestScript:
     def test_types_from_str(self):
         assert (PloScript(size="4096", offs="512").size, PloScript(size="4096", offs="512").offs) == (0x1000, 0x200)
 
-    @pytest.mark.xfail(strict=True, reason="size/offs strings are parsed as decimal only")
     def test_types_from_hex_str(self):
         assert PloScript(size="0x1000").size == 0x1000
 

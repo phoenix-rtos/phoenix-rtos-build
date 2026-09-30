@@ -428,9 +428,9 @@ class PloScript:
     def __post_init__(self):
         # fix types
         if isinstance(self.size, str):
-            self.size = int(self.size)
+            self.size = int(self.size, 0)
         if isinstance(self.offs, str):
-            self.offs = int(self.offs)
+            self.offs = int(self.offs, 0)
 
     def write(self, file: TextIO, enc: PloScriptEncoding = PloScriptEncoding.STRING_MAGIC_V1) -> List[ProgInfo]:
         prog_offs = self.offs + self.size  # init with "just after the script"
