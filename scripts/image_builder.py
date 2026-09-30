@@ -472,10 +472,10 @@ def render_val(tpl: Any, **kwargs) -> Any:  # mostly str | List[str] | Dict[str,
     return tpl
 
 
-def str2bool(v: str | bool) -> bool:
+def str2bool(v: str | bool | int | None) -> bool:
     """False is denoted by empty string or any literal sensible false values"""
-    if isinstance(v, bool):
-        return v
+    if not isinstance(v, str):
+        return bool(v)
     return v.lower() not in ("", "no", "false", "n", "0")
 
 
