@@ -177,13 +177,14 @@ class TestApp:
         assert text == "alias -r logo 0x1000 0x10\nblob flash0 logo ddr\n"
         assert (offs, prog.path) == (0x2000, tree.rootfs / "etc/logo")
 
-    @pytest.mark.xfail(strict=True, reason="integer `flags` are accepted but not converted to CmdAppFlags")
-    def test_emit_int_flags(self, tree):
+    @pytest.mark.parametrize("flags, text", [(1, "app flash0 -x psh"), (0, "app flash0 psh"), ("", "app flash0 psh"),
+                                             (None, "app flash0 psh")])
+    def test_emit_int_flags(self, tree, flags, text):
         tree.payload("psh", 0x10)
-        cmd = PloCmdFactory.build(action="app", device="flash0", filename="psh", flags=1, text_map="ddr",
+        cmd = PloCmdFactory.build(action="app", device="flash0", filename="psh", flags=flags, text_map="ddr",
                                   data_maps="ddr")
 
-        assert "app flash0 -x psh ddr ddr" in emit(cmd)[0]
+        assert f"{text} ddr ddr" in emit(cmd)[0]
 
 
 class TestAlias:
