@@ -31,7 +31,6 @@ def test_program_headers(tree):
     ]
 
 
-@pytest.mark.xfail(strict=True, reason="PT_GNU_EH_FRAME value typo (0x6474e50 instead of 0x6474e550)")
 def test_gnu_eh_frame_segment(tree):
     path = make_elf32(tree.root / "eh.elf", [Segment(PT_GNU_EH_FRAME, PF_R)])
 

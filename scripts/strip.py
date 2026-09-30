@@ -58,9 +58,9 @@ class PhType(IntEnum):
 
     # x86-64 program header types.
     # These all contain stack unwind tables.
-    PT_GNU_EH_FRAME = 0x6474e50
-    PT_SUNW_EH_FRAME = 0x6474e50
-    PT_SUNW_UNWIND = 0x6464e50
+    PT_GNU_EH_FRAME = 0x6474e550
+    PT_SUNW_EH_FRAME = 0x6474e550
+    PT_SUNW_UNWIND = 0x6464e550
 
     PT_GNU_STACK = 0x6474e551    # Indicates stack executability.
     PT_GNU_RELRO = 0x6474e552    # Read-only after relocation.
