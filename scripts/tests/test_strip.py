@@ -13,7 +13,8 @@ import sys
 import pytest
 
 import strip
-from elfgen import KERNEL_SEGMENTS, PF_R, PT_GNU_EH_FRAME, SHT_PROGBITS, Section, Segment, make_elf32, rel_section
+from elfgen import (KERNEL_SEGMENTS, PF_R, PT_GNU_EH_FRAME, SHT_PROGBITS, Section, Segment, make_elf32, rel_section,
+                    symtab_sections)
 from strip import ElfParser, PhFlags, PhType
 
 
@@ -49,6 +50,23 @@ def test_invalid_elf(tree, ident, exc):
 
     with open(path, "rb") as f, pytest.raises(exc):
         ElfParser(f)
+
+
+def test_symbols(tree):
+    path = make_elf32(tree.root / "k.elf", KERNEL_SEGMENTS, [
+        Section(".text", SHT_PROGBITS, b"\0" * 4),
+        *symtab_sections({"init_vectors": 0xc0000000, "syspage_data": 0xc0000020, "_end": 0xc00306ec}),
+    ])
+
+    with open(path, "rb") as f:
+        symbols = [(name, sym.st_value) for name, sym in ElfParser(f).get_symbols()]
+
+    assert symbols == [("", 0), ("init_vectors", 0xc0000000), ("syspage_data", 0xc0000020), ("_end", 0xc00306ec)]
+
+
+def test_no_symbols(tree):
+    with open(make_elf32(tree.root / "k.elf", KERNEL_SEGMENTS), "rb") as f:
+        assert list(ElfParser(f).get_symbols()) == []
 
 
 def rel_elf(tree):
