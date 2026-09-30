@@ -780,6 +780,7 @@ def main() -> int:
                     curr_offs = int(offs)
 
                 contents.append(ProgInfo(Path(name), curr_offs, os.path.getsize(name)))
+                curr_offs += contents[-1].size
 
         return write_image(contents, PREFIX_BOOT / target_part.filename, target_part.size, target_part.flash.padding_byte)
 
