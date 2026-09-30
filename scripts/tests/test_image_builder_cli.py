@@ -213,11 +213,11 @@ def test_partition_contents_appended(project, run_ib):
     assert (project.boot / "part_plo.img").read_bytes() == a.read_bytes() + b.read_bytes()
 
 
-@pytest.mark.xfail(strict=True, reason="--contents offset is parsed as decimal only")
 def test_partition_contents_hex_offset(project, run_ib):
     plo = project.payload("plo.img", 0x10)
 
     assert run_ib("part", "--name", "plo", "--contents", f"{plo}:0x1000") == 0
+    assert (project.boot / "part_plo.img").read_bytes() == b"\xff" * 0x1000 + plo.read_bytes()
 
 
 def test_disk(project, run_ib):

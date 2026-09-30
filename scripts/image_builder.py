@@ -776,8 +776,8 @@ def main() -> int:
             for name in args.contents:
                 if ":" in name:
                     name, offs = name.split(":")
-                    assert int(offs) >= curr_offs, f"offset {offs} larger than current offset ({curr_offs})"
-                    curr_offs = int(offs)
+                    assert int(offs, 0) >= curr_offs, f"offset {offs} is smaller than current offset ({curr_offs})"
+                    curr_offs = int(offs, 0)
 
                 contents.append(ProgInfo(Path(name), curr_offs, os.path.getsize(name)))
                 curr_offs += contents[-1].size
