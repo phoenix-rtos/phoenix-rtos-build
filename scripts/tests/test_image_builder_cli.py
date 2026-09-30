@@ -339,10 +339,10 @@ def test_ptable_missing_partition(project, run_ib, psdisk):
         run_ib("ptable")
 
 
-@pytest.mark.xfail(strict=True, reason="missing subcommand crashes instead of printing usage")
-def test_no_subcommand(tree, run_ib):
+def test_no_subcommand(tree, run_ib, capsys):
     with pytest.raises(SystemExit):
         run_ib()
+    assert "the following arguments are required: cmd" in capsys.readouterr().err
 
 
 def test_missing_required_env(tree, run_ib, monkeypatch, capsys):
