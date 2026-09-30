@@ -311,7 +311,7 @@ class PloCmdApp(PloCmdBase):
 
     def _parse_flags(self, extra_flags: str):
         # flags attr takes precedence
-        if self.flags and isinstance(self.flags, str):
+        if self.flags:
             self.flags = CmdAppFlags(self.flags)
             return
 
@@ -319,6 +319,8 @@ class PloCmdApp(PloCmdBase):
             self.flags = CmdAppFlags.EXEC
         elif extra_flags == "-xn":
             self.flags = CmdAppFlags.EXEC_NO_COPY
+        else:
+            self.flags = CmdAppFlags.NONE
 
     def __post_init__(self, extra_flags: str = '', filename_args: str = ''):
         self._parse_flags(extra_flags)
