@@ -657,7 +657,7 @@ def parse_args() ->argparse.Namespace:
     parser.add_argument("--prefix-prog-stripped", **env_or_required("PREFIX_PROG_STRIPPED"), help="prog.stripped directory path")
     parser.add_argument("--plo-script-dir", **env_or_required("PLO_SCRIPT_DIR"), help="output PLO scripts directory path")
 
-    subparsers = parser.add_subparsers(help="subcommands", dest="cmd")
+    subparsers = parser.add_subparsers(help="subcommands", dest="cmd", required=True)
     ptable = subparsers.add_parser("ptable", help="prepare partition tables")
     ptable.add_argument("--nvm", type=str, default="nvm.yaml", help="Path to NVM config (default: %(default)s)")
 
