@@ -296,7 +296,6 @@ class TestTemplates:
     def test_str2bool(self, value, expected):
         assert ib.str2bool(value) is expected
 
-    @pytest.mark.xfail(strict=True, reason="non-string values (eg. empty `if:` in YAML) crash str2bool")
     @pytest.mark.parametrize("value", [None, 0])
     def test_str2bool_non_str(self, value):
         assert ib.str2bool(value) is False
