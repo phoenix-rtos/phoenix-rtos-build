@@ -10,7 +10,7 @@
 import struct
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, Union
+from typing import Dict, Iterable, List, Union
 
 PT_LOAD = 1
 PT_ARM_EXIDX = 0x70000001
@@ -22,6 +22,7 @@ PF_W = 2
 PF_R = 4
 
 SHT_PROGBITS = 1
+SHT_SYMTAB = 2
 SHT_STRTAB = 3
 SHT_REL = 9
 
@@ -61,6 +62,16 @@ KERNEL_SEGMENTS = (
 def rel_section(name: str, relocs: Iterable[tuple[int, int]]) -> Section:
     """SHT_REL section from (r_offset, r_info) pairs"""
     return Section(name, SHT_REL, b"".join(struct.pack("<II", *r) for r in relocs), entsize=8)
+
+
+def symtab_sections(symbols: Dict[str, int]) -> List[Section]:
+    """.symtab + .strtab with local NOTYPE symbols (like the kernel's asm labels)"""
+    strtab = b"\0"
+    symtab = bytes(16)  # STN_UNDEF
+    for name, value in symbols.items():
+        symtab += struct.pack("<IIIBBH", len(strtab), value, 0, 0, 0, 1)
+        strtab += name.encode() + b"\0"
+    return [Section(".symtab", SHT_SYMTAB, symtab, link=".strtab", entsize=16), Section(".strtab", SHT_STRTAB, strtab)]
 
 
 def make_elf32(path: Path, segments: Iterable[Segment] = (), sections: Iterable[Section] = (),
