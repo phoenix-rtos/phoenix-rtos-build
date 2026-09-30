@@ -139,7 +139,6 @@ class TestFactory:
         assert type(cmd) is PloCmdGeneric
         assert cmd.cmd == expected
 
-    @pytest.mark.xfail(strict=True, reason="`cmd_name in (\"call\")` is a substring test on a string")
     def test_call_substring(self):
         assert type(PloCmdFactory.build("ca foo bar")) is PloCmdGeneric
 
