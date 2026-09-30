@@ -128,7 +128,7 @@ class PloCmdFactory:
             return PloCmdKernel(*cmd_args, **kwargs)
         if cmd_name in ("app", "blob"):
             return PloCmdApp(*cmd_args, **kwargs)
-        if cmd_name in ("call"):
+        if cmd_name == "call":
             return PloCmdCall(*cmd_args, **kwargs)
 
         # TODO: add compile-time checks for scripts validity (eg. memory regions cross-check)?
