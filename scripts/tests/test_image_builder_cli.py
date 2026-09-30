@@ -205,7 +205,6 @@ def test_partition_contents(project, run_ib):
     assert (project.boot / "part_plo.img").read_bytes() == plo.read_bytes() + b"\xff" * 0xdcc + extra.read_bytes()
 
 
-@pytest.mark.xfail(strict=True, reason="files without explicit offset are all written at the same offset")
 def test_partition_contents_appended(project, run_ib):
     a, b = project.payload("a.img", 0x10), project.payload("b.img", 0x10)
 
