@@ -1,0 +1,12 @@
+[run]
+branch = True
+include =
+    */scripts/image_builder.py
+    */scripts/nvm_config.py
+    */scripts/strip.py
+
+[report]
+show_missing = True
+fail_under = 90
+exclude_also =
+    if __name__ == .__main__.:
