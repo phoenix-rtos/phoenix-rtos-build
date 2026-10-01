@@ -314,7 +314,7 @@ class TestTemplates:
 
         assert d["flash0"]["kernel"] is nvm[0].parts[0]
         assert d["flash0"]["_meta"] == {"name": "flash0", "size": 0x10000, "block_size": 0x1000, "padding_byte": 0,
-                                        "parts": nvm[0].parts}
+                                        "ptable_size": 0, "parts": nvm[0].parts}
 
 
 class TestParseScript:

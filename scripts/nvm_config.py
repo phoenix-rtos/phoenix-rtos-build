@@ -65,6 +65,7 @@ class FlashMemory:
     size: int
     block_size: int
     padding_byte: int = 0x0
+    ptable_size: int = 0  # reserved for the virtual ptable at the end of the flash
 
     parts: List[Partition] = field(default_factory=list, kw_only=True)
 
@@ -97,6 +98,8 @@ class FlashMemory:
 
             if part.offs + part.size > self.size:
                 raise ValueError(f"{self.name}: partition '{part.name}' size extends over the end of the flash")
+            if part.offs + part.size > self.size - self.ptable_size:
+                raise ValueError(f"{self.name}: partition '{part.name}' overlaps the ptable blocks")
 
             prev_part = part
 
@@ -142,15 +145,15 @@ def read_nvm(fname: str) -> List[FlashMemory]:
             # add "virtual" ptable partition
             ptable_blocks = attrs.get('ptable_blocks', 0)
             if ptable_blocks > 0:
-                ptable_size = ptable_blocks * f.block_size
-                p = Partition(f.size - ptable_size, ptable_size, "ptable", PartitionType.RAW, flash=f, virtual=True)
+                f.ptable_size = ptable_blocks * f.block_size
+                p = Partition(f.size - f.ptable_size, f.ptable_size, "ptable", PartitionType.RAW, flash=f, virtual=True)
                 f.parts.append(p)
 
             # set last non-virtual partition size (if 0) to the end of flash
             for part in reversed(f.parts):
                 if not part.virtual:
                     if part.size == 0:
-                        part.size = f.size - part.offs
+                        part.size = f.size - f.ptable_size - part.offs
                     break
 
             logging.debug(f)
