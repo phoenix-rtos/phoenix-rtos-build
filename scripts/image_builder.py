@@ -20,10 +20,11 @@ from typing import IO, Any, BinaryIO, ClassVar, Dict, List, Optional, TextIO, Tu
 import yaml
 import jinja2
 
+import syspage
 from nvm_config import FlashMemory, read_nvm, find_target_part
 from strip import ElfParser, PhFlags, PhType
 
-VERSION = (1, 0, 0)
+VERSION = (1, 1, 0)
 
 
 # global consts (taken from env/commandline)
@@ -84,6 +85,21 @@ def get_elf_sizes(path : Path) -> Tuple[int, int, int, int]:
                 bss_ph[0].p_vaddr, round_up(bss_ph[0].p_memsz, SIZE_PAGE))
 
 
+def get_elf_symbols(path: Path, names: Tuple[str, ...]) -> Dict[str, int]:
+    """Returns values of the given symbols (each has to be defined exactly once)"""
+    values = defaultdict(set)
+    with open(path, "rb") as f:
+        for name, sym in ElfParser(f).get_symbols():
+            if name in names:
+                values[name].add(sym.st_value)
+
+    for name in names:
+        if len(values[name]) != 1:
+            raise ValueError(f"{path}: symbol '{name}' not found or ambiguous (stripped ELF?)")
+
+    return {name: values[name].pop() for name in names}
+
+
 class PloScriptEncoding(Enum):
     """All supported types of PLO script encoding"""
     DEBUG_ASDICT = -1    # debug-only output
@@ -130,6 +146,10 @@ class PloCmdFactory:
             return PloCmdApp(*cmd_args, **kwargs)
         if cmd_name == "call":
             return PloCmdCall(*cmd_args, **kwargs)
+        if cmd_name == "map":
+            return PloCmdMap(cmd)
+        if cmd_name == "console":
+            return PloCmdConsole(cmd)
 
         # TODO: add compile-time checks for scripts validity (eg. memory regions cross-check)?
 
@@ -163,11 +183,18 @@ class PloCmdBase:
 
         raise NotImplementedError(f"{self.__class__.__name__}: emit not implemented!")
 
+    def add_to_kernel_image(self, img: "KernelImage") -> None:
+        """Add the command to the plo-less kernel image (its syspage and payload)"""
+        raise ValueError(f"command not supported in kernel image: {self}")
+
 
 @dataclass
 class PloCmdGeneric(PloCmdBase):
     """Generic PLO command - treated only as a string - fallback for unknown specific PLO cmd type"""
     cmd: str
+
+    def __str__(self):
+        return self.cmd
 
     def emit(self, file: TextIO, enc: PloScriptEncoding, payload_offs: int, is_relative: bool) -> Tuple[int, Optional[ProgInfo]]:
         if enc == PloScriptEncoding.DEBUG_ASDICT:
@@ -179,6 +206,57 @@ class PloCmdGeneric(PloCmdBase):
             raise NotImplementedError(f"PloScriptEncoding {enc.value} not implemented")
 
         return payload_offs, None
+
+
+@dataclass
+class PloCmdMap(PloCmdGeneric):
+    """Memory map definition - emitted unchanged, parsed for the syspage built on host:
+        map <name> <start> <end> <attributes>
+        map ddr 0x80000000 0x87ffffff rwx
+    """
+    NAME: ClassVar = "map"
+    name: str = field(default=NAME, kw_only=True)
+
+    # internal fields
+    map_name: str = field(init=False)
+    start: int = field(init=False)
+    end: int = field(init=False)
+    attrs: str = field(init=False)
+
+    def __post_init__(self, extra_flags: str = ''):
+        args = self.cmd.split()[1:]
+        if len(args) != 4:
+            raise ValueError(f"expected `map <name> <start> <end> <attributes>`: {self.cmd}")
+
+        self.map_name, self.attrs = args[0], args[3]
+        self.start, self.end = int(args[1], 0), int(args[2], 0)
+
+    def add_to_kernel_image(self, img: "KernelImage") -> None:
+        img.sp.add_map(self.map_name, self.start, self.end, self.attrs)
+
+
+@dataclass
+class PloCmdConsole(PloCmdGeneric):
+    """Console selection - emitted unchanged, parsed for the syspage built on host:
+        console <major>.<minor> [<mirror major>.<minor>...]
+        console 0.0
+    """
+    NAME: ClassVar = "console"
+    name: str = field(default=NAME, kw_only=True)
+
+    # internal fields
+    device: str = field(init=False)
+    mirrors: List[str] = field(init=False)  # plo output only - not passed in the syspage
+
+    def __post_init__(self, extra_flags: str = ''):
+        args = self.cmd.split()[1:]
+        if not args:
+            raise ValueError(f"expected `console <major>.<minor> [<mirror major>.<minor>...]`: {self.cmd}")
+
+        self.device, *self.mirrors = args
+
+    def add_to_kernel_image(self, img: "KernelImage") -> None:
+        img.sp.console = syspage.parse_console(self.device)
 
 
 @dataclass
@@ -252,6 +330,15 @@ class PloCmdKernel(PloCmdBase):
             raise NotImplementedError(f"PloScriptEncoding {enc.value} not implemented")
 
         return new_offs, prog_info
+
+    def add_to_kernel_image(self, img: "KernelImage") -> None:
+        if self.name != "kernelimg":
+            raise ValueError("`kernel` (ELF loaded by plo) can't be used in kernel image - use `kernelimg`")
+        if img.progs:
+            raise ValueError("`kernelimg` has to be the first program (the image is loaded with the kernel at its "
+                             "beginning)")
+
+        img.add(self.abspath, self.size)
 
 
 class CmdAppFlags(IntEnum):
@@ -367,6 +454,22 @@ class PloCmdApp(PloCmdBase):
             raise NotImplementedError(f"PloScriptEncoding {enc.value} not implemented")
 
         return new_offs, prog_info
+
+    def add_to_kernel_image(self, img: "KernelImage") -> None:
+        argv = ";".join([self.filename, *self.args])
+        if not img.progs:
+            raise ValueError(f"`{self.name} {argv}` before `kernelimg` (the kernel has to be the first program)")
+        if self.flags == CmdAppFlags.EXEC_NO_COPY:
+            # TODO: XIP programs would need a separate (mappable) partition - kernel image is loaded to RAM as a whole
+            raise ValueError(f"`app -xn {argv}`: execute in place is not supported in kernel image")
+
+        if self.name == "blob":
+            start, end = img.add(self.abspath, self.size, location=self.data_maps)
+            img.sp.add_prog(syspage.SyspageProg(argv, start, end, [], [], exec=False))
+        else:
+            imaps, dmaps = self.text_map.split(";"), self.data_maps.split(";")
+            start, end = img.add(self.abspath, self.size, location=imaps[0])
+            img.sp.add_prog(syspage.SyspageProg(argv, start, end, imaps, dmaps, exec=(self.flags == CmdAppFlags.EXEC)))
 
 
 @dataclass
@@ -640,6 +743,74 @@ def write_image(contents: List[ProgInfo], img_out_name: Path, img_max_size: int,
     return 0
 
 
+@dataclass
+class KernelImage:
+    """Plo-less kernel image: kernel binary followed by programs, described by the syspage"""
+    load_addr: int  # physical address of the image in memory
+    sp: syspage.Syspage = field(default_factory=syspage.Syspage)
+    progs: List[ProgInfo] = field(default_factory=list)
+
+    def add(self, path: Path, size: int, location: str = "") -> Tuple[int, int]:
+        """Append file to the image, returns its physical address range. Programs are used in place, so they have to
+        lie in their `location` map (plo would copy them into it otherwise)"""
+        offs = round_up(self.progs[-1].offs + self.progs[-1].size, SIZE_PAGE) if self.progs else 0
+        start, end = self.load_addr + offs, self.load_addr + offs + size
+        if location:
+            m = self.sp.get_map(location)
+            if not m.start <= start < end <= m.end:
+                raise ValueError(f"{path.name} at {start:#x}-{end:#x} is outside of map '{location}' (copying "
+                                 "programs into their maps is not supported)")
+
+        self.progs.append(ProgInfo(path, offs, size))
+        return start, end
+
+    @classmethod
+    def from_script(cls, script: PloScript, load_addr: int) -> "KernelImage":
+        if script.size != 0 or script.offs != 0 or script.is_relative:
+            raise ValueError("kernel image script needs `size: 0` (script is not stored), `offs: 0` and "
+                             "`is_relative: False`")
+
+        img = cls(load_addr)
+        for cmd in script.contents:
+            cmd.add_to_kernel_image(img)
+
+        if not img.progs:
+            raise ValueError("no `kernelimg` command")
+        return img
+
+    def pack_syspage(self, hal: syspage.HalPart, offs: int) -> bytes:
+        """Whole syspage (HAL part included) placed at `offs` in the image"""
+        size = self.progs[-1].offs + self.progs[-1].size
+        return hal.pack(image_size=size) + self.sp.pack(self.load_addr + offs, hal.SIZE, self.load_addr)
+
+
+def write_kernel_image(nvm: List[FlashMemory], script_name: str, kernel_elf: Path, load_addr: Optional[int],
+                       img_out_name: Path, img_max_size: int, padding_byte: int) -> int:
+    """Kernel binary image + programs, with the syspage built from the script - embedded in the kernel (plo-less boot)"""
+    target = syspage.get_ploless_target(TARGET)
+    try:
+        img = KernelImage.from_script(parse_plo_script(nvm, script_name),
+                                      target.load_addr if load_addr is None else load_addr)
+    except ValueError as ex:
+        raise ValueError(f"{script_name}: {ex}") from ex
+
+    sp_offs, sp_max_size = target.syspage_area(get_elf_symbols(kernel_elf, target.window))
+    data = img.pack_syspage(target.hal, sp_offs)
+    if len(data) > sp_max_size:
+        raise ValueError(f"syspage too large ({len(data)} > {sp_max_size} bytes available in the kernel image)")
+
+    write_image(img.progs, img_out_name, img_max_size, padding_byte)
+    with open(img_out_name, "r+b") as f:
+        f.seek(sp_offs)
+        if f.read(sp_max_size) != bytes(sp_max_size):
+            raise ValueError(f"{img.progs[0].path}: no empty syspage area at {sp_offs:#x} (kernel ELF doesn't match?)")
+        f.seek(sp_offs)
+        f.write(data)
+
+    logging.info("%s: syspage embedded at offset %#x (size=%u / %u)", img_out_name, sp_offs, len(data), sp_max_size)
+    return 0
+
+
 def parse_args() ->argparse.Namespace:
     def env_or_required(key):
         """required as a commandline param or ENV var"""
@@ -684,6 +855,25 @@ def parse_args() ->argparse.Namespace:
     script.add_argument("--nvm", type=str, default="nvm.yaml", help="Path to NVM config (default: %(default)s)")
     script.add_argument("--script", type=str, required=True, dest="script_name", help="YAML PLO script definition")
     script.add_argument("--out", type=str, dest="out_name", help="Output script name (or full path) - default is the script name without .yaml suffix")
+
+
+    kernel_image = subparsers.add_parser(
+        "kernel-image", help="prepare kernel image with embedded syspage and programs (plo-less boot)",
+        description="Creates kernel binary image followed by programs, with the whole syspage (HAL part included) "
+                    "built on host and embedded in the kernel. For targets booting without plo: "
+                    f"{', '.join(syspage.PLOLESS_TARGETS)}")
+    kernel_image.add_argument("--nvm", type=str, default="nvm.yaml", help="Path to NVM config (default: %(default)s)")
+    kernel_image.add_argument("--script", type=str, required=True, dest="script_name",
+                              help="YAML script definition: `map`/`console` commands, `kernelimg`, then "
+                                   "`app`s and `blob`s")
+    kernel_image.add_argument("--kernel-elf", type=Path, required=True,
+                              help="unstripped kernel ELF (for the syspage location)")
+    kernel_image.add_argument("--load-addr", type=lambda x: int(x, 0),
+                              help="physical address of the image in memory (default: target specific)")
+    kernel_image.add_argument("--name", type=str, dest="part_name",
+                              help="target partition in format [flash_name:]part_name (image size limit, padding)")
+    kernel_image.add_argument("--out", type=str, dest="out_name",
+                              help="Output image name (or full path) - default is the partition image name")
 
 
     disk = subparsers.add_parser("disk", help="prepare disk image")
@@ -783,6 +973,21 @@ def main() -> int:
                 curr_offs += contents[-1].size
 
         return write_image(contents, PREFIX_BOOT / target_part.filename, target_part.size, target_part.flash.padding_byte)
+
+    if args.cmd == "kernel-image":
+        max_size, padding_byte, out_name = 2**32, 0, args.out_name
+        if args.part_name:
+            target_part = find_target_part(nvm, args.part_name)
+            if not target_part:
+                raise ValueError("Can't find target partition with given params")
+            max_size, padding_byte = target_part.size, target_part.flash.padding_byte
+            out_name = out_name or target_part.filename
+        if not out_name:
+            raise ValueError("Output image not defined (use --name and/or --out)")
+
+        out_path = Path(out_name) if out_name.startswith("/") else PREFIX_BOOT / out_name
+        return write_kernel_image(nvm, args.script_name, args.kernel_elf, args.load_addr, out_path, max_size,
+                                  padding_byte)
 
     if args.cmd == "disk":
         # support `--part` overrides in format: `[flash_name:]part_name=img_path`

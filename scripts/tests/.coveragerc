@@ -4,6 +4,7 @@ include =
     */scripts/image_builder.py
     */scripts/nvm_config.py
     */scripts/strip.py
+    */scripts/syspage.py
 
 [report]
 show_missing = True
