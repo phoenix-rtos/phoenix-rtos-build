@@ -86,6 +86,8 @@ class FlashMemory:
             if part.virtual:  # virtual partitions can overlap existing ones and not be aligned to block
                 continue
 
+            if part.size < 0:
+                raise ValueError(f"{self.name}: partition '{part.name}' starts beyond the end of the flash or ptable")
             if part.offs % self.block_size != 0:
                 raise ValueError(f"{self.name}: partition '{part.name}' start 0x{part.offs:x} is not aligned to block size 0x{self.block_size:x}")
             if part.size % self.block_size != 0:

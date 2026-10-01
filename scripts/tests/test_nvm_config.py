@@ -115,6 +115,33 @@ def test_ptable_blocks_overlap_error(tree):
             """)
 
 
+@pytest.mark.parametrize("ptable_blocks, offs", [(0, 0x110000), (2, 0xf0000)])
+def test_partition_beyond_end(tree, ptable_blocks, offs):
+    with pytest.raises(ValueError, match="'rootfs' starts beyond the end of the flash or ptable"):
+        nvm(tree, f"""
+            flash0:
+              size: 0x100000
+              block_size: 0x10000
+              ptable_blocks: {ptable_blocks}
+              partitions:
+                - {{name: kernel, size: 0x40000}}
+                - {{name: rootfs, offs: {offs:#x}}}
+            """)
+
+
+def test_zero_size_partition(tree):
+    [flash] = nvm(tree, """
+        flash0:
+          size: 0x100000
+          block_size: 0x10000
+          partitions:
+            - {name: plo, offs: 0x0}
+            - {name: kernel}
+        """)
+
+    assert [(p.name, p.offs, p.size) for p in flash.parts] == [("plo", 0, 0), ("kernel", 0, 0x100000)]
+
+
 @pytest.mark.parametrize("value, expected", [
     ("raw", PartitionType.RAW), ("JFFS2", PartitionType.JFFS2),
     ("meterfs", PartitionType.METERFS), ("futurefs", PartitionType.FUTUREFS),
