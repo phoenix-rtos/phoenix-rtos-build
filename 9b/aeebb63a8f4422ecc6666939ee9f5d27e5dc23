@@ -1,0 +1,21 @@
+scripts/image_builder.py
+  s_a84a01103c800f::t_763bba90b58c71 188
+scripts/tests/test_kernel_image.py
+  s_a84a01103c800f::t_50b3f0abb17b57 160-162
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "9baeebb63a8f4422ecc6666939ee9f5d27e5dc23",
+  "prompts": {},
+  "sessions": {
+    "s_a84a01103c800f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e99c5dd2-904d-4ac0-bc9a-54ac5ed25308",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marek Białowąs <marek.bialowas@phoenix-rtos.com>"
+    }
+  }
+}
