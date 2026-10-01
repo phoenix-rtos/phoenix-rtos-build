@@ -1,0 +1,19 @@
+scripts/strip.py
+  s_7106574b899511::t_aef6df7f032c3f 61-63
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "34bc9112d6b92949069c5931a2b33523060494bc",
+  "prompts": {},
+  "sessions": {
+    "s_7106574b899511": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3006f67e-14c6-4147-8c86-2fa189b70557",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marek Białowąs <marek.bialowas@phoenix-rtos.com>"
+    }
+  }
+}
