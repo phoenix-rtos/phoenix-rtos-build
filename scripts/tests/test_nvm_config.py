@@ -87,7 +87,6 @@ def test_ptable_blocks(tree):
     assert ptable.filename == "part_flash0_ptable.img"
 
 
-@pytest.mark.xfail(strict=True, reason="auto-sized last partition extends over the virtual ptable")
 def test_ptable_blocks_not_overlapped(tree):
     [flash] = nvm(tree, """
         flash0:
@@ -100,7 +99,20 @@ def test_ptable_blocks_not_overlapped(tree):
         """)
 
     rootfs, ptable = flash.parts[-2:]
-    assert rootfs.offs + rootfs.size <= ptable.offs
+    assert rootfs.offs + rootfs.size == ptable.offs
+
+
+def test_ptable_blocks_overlap_error(tree):
+    with pytest.raises(ValueError, match="'rootfs' overlaps the ptable blocks"):
+        nvm(tree, """
+            flash0:
+              size: 0x100000
+              block_size: 0x10000
+              ptable_blocks: 1
+              partitions:
+                - {name: kernel, size: 0x40000}
+                - {name: rootfs, size: 0xc0000}
+            """)
 
 
 @pytest.mark.parametrize("value, expected", [
