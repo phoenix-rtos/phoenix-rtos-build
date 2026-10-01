@@ -1,0 +1,47 @@
+scripts/tests/test_image_builder_cli.py
+  s_7106574b899511::t_2286e2bafe7e01 368
+scripts/image_builder.py
+  s_7106574b899511::t_8006df0266cf55 23,27,88-102,767-768,770,771-775,777,784-785,787-791,793-798,800-806,853-859,862-871,969-983
+  s_a84a01103c800f::t_3746b8cdb9d697 186-190,197-199,235-237,259-261,335-343,457-472,745-766,769,776,778-783,786,792,799,860-861
+scripts/tests/test_kernel_image.py
+  s_6236ea6df4af8c::t_e868460144c878 1-15,18-101,103-105,141-158,166,168-175,177-179,183-185,187-189,191-226
+  s_a84a01103c800f::t_d835b70ed7c4ea 16-17,102,106-140,159-165,167,176,180-182,186,190
+scripts/syspage.py
+  s_a84a01103c800f::t_d7a55880bc4c15 87-92
+scripts/tests/test_syspage.py
+  s_a84a01103c800f::t_e96706c9e80021 129-137
+scripts/strip.py
+  s_a84a01103c800f::t_397e59a95229b1 393,402
+---
+{
+  "schema_version": "authorship/3.0.0",
+  "git_ai_version": "1.7.4",
+  "base_commit_sha": "970b61347ecd8425ff6548dec21ceda40aea5e47",
+  "prompts": {},
+  "sessions": {
+    "s_6236ea6df4af8c": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "337aabf0-c686-4091-b881-d22f9f39200f",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marek Białowąs <marek.bialowas@phoenix-rtos.com>"
+    },
+    "s_7106574b899511": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "3006f67e-14c6-4147-8c86-2fa189b70557",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marek Białowąs <marek.bialowas@phoenix-rtos.com>"
+    },
+    "s_a84a01103c800f": {
+      "agent_id": {
+        "tool": "claude",
+        "id": "e99c5dd2-904d-4ac0-bc9a-54ac5ed25308",
+        "model": "claude-opus-5-5"
+      },
+      "human_author": "Marek Białowąs <marek.bialowas@phoenix-rtos.com>"
+    }
+  }
+}
