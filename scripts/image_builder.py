@@ -130,6 +130,10 @@ class PloCmdFactory:
             return PloCmdApp(*cmd_args, **kwargs)
         if cmd_name == "call":
             return PloCmdCall(*cmd_args, **kwargs)
+        if cmd_name == "map":
+            return PloCmdMap(cmd)
+        if cmd_name == "console":
+            return PloCmdConsole(cmd)
 
         # TODO: add compile-time checks for scripts validity (eg. memory regions cross-check)?
 
@@ -179,6 +183,51 @@ class PloCmdGeneric(PloCmdBase):
             raise NotImplementedError(f"PloScriptEncoding {enc.value} not implemented")
 
         return payload_offs, None
+
+
+@dataclass
+class PloCmdMap(PloCmdGeneric):
+    """Memory map definition - emitted unchanged, parsed for the syspage built on host:
+        map <name> <start> <end> <attributes>
+        map ddr 0x80000000 0x87ffffff rwx
+    """
+    NAME: ClassVar = "map"
+    name: str = field(default=NAME, kw_only=True)
+
+    # internal fields
+    map_name: str = field(init=False)
+    start: int = field(init=False)
+    end: int = field(init=False)
+    attrs: str = field(init=False)
+
+    def __post_init__(self, extra_flags: str = ''):
+        args = self.cmd.split()[1:]
+        if len(args) != 4:
+            raise ValueError(f"expected `map <name> <start> <end> <attributes>`: {self.cmd}")
+
+        self.map_name, self.attrs = args[0], args[3]
+        self.start, self.end = int(args[1], 0), int(args[2], 0)
+
+
+@dataclass
+class PloCmdConsole(PloCmdGeneric):
+    """Console selection - emitted unchanged, parsed for the syspage built on host:
+        console <major>.<minor> [<mirror major>.<minor>...]
+        console 0.0
+    """
+    NAME: ClassVar = "console"
+    name: str = field(default=NAME, kw_only=True)
+
+    # internal fields
+    device: str = field(init=False)
+    mirrors: List[str] = field(init=False)  # plo output only - not passed in the syspage
+
+    def __post_init__(self, extra_flags: str = ''):
+        args = self.cmd.split()[1:]
+        if not args:
+            raise ValueError(f"expected `console <major>.<minor> [<mirror major>.<minor>...]`: {self.cmd}")
+
+        self.device, *self.mirrors = args
 
 
 @dataclass

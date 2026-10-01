@@ -15,8 +15,8 @@ import pytest
 import image_builder as ib
 from conftest import KERNEL
 from elfgen import PF_R, PF_X, PT_LOAD, Segment, make_elf32
-from image_builder import (CmdAppFlags, PloCmdAlias, PloCmdApp, PloCmdCall, PloCmdFactory, PloCmdGeneric,
-                           PloCmdKernel, PloScript, PloScriptEncoding, ProgInfo)
+from image_builder import (CmdAppFlags, PloCmdAlias, PloCmdApp, PloCmdCall, PloCmdConsole, PloCmdFactory,
+                           PloCmdGeneric, PloCmdKernel, PloCmdMap, PloScript, PloScriptEncoding, ProgInfo)
 from nvm_config import read_nvm
 
 ENC = PloScriptEncoding.STRING_MAGIC_V1
@@ -129,6 +129,30 @@ class TestFactory:
         assert (cmd.set_base, cmd.absolute) == (False, False)
         assert PloCmdFactory.build("call -setbase flash0 user.plo 0x10000 dabaabad").set_base
         assert PloCmdFactory.build("call -absolute flash0 user.plo 0x10000 dabaabad").absolute
+
+    def test_map(self):
+        cmd = PloCmdFactory.build("map per    0x50000000 0x60000000 rw")
+
+        assert isinstance(cmd, PloCmdMap)
+        assert (cmd.map_name, cmd.start, cmd.end, cmd.attrs) == ("per", 0x50000000, 0x60000000, "rw")
+        assert emit(cmd) == ("map per    0x50000000 0x60000000 rw\n", 0, None)
+
+    def test_console(self):
+        cmd = PloCmdFactory.build("console 0.2")
+
+        assert isinstance(cmd, PloCmdConsole)
+        assert (cmd.device, cmd.mirrors) == ("0.2", [])
+        assert emit(cmd) == ("console 0.2\n", 0, None)
+        assert PloCmdFactory.build("console 0.0 3.0 3.1").mirrors == ["3.0", "3.1"]
+
+    @pytest.mark.parametrize("text, error", [
+        ("map ddr 0x0", "expected `map <name> <start> <end> <attributes>`"),
+        ("map ddr 0x0 end rwx", "invalid literal"),
+        ("console", "expected `console <major>.<minor>"),
+    ])
+    def test_map_console_errors(self, text, error):
+        with pytest.raises(ValueError, match=error):
+            PloCmdFactory.build(text)
 
     @pytest.mark.parametrize("text, expected", [
         ("wait 500", "wait 500"), ("go!", "go!"), ("%alias -b 0x100", "alias -b 0x100"), ("%  go!", "go!"),
@@ -350,7 +374,7 @@ class TestParseScript:
             """)
 
         assert (script.size, script.offs, script.magic, script.is_relative) == (0x10000, 0x20000, "dabaabad", False)
-        assert [type(c) for c in script.contents] == [PloCmdGeneric, PloCmdGeneric, PloCmdCall]
+        assert [type(c) for c in script.contents] == [PloCmdGeneric, PloCmdConsole, PloCmdCall]
         assert [c.cmd for c in script.contents[:2]] == ["wait 65536", "console 0.0"]
         assert (script.contents[2].device, script.contents[2].offset) == ("flash0", 0x20000)
 
