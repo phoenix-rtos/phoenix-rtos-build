@@ -19,8 +19,10 @@ ifeq ($(TARGET_FAMILY), armv7m7)
   CFLAGS += -mcpu=cortex-m7 -mfloat-abi=hard -mfpu=fpv5-d16
 else ifeq ($(TARGET_FAMILY), armv7m4)
   CFLAGS += -mcpu=cortex-m4 -mfloat-abi=soft
+  LIBM_USE_HW=n
 else ifeq ($(TARGET_FAMILY), armv7m3)
   CFLAGS += -mcpu=cortex-m3 -mfloat-abi=soft
+  LIBM_USE_HW=n
 endif
 
 VADDR_KERNEL_INIT := $(KERNEL_PHADDR)

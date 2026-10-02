@@ -24,6 +24,7 @@ ifeq ($(TARGET_SUBFAMILY), gr716)
   VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
 
   CFLAGS += -msoft-float
+  LIBM_USE_HW=n
 
   ifeq ($(KERNEL), 1)
     # On GR716 RAM is split into IRAM and DRAM, kernel data must be put into DRAM
@@ -41,6 +42,7 @@ ifeq ($(TARGET_SUBFAMILY), gr716)
 else ifeq ($(TARGET_SUBFAMILY), gr712rc)
   ifeq ($(KERNEL), 1)
     CFLAGS += -msoft-float
+    LIBM_USE_HW=n
   endif
   STRIP := $(CROSS)strip
   VADDR_KERNEL_INIT := 0xc0000000
@@ -55,6 +57,7 @@ else ifeq ($(TARGET_SUBFAMILY), generic)
     # funnily enough, real hw can run without it
     # but qemu will throw an exception
     CFLAGS += -msoft-float -mno-user-mode
+    LIBM_USE_HW=n
   endif
 
   STRIP := $(CROSS)strip
@@ -66,6 +69,7 @@ else ifeq ($(TARGET_SUBFAMILY), generic)
 else ifeq ($(TARGET_SUBFAMILY), gr740)
   ifeq ($(KERNEL), 1)
     CFLAGS += -msoft-float
+    LIBM_USE_HW=n
     CPPFLAGS += -DLEON_USE_PWR
   endif
   STRIP := $(CROSS)strip
