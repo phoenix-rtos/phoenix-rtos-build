@@ -14,7 +14,7 @@ from io import BytesIO
 from dataclasses import dataclass
 from enum import Flag, IntEnum
 import struct
-from typing import ClassVar, Type, List, Tuple
+from typing import ClassVar, Iterator, Type, List, Tuple
 
 
 class EiClass(IntEnum):
@@ -38,6 +38,8 @@ class EiData(IntEnum):
 class ShType(IntEnum):
     """Interpretation of sh_type field of ElfXX_Shdr struct. Determines section type"""
     SHT_NULL = 0
+    SHT_SYMTAB = 2
+    SHT_STRTAB = 3
     SHT_RELA = 4
     SHT_REL = 9
 
@@ -268,6 +270,30 @@ class Elf32Rel(ElfRelx):
     ]
 
 
+@dataclass
+class ElfSym(ElfStruct):
+    """Abstraction for structs Elf32_Sym and Elf64_Sym"""
+    st_name: int
+    st_value: int
+    st_size: int
+    st_info: int
+    st_other: int
+    st_shndx: int
+
+
+@dataclass
+class Elf32Sym(ElfSym):
+    """struct Elf32_Sym"""
+    FORMAT = [
+        ("I", "st_name"),
+        ("I", "st_value"),
+        ("I", "st_size"),
+        ("B", "st_info"),
+        ("B", "st_other"),
+        ("H", "st_shndx")
+    ]
+
+
 class ElfFixedSizeTable:
     offset: int
     size: int
@@ -320,6 +346,17 @@ class ElfRelocationTable(ElfFixedSizeTable):
         self.entrySize = s.sh_entsize
 
 
+class ElfSymbolTable(ElfFixedSizeTable):
+    header: Type[ElfSym]
+
+    def __init__(self, s: ElfShdr, p: "ElfParser"):
+        super().__init__(p)
+        self.header = {EiClass.ELFCLASS32: Elf32Sym}[p.ident.get_class()]
+        self.offset = s.sh_offset
+        self.size = s.sh_size
+        self.entrySize = s.sh_entsize
+
+
 class ElfParser:
     data: BytesIO
     ident: ElfEident
@@ -350,6 +387,20 @@ class ElfParser:
 
     def get_program_headers(self) -> ElfPhdrTable:
         return ElfPhdrTable(self.header, self)
+
+    def get_symbols(self) -> Iterator[Tuple[str, ElfSym]]:
+        """All symbols (with their names) from all symbol tables"""
+        sections = [s for s, _ in self.get_sections() if isinstance(s, ElfShdr)]
+        for s in sections:
+            if s.sh_type != ShType.SHT_SYMTAB:
+                continue
+
+            strtab = sections[s.sh_link]
+            self.data.seek(strtab.sh_offset)
+            names = self.data.read(strtab.sh_size)
+            for sym, _ in ElfSymbolTable(s, self):
+                assert isinstance(sym, ElfSym)
+                yield names[sym.st_name:names.index(b"\0", sym.st_name)].decode(), sym
 
 
 def remove_symtab_references(in_file, out_file):

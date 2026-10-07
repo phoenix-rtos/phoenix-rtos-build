@@ -364,7 +364,7 @@ def run_process(*argv):
 def test_process_version():
     proc = run_process("--version")
 
-    assert (proc.returncode, proc.stdout) == (0, "image_builder.py 1.0.0\n")
+    assert (proc.returncode, proc.stdout) == (0, "image_builder.py 1.1.0\n")
 
 
 def test_process_script(project):
