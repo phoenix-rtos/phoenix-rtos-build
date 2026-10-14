@@ -9,7 +9,7 @@
 
 import pytest
 
-from nvm_config import PartitionType, find_target_part, read_nvm
+from nvm_config import PartitionType, find_target_part, parse_size, read_nvm
 
 
 def nvm(tree, text):
@@ -224,3 +224,47 @@ def test_str(tree):
     assert text.startswith("FlashMemory(flash0)  size=0x200000 [2 MB] block_size=0x1000")
     assert "E 0x000000  0x001000  [    4 kB]   mtd          raw" in text
     assert "  0x000000  0x200000  [ 2048 kB]   rootfs       jffs2" in text
+
+
+@pytest.mark.parametrize("value, expected", [
+    (0x1000, 0x1000),
+    ("4096", 4096),
+    ("0x1000", 0x1000),
+    ("256K", 256 * 1024),
+    ("4M", 4 * 1024 * 1024),
+    ("2G", 2 * 1024 * 1024 * 1024),
+    ("0x10M", 16 * 1024 * 1024),
+    (" 5 M ", 5 * 1024 * 1024),
+])
+def test_parse_size(value, expected):
+    assert parse_size(value) == expected
+
+
+@pytest.mark.parametrize("value", ["4m", "1.5M", "4MB", "M", "", True, None, 1.0])
+def test_parse_size_invalid(value):
+    with pytest.raises(ValueError, match="invalid size"):
+        parse_size(value)
+
+
+def test_sizes_with_units(tree):
+    [hexa] = nvm(tree, """
+        flash0:
+          size: 0x80000000
+          block_size: 0x40000
+          partitions:
+            - {name: kernel, offs: 0x200000, size: 0x400000}
+            - {name: rootfs, offs: 0x1000000, size: 0x2000000}
+            - {name: data, type: jffs2}
+        """)
+    [units] = nvm(tree, """
+        flash0:
+          size: 2G
+          block_size: 256K
+          partitions:
+            - {name: kernel, offs: 2M, size: 4M}
+            - {name: rootfs, offs: 16M, size: 32M}
+            - {name: data, type: jffs2}
+        """)
+
+    assert (units.size, units.block_size) == (hexa.size, hexa.block_size)
+    assert layout(units) == layout(hexa)
