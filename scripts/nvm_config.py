@@ -117,6 +117,27 @@ def round_up(size: int, size_page: int) -> int:
     return (size + size_page - 1) & ~(size_page - 1)
 
 
+SIZE_UNITS = {"K": 1 << 10, "M": 1 << 20, "G": 1 << 30}
+
+
+def parse_size(value: Any) -> int:
+    """Returns size/offset in bytes: an int or a string with optional binary K/M/G suffix (eg. `256K`, `0x10M`)"""
+    if isinstance(value, int) and not isinstance(value, bool):
+        return value
+
+    if isinstance(value, str):
+        text = value.strip()
+        mult = SIZE_UNITS.get(text[-1:], 1)
+        if mult != 1:
+            text = text[:-1].strip()
+        try:
+            return int(text, 0) * mult
+        except ValueError:
+            pass
+
+    raise ValueError(f"invalid size: {value!r}")
+
+
 def read_nvm(fname: str) -> List[FlashMemory]:
     """reads full Non-Volatile Memory layout from a file {fname}"""
     nvm = []
@@ -125,11 +146,13 @@ def read_nvm(fname: str) -> List[FlashMemory]:
         # TODO: validate against JSON template?
 
         for (name, attrs) in nvm_dict.items():
-            f = FlashMemory(name, attrs['size'], attrs['block_size'], attrs.get('padding_byte', 0))
+            f = FlashMemory(name, parse_size(attrs['size']), parse_size(attrs['block_size']),
+                            attrs.get('padding_byte', 0))
             curr_offs = 0
             prev_p: Partition | None = None
             for part_attrs in attrs.get('partitions', []):
-                p = Partition(part_attrs.get('offs', curr_offs), part_attrs.get('size', 0), part_attrs['name'],
+                offs = parse_size(part_attrs.get('offs', curr_offs))
+                p = Partition(offs, parse_size(part_attrs.get('size', 0)), part_attrs['name'],
                               PartitionType(part_attrs.get('type', 'RAW')), flash=f, empty=part_attrs.get('empty', False))
 
                 if part_attrs.get('virtual'):
