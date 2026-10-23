@@ -281,13 +281,6 @@ if [ "${B_CORE}" = "y" ]; then
 fi
 
 #
-# Build test part
-#
-if [ "${B_TEST}" = "y" ]; then
-	b_build_test
-fi
-
-#
 # Build ports
 #
 if [ "${B_PORTS}" = "y" ] && [ -d phoenix-rtos-ports ]; then
@@ -299,6 +292,13 @@ fi
 #
 if [ "${B_PROJECT}" = "y" ]; then
 	b_build
+fi
+
+#
+# Build test part
+#
+if [ "${B_TEST}" = "y" ]; then
+	b_build_test
 fi
 
 #
