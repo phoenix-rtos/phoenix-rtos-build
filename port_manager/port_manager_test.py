@@ -226,6 +226,22 @@ def test_resolution_unsatisfiable_version(fix):
             run_dry_build(all_ports, to_build)
 
 
+@pytest.mark.parametrize("phoenix_ver", ["3.4.0", "v3.4.0", "3.4.0-dev+2.6cedd735", "3.4.0-rc.1",
+                                         "3.4.0-rc.1.dev+3.abcdef12", "3.4.0+0.b4f87eb7.dirty"])
+def test_phoenix_version_core_only(fix, monkeypatch, phoenix_ver):
+    """PHOENIX_VER (os-version.sh format) is resolved by MAJOR.MINOR.PATCH only"""
+    monkeypatch.setenv("PHOENIX_VER", phoenix_ver)
+    to_build = {"ports": [{"name": "foo"}]}
+
+    for supports in ["phoenix==3.4.0", "phoenix>=3.4", "phoenix<=3.4.0"]:
+        pm = run_dry_build({"foo-1.0.0": {"supports": supports}}, to_build)
+        assert pm.mapping["foo-1.0.0"]["phoenix"].version == PhxVersion("3.4.0")
+
+    for supports in ["phoenix<3.4", "phoenix>3.4.0"]:
+        with pytest.raises(ResolutionImpossible):
+            run_dry_build({"foo-1.0.0": {"supports": supports}}, to_build)
+
+
 def test_install_path(fix):
     all_ports = {
         "foo-1.2.3": {"requires": "bar>=1.1.1"},

@@ -19,6 +19,7 @@ import sys
 import time
 import json
 import os
+import re
 
 from pathlib import Path
 
@@ -130,8 +131,9 @@ class PortManager:
         to satisfy `supports` requirements.
         """
         if not self.os_candidates_added:
-            # ignore any abbrevs that may possibly be emitted if version is taken with `git describe`
-            phoenix_ver = os.environ["PHOENIX_VER"].split("-", 1)[0]
+            # resolve against MAJOR.MINOR.PATCH only: X.Y.Z-dev and X.Y.Z-rc.N trees already provide X.Y.Z,
+            # build metadata (+...) must not take part in comparisons
+            phoenix_ver = re.split(r"[-+]", os.environ["PHOENIX_VER"], maxsplit=1)[0]
 
             self.add_candidate(OsCandidate("phoenix", PhxVersion(phoenix_ver)))
             self.add_candidate(OsCandidate("host", PhxVersion("0")))

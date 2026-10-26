@@ -82,6 +82,13 @@ EXPORT_STRIP="$(make -f phoenix-rtos-build/Makefile.common export-strip)"
 
 export EXPORT_CFLAGS EXPORT_CXXFLAGS EXPORT_LDFLAGS EXPORT_STRIP
 
+# Phoenix-RTOS version from OS-VERSION (see makes/version.mk) for build scripts and ports
+PHOENIX_VER_INFO="$(make -f phoenix-rtos-build/Makefile.common export-version)"
+while IFS='=' read -r key value; do
+	export "$key=$value"
+done <<<"$PHOENIX_VER_INFO"
+unset PHOENIX_VER_INFO key value
+
 
 #
 # Parse command line
@@ -277,6 +284,8 @@ done
 # Build core part
 #
 if [ "${B_CORE}" = "y" ]; then
+	b_log "Building Phoenix-RTOS $PHOENIX_VER"
+
 	"./phoenix-rtos-build/build-core-${TARGET_FAMILY}-${TARGET_SUBFAMILY}.sh"
 fi
 
