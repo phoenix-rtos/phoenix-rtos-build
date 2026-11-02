@@ -36,6 +36,11 @@ reset_env() {
 	CFLAGS="${EXPORT_CFLAGS}"
 	LDFLAGS="${EXPORT_LDFLAGS}"
 	STRIP="${EXPORT_STRIP}"
+
+	# Phoenix does not support executable stacks by presence or absence of
+	# PT_GNU_STACK. We do enable --noexecstack in system build, here it seems
+	# a little too much.
+	LDFLAGS="${LDFLAGS} -Wl,--no-warn-execstack -Wl,--no-error-execstack"
 	export CFLAGS LDFLAGS STRIP
 
 	export PORTS_MIRROR_BASEURL="https://files.phoesys.com/ports/"
