@@ -175,11 +175,11 @@ build_libc() {
     # NOCHECKENV: don't check if build env is sane - we're building only necessary components by hand
     for phx_target in $PHOENIX_TARGETS; do
         log "[$phx_target] installing kernel headers"
-        make -C "$SCRIPT_DIR/../../phoenix-rtos-kernel" NOCHECKENV=1 TARGET="$phx_target" install-headers
+        make -C "$SCRIPT_DIR/../../phoenix-rtos-kernel" NOCHECKENV=1 TARGET="$phx_target" PREFIX_PROJECT="${SCRIPT_DIR}/../../" install-headers
 
         # FIXME: libphoenix should be installed for all supported multilib target variants
         log "[$phx_target] installing libphoenix"
-        make -C "$SCRIPT_DIR/../../libphoenix" NOCHECKENV=1 TARGET="$phx_target" clean install
+        make -C "$SCRIPT_DIR/../../libphoenix" NOCHECKENV=1 TARGET="$phx_target" PREFIX_PROJECT="${SCRIPT_DIR}/../../" clean install
     done
 
     PATH="$OLDPATH"
