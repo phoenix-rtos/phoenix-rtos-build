@@ -41,3 +41,8 @@ make -C "phoenix-rtos-devices" all install
 
 b_log "Building coreutils"
 make -C "phoenix-rtos-utils" all install
+
+if [ "$CORE_NETWORKING_DISABLE" != "y" ]; then
+	b_log "phoenix-rtos-lwip"
+	make -C "phoenix-rtos-lwip" all install
+fi
