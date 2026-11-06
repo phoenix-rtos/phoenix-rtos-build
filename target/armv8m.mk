@@ -23,16 +23,21 @@ ifeq ($(TARGET_FAMILY), armv8m55)
   CFLAGS += -mcpu=cortex-m55 -mfloat-abi=hard -mfpu=fpv5-d16
   CPPFLAGS += -DKERNEL_FPU_SUPPORT=1
 else ifeq ($(TARGET_FAMILY), armv8m33)
-  CFLAGS += -mfloat-abi=soft
-  LIBM_USE_HW=n
-  ifeq ($(MCX_USE_CPU1), y)
-    CFLAGS += -mcpu=cortex-m33+nodsp
+  ifeq ($(TARGET_SUBFAMILY), stm32h5)
+    CFLAGS += -mcpu=cortex-m33 -mfloat-abi=hard -mfpu=fpv5-sp-d16 -DKERNEL_FPU_SUPPORT=1
+    LIBM_USE_HW = sp
   else
-    CFLAGS += -mcpu=cortex-m33
+    LIBM_USE_HW = n
+    CFLAGS += -mfloat-abi=soft
+    ifeq ($(MCX_USE_CPU1), y)
+      CFLAGS += -mcpu=cortex-m33+nodsp
+    else
+      CFLAGS += -mcpu=cortex-m33
+    endif
   endif
 else
   CFLAGS += -mfloat-abi=soft
-  LIBM_USE_HW=n
+  LIBM_USE_HW = n
 endif
 
 VADDR_KERNEL_INIT := $(KERNEL_PHADDR)
