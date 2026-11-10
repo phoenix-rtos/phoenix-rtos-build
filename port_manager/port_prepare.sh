@@ -109,6 +109,8 @@ export PREFIX_A="${PREFIX_PORT_INSTALL}/lib"
 mkdir -p "${PREFIX_H}"
 mkdir -p "${PREFIX_A}"
 
+cd "${PREFIX_PORT_WORKDIR:?}"
+
 [[ $(type -t p_common) == function ]] && p_common # definition is optional
 p_prepare
 
