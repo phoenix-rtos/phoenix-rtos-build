@@ -103,8 +103,14 @@ build_binutils() {
     mkdir -p "${BINUTILS}/build"
     pushd "${BINUTILS}/build" > /dev/null
 
-    ../configure --target="${TARGET}" --prefix="${TOOLCHAIN_PREFIX}" \
-                 --with-sysroot="${SYSROOT}" --enable-lto --enable-deterministic-archives
+    ../configure --target="${TARGET}" \
+                 --prefix="${TOOLCHAIN_PREFIX}" \
+                 --with-sysroot="${SYSROOT}" \
+                 --enable-lto \
+                 --enable-deterministic-archives \
+                 --enable-warn-execstack=no \
+                 --enable-default-execstack=no
+
     make
 
     log "installing binutils"
