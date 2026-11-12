@@ -35,6 +35,14 @@ endif
 
 CXXFLAGS := $(CFLAGS)
 
+RUST_TARGET ?= armv8r-unknown-phoenix
+# RWPI needs lld (GNU ld cannot resolve R_ARM_SBREL32); with $(CC) as the
+# linker rustc would assume GNU ld, so use rustc's bundled lld explicitly
+RUST_TARGET_RUSTFLAGS := -C linker-flavor=gnu-lld-cc -Z unstable-options -C link-self-contained=+linker \
+  -C link-arg=-T$(PREFIX_PROJECT)/phoenix-rtos-build/ld/arm-rwpi.ld
+# GNU ld only
+RUST_LDFLAGS_FILTER = $(LDFLAGS_PREFIX)--no-warn-rwx-segments
+
 AR := $(CROSS)ar
 ARFLAGS := -r
 
