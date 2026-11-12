@@ -26,6 +26,8 @@ endif
 CFLAGS += -mcpu=$(cpu) -mtune=$(cpu) -mthumb -fomit-frame-pointer -mno-unaligned-access
 CXXFLAGS := $(CFLAGS)
 
+RUST_TARGET ?= armv7a-unknown-phoenix
+
 AR := $(CROSS)ar
 ARFLAGS := -r
 

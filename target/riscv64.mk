@@ -39,6 +39,8 @@ ifneq ($(KERNEL),1)
   LDFLAGS += $(LDFLAGS_PREFIX)-T,$(PREFIX_PROJECT)/phoenix-rtos-build/ld/riscv64.ld
 endif
 
+RUST_TARGET ?= riscv64gc-unknown-phoenix
+
 OBJCOPY := $(CROSS)objcopy
 OBJDUMP := $(CROSS)objdump
 

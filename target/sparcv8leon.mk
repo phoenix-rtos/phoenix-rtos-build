@@ -79,6 +79,8 @@ else
   $(error Incorrect TARGET.)
 endif
 
+RUST_TARGET ?= sparc-unknown-phoenix
+
 AR := $(CROSS)ar
 ARFLAGS = -r
 

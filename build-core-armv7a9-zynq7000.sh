@@ -38,3 +38,8 @@ make -C "phoenix-rtos-utils" all install
 
 b_log "Building posixsrv"
 make -C "phoenix-rtos-posixsrv" all install
+
+if [ -d "phoenix-rtos-rust" ] && [ "$RUST_ENABLE" = "y" ]; then
+	b_log "Building phoenix-rtos-rust"
+	make -C "phoenix-rtos-rust" all install
+fi

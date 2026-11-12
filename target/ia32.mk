@@ -25,6 +25,9 @@ LDFLAGS_PREFIX := -Wl,
 
 LDFLAGS :=
 
+# i586: no SSE, matching CFLAGS
+RUST_TARGET ?= i586-unknown-phoenix
+
 OBJCOPY := $(CROSS)objcopy
 OBJDUMP := $(CROSS)objdump
 

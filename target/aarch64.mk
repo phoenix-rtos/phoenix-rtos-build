@@ -20,6 +20,8 @@ cpu := cortex-$(subst aarch64,,$(TARGET_FAMILY))
 CFLAGS += -mcpu=$(cpu) -mtune=$(cpu) -fomit-frame-pointer -mstrict-align -mno-outline-atomics
 CXXFLAGS := $(CFLAGS)
 
+RUST_TARGET ?= aarch64-unknown-phoenix
+
 AR := $(CROSS)ar
 ARFLAGS := -r
 

@@ -78,17 +78,28 @@ include $(MAKES_PATH)/funcs.mk
 # add ports.mk
 include $(MAKES_PATH)/ports.mk
 
+# setup the Rust toolchain (lazy)
+include $(MAKES_PATH)/setup-rust.mk
+
 # provide template files' paths to external makes
 binary.mk := $(MAKES_PATH)/binary.mk
 static-lib.mk := $(MAKES_PATH)/static-lib.mk
 test-binary.mk := $(MAKES_PATH)/test-binary.mk
+rust-binary.mk := $(MAKES_PATH)/rust-binary.mk
+rust-test.mk := $(MAKES_PATH)/rust-test.mk
+
+# Rust components, registered by rust-binary.mk (in ALL_COMPONENTS only with RUST_ENABLE=y)
+RUST_COMPONENTS :=
 
 # unit tests, registered by test-binary.mk (deliberately not in ALL_COMPONENTS)
 TEST_COMPONENTS :=
 
+# tests of Rust crates, registered by rust-cargo.mk (also in TEST_COMPONENTS)
+RUST_TEST_COMPONENTS :=
+
 # unit tests taking part in the test/test-install/test-run goals - narrow the
-# list down if not all of them build for every TARGET
-DEFAULT_TEST_COMPONENTS = $(TEST_COMPONENTS)
+# list down if not all of them build for every TARGET. Rust ones are opt-in.
+DEFAULT_TEST_COMPONENTS = $(filter-out $(if $(filter y,$(RUST_ENABLE)),,$(RUST_TEST_COMPONENTS)),$(TEST_COMPONENTS))
 
 # make pattern selecting a subset, e.g. make test TEST_FILTER=test-libsha256
 TEST_FILTER ?= %
@@ -211,6 +222,13 @@ export-strip:
 export-version:
 	@$(foreach v,$(PHOENIX_VER_VARS),echo "$(v)=$($(v))";)
 
+# usage: eval "$(make -s export-cargo-env)"; see makes/setup-rust.mk
+.PHONY: export-cargo-env
+export-cargo-env:
+	@for kv in $(RUST_EXPORT_CARGO_VARS); do \
+		printf "export %s='%s'\n" "$${kv%%=*}" "$${kv#*=}"; \
+	done
+
 #
 # Unit tests (registered by test-binary.mk)
 #
@@ -245,18 +263,25 @@ clean: test-clean
 test-clean:
 	$(SIL)$(if $(TEST_COMPONENTS),$(MAKE) $(patsubst %,%-clean,$(TEST_COMPONENTS)),:)
 
+# likewise Rust components left out of ALL_COMPONENTS (no RUST_ENABLE=y)
+.PHONY: rust-clean
+clean: rust-clean
+rust-clean:
+	$(SIL)$(if $(filter-out $(ALL_COMPONENTS),$(RUST_COMPONENTS)),$(MAKE) $(patsubst %,%-clean,$(filter-out $(ALL_COMPONENTS),$(RUST_COMPONENTS))),:)
+
 help:
 	$(info DEFAULT_COMPONENTS := $(DEFAULT_COMPONENTS))
 	$(info ALL_COMPONENTS := $(ALL_COMPONENTS))
 	$(info TEST_COMPONENTS := $(TEST_COMPONENTS))
+	$(info RUST_COMPONENTS := $(RUST_COMPONENTS))
 	@echo
 	@echo "available generic make targets:"
 	@echo "  all             build DEFAULT_COMPONENTS"
 	@echo "  install         install DEFAULT_COMPONENTS into PREFIX_ROOTFS"
-	@echo "  clean           clean ALL_COMPONENTS and TEST_COMPONENTS"
+	@echo "  clean           clean ALL_COMPONENTS, TEST_COMPONENTS and RUST_COMPONENTS"
 	@echo "  test            build DEFAULT_TEST_COMPONENTS (narrow with TEST_FILTER=<pattern>)"
 	@echo "  test-install    install DEFAULT_TEST_COMPONENTS into PREFIX_ROOTFS"
-	@echo "  test-run        run DEFAULT_TEST_COMPONENTS (host targets only)"
+	@echo "  test-run        run DEFAULT_TEST_COMPONENTS (host targets, and Rust tests through RUST_RUNNER)"
 	@echo "  export-cflags   outputs contents of CFLAGS variable"
 	@echo "  export-cxxflags outputs contents of CXXFLAGS variable"
 	@echo "  export-ldflags  outputs contents of LDFLAGS variable"
@@ -268,7 +293,8 @@ help:
 	@echo "  <target>-install  install <target> into PREFIX_ROOTFS"
 	@echo "  <target>-clean    clean <target>"
 	@echo "  <target>-headers  install <target> headers into staging"
-	@echo "  <target>-run      run <target> (unit tests on host targets only)"
+	@echo "  <target>-run      run <target> (unit tests on host targets, Rust tests through RUST_RUNNER)"
+	@echo "  <target>-cargo-env   print the cargo environment of a Rust <target> as shell exports"
 
 
 #
