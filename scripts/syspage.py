@@ -17,7 +17,7 @@ import struct
 from dataclasses import dataclass, field
 from typing import ClassVar, Dict, List, Tuple
 
-MAP_ATTRS = {"r": 0x01, "w": 0x02, "x": 0x04, "s": 0x08, "c": 0x10, "b": 0x20}
+MAP_ATTRS = {"r": 0x01, "w": 0x02, "x": 0x04, "s": 0x08, "c": 0x10, "b": 0x20, "k": 0x40}
 ALIGN = 8
 
 
