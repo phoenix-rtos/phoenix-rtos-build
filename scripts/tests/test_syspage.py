@@ -61,7 +61,7 @@ SYSPAGEN_MAPS = bytes.fromhex(
 
 def imx6ull(sp, image_size):
     """Full syspage as embedded in the plo-less kernel image"""
-    return HalImx6ull().pack(image_size=image_size) + sp.pack(ADDR, HalImx6ull.SIZE, LOAD)
+    return HalImx6ull().pack(image_size=image_size) + sp.pack(ADDR, HalImx6ull.HAL_SYSPAGE_SIZE, LOAD)
 
 
 def prog(argv, offs, size, imaps=("ddr",), dmaps=("ddr",), exec=True):
@@ -149,13 +149,13 @@ def test_parse_console_invalid(text):
 def test_syspage_area():
     target = syspage.get_ploless_target("armv7a7-imx6ull")
 
-    symbols = {"init_vectors": 0x80000000, "syspage_data": 0x80000020, "plugin_ivt": 0x80000400}
+    symbols = {"init_vectors": 0x80000000, "syspage_data": 0x80000020, "syspage_end": 0x80000400, "ivt": 0x80000400}
     assert target.syspage_area(symbols) == (0x20, 0x3e0)
 
 
 def test_get_ploless_target():
     target = syspage.get_ploless_target("armv7a7-imx6ull-midash")
 
-    assert (target.load_addr, target.window) == (0x80000000, ("init_vectors", "syspage_data", "plugin_ivt"))
+    assert (target.load_addr, target.window) == (0x80000000, ("init_vectors", "syspage_data", "syspage_end"))
     with pytest.raises(ValueError, match=r"armv7a9-zynq7000-qemu: .* \(supported plo-less targets: armv7a7-imx6ull\)"):
         syspage.get_ploless_target("armv7a9-zynq7000-qemu")

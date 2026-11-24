@@ -16,7 +16,7 @@ from collections import defaultdict
 from enum import Enum, IntEnum
 from pathlib import Path
 from dataclasses import InitVar, asdict, dataclass, field, KW_ONLY, fields
-from typing import IO, Any, BinaryIO, ClassVar, Dict, List, Optional, TextIO, Tuple, Union
+from typing import IO, Any, BinaryIO, ClassVar, Dict, Iterable, List, Optional, Set, TextIO, Tuple, Union
 import yaml
 import jinja2
 
@@ -85,19 +85,24 @@ def get_elf_sizes(path : Path) -> Tuple[int, int, int, int]:
                 bss_ph[0].p_vaddr, round_up(bss_ph[0].p_memsz, SIZE_PAGE))
 
 
-def get_elf_symbols(path: Path, names: Tuple[str, ...]) -> Dict[str, int]:
+def get_elf_symbols(path: Path, request: Set[str]) -> Dict[str, int]:
     """Returns values of the given symbols (each has to be defined exactly once)"""
-    values = defaultdict(set)
+    symbols : Dict[str, int] = {}
     with open(path, "rb") as f:
         for name, sym in ElfParser(f).get_symbols():
-            if name in names:
-                values[name].add(sym.st_value)
+            if name not in request:
+                continue
 
-    for name in names:
-        if len(values[name]) != 1:
-            raise ValueError(f"{path}: symbol '{name}' not found or ambiguous (stripped ELF?)")
+            if name in symbols:
+                raise ValueError(f"{path}: symbol '{name}' is ambiguous")
 
-    return {name: values[name].pop() for name in names}
+            symbols[name] = sym.st_value
+
+    not_found = request.difference(symbols)
+    if not_found:
+        raise KeyError(f"{path}: symbol(s) {', '.join(not_found)} not found")
+
+    return symbols
 
 
 class PloScriptEncoding(Enum):
@@ -781,11 +786,11 @@ class KernelImage:
     def pack_syspage(self, hal: syspage.HalPart, offs: int) -> bytes:
         """Whole syspage (HAL part included) placed at `offs` in the image"""
         size = self.progs[-1].offs + self.progs[-1].size
-        return hal.pack(image_size=size) + self.sp.pack(self.load_addr + offs, hal.SIZE, self.load_addr)
+        return hal.pack(image_size=size) + self.sp.pack(self.load_addr + offs, hal.HAL_SYSPAGE_SIZE, self.load_addr)
 
 
 def write_kernel_image(nvm: List[FlashMemory], script_name: str, kernel_elf: Path, load_addr: Optional[int],
-                       img_out_name: Path, img_max_size: int, padding_byte: int) -> int:
+                       img_out_name: Path, img_max_size: int, padding_byte: int, post_process_args: Iterable[str]) -> int:
     """Kernel binary image + programs, with the syspage built from the script - embedded in the kernel (plo-less boot)"""
     target = syspage.get_ploless_target(TARGET)
     try:
@@ -794,7 +799,10 @@ def write_kernel_image(nvm: List[FlashMemory], script_name: str, kernel_elf: Pat
     except ValueError as ex:
         raise ValueError(f"{script_name}: {ex}") from ex
 
-    sp_offs, sp_max_size = target.syspage_area(get_elf_symbols(kernel_elf, target.window))
+    symbols_request: Set[str] = set(target.window)
+    symbols_request.update(target.hal.SYMBOLS)
+    symbols = get_elf_symbols(kernel_elf, symbols_request)
+    sp_offs, sp_max_size = target.syspage_area(symbols)
     data = img.pack_syspage(target.hal, sp_offs)
     if len(data) > sp_max_size:
         raise ValueError(f"syspage too large ({len(data)} > {sp_max_size} bytes available in the kernel image)")
@@ -806,6 +814,7 @@ def write_kernel_image(nvm: List[FlashMemory], script_name: str, kernel_elf: Pat
             raise ValueError(f"{img.progs[0].path}: no empty syspage area at {sp_offs:#x} (kernel ELF doesn't match?)")
         f.seek(sp_offs)
         f.write(data)
+        target.hal.post_process(f, symbols, args=post_process_args)
 
     logging.info("%s: syspage embedded at offset %#x (size=%u / %u)", img_out_name, sp_offs, len(data), sp_max_size)
     return 0
@@ -874,6 +883,7 @@ def parse_args() ->argparse.Namespace:
                               help="target partition in format [flash_name:]part_name (image size limit, padding)")
     kernel_image.add_argument("--out", type=str, dest="out_name",
                               help="Output image name (or full path) - default is the partition image name")
+    kernel_image.add_argument("--post-process", type=str, dest="post_process", action="append", default=[], help="Apply post-processing option (target-dependent)")
 
 
     disk = subparsers.add_parser("disk", help="prepare disk image")
@@ -987,7 +997,7 @@ def main() -> int:
 
         out_path = Path(out_name) if out_name.startswith("/") else PREFIX_BOOT / out_name
         return write_kernel_image(nvm, args.script_name, args.kernel_elf, args.load_addr, out_path, max_size,
-                                  padding_byte)
+                                  padding_byte, args.post_process)
 
     if args.cmd == "disk":
         # support `--part` overrides in format: `[flash_name:]part_name=img_path`
