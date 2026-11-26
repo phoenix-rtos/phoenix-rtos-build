@@ -144,7 +144,7 @@ class PortManager:
         for port, def_path in self.find_ports(self.args.ports_dir):
             name, version = parse_namever(port["namever"])
 
-            req = parse_requirements(port["requires"], BaseRequirement)
+            req = parse_requirements(port["depends"], BaseRequirement)
             req += parse_requirements(port["supports"], BaseRequirement)
 
             conflicts = parse_requirements(

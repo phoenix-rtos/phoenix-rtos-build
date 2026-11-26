@@ -32,7 +32,8 @@ if [ ! "${found}" ]; then
 	b_die "bad ports_api: ${ports_api} (supported: ${ports_apis[*]})"
 fi
 
-: "${name?}"
+# shellcheck disable=2034 # used in vars
+namever="${name?}-${version?}"
 : "${version?}"
 : "${desc?}"
 
@@ -64,26 +65,24 @@ fi
 : "${conflicts?}"
 : "${depends?}"
 
+vars=(
+	namever
+	depends
+	conflicts
+	iuse
+	required_use
+	supports
+	desc
+)
+
 # TODO: add host dependencies fields?
 
 [[ $(type -t p_prepare) == function ]] || b_die "p_prepare undefined"
 [[ $(type -t p_build) == function ]] || b_die "p_build undefined"
 
-# shellcheck disable=2154 # variables loaded from port.def.sh
-jq -n \
-	--arg namever "${name}-${version}" \
-	--arg requires "${depends}" \
-	--arg conflicts "${conflicts}" \
-	--arg iuse "${iuse}" \
-	--arg required_use "${required_use}" \
-	--arg supports "${supports}" \
-	--arg desc "${desc}" \
-	'{
-    namever: $namever,
-    requires: $requires,
-    conflicts: $conflicts,
-    iuse: $iuse,
-    required_use: $required_use,
-    supports: $supports,
-    desc: $desc,
-  }'
+jq_args=()
+for v in "${vars[@]}"; do
+	jq_args+=(--arg "$v" "${!v}")
+done
+
+jq -n "${jq_args[@]}" '$ARGS.named'
