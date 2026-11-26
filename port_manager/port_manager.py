@@ -111,7 +111,7 @@ class PortManager:
         )
         self.find_ports = find_ports if find_ports else build_layer.find_ports
 
-        self.ports_installed: list[Candidate] = []
+        self.ports_installed: list[InstallableCandidate] = []
         self.ports_skipped: list[str] = []
         self._state_dir = Path(state_dir) if state_dir else None
         self.stale_ports: set[str] = set()
@@ -168,10 +168,10 @@ class PortManager:
                     version,
                     req,
                     conflicts,
-                    str(def_path),
                     available_flags,
                     port["desc"],
-                    required_use=required_use_exprs,
+                    required_use_exprs,
+                    definition_path=str(def_path),
                 )
             )
 
@@ -390,6 +390,10 @@ class PortManager:
                     port_cands.values(), key=lambda c: c.version, reverse=True
                 )[0]
 
+            if not isinstance(cand, InstallableCandidate):
+                logger.error(f"{cand} is not installable!")
+                sys.exit(1)
+
             if isinstance(port, dict):
                 if not require_bool(port, "if", True):
                     cands.pop(str(cand), None)
@@ -400,10 +404,6 @@ class PortManager:
                 use_flags = port.get("use", None)
                 if use_flags:
                     cand.set_use_flags(use_flags)
-
-            if not isinstance(cand, InstallableCandidate):
-                logger.error(f"{cand} is not installable!")
-                sys.exit(1)
 
             cands[str(cand)] = cand
 

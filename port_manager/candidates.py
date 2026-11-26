@@ -36,40 +36,19 @@ class Candidate:
         version: PhxVersion,
         requirements: Iterable[Requirement],
         conflicts: Iterable[ConflictRequirement],
-        definition_path: str,
         exposed_use_flags: list[str],
-        desc: str = "",
+        desc: str,
         required_use: list[RequiredUseExpr] | None = None,
     ) -> None:
-        self._name = name
-        self._version = version
-
-        self.installed = False
-        self.needed_by: list[Candidate] = []
-        self.user_required = False
-
+        self.name = name
+        self.version = version
         self._requirements = requirements
         self._conflicts = conflicts
-        self._definition_path = definition_path
-        self.build_tests = False
         self.exposed_use_flags = exposed_use_flags
         self.use_flags: list[str] = []
         self.use_flags_origins: dict[str, list[str]] = {}
         self.required_use: list[RequiredUseExpr] = required_use or []
         self.desc = desc
-
-    @property
-    def name(self) -> str:
-        """The name identifying this candidate in the resolver"""
-        return self._name
-
-    @property
-    def version(self) -> PhxVersion:
-        return self._version
-
-    @property
-    def definition_path(self) -> str:
-        return self._definition_path
 
     def __repr__(self) -> str:
         return f"{self.name}-{self.version}"
@@ -123,12 +102,11 @@ class Candidate:
                 return True
         return False
 
-    def to_dict(self, ports_dir: str) -> dict[str, str | list[str]]:
+    def to_dict(self, ports_dir: str) -> dict[str, str | list | dict]:
         return {
             "version": str(self.version),
             "requirements": [str(r) for r in self._requirements],
             "conflicts": [str(r) for r in self.iter_conflicts()],
-            "port_def_path": str(Path(self.definition_path).relative_to(ports_dir)),
             "required_use": [str(ru) for ru in self.required_use],
             "iuse": self.exposed_use_flags,
             "desc": self.desc,
@@ -160,7 +138,7 @@ class OsCandidate(Candidate):
     """
 
     def __init__(self, name: str, version: PhxVersion) -> None:
-        super().__init__(name, version, [], [], "", [], required_use=[])
+        super().__init__(name, version, [], [], [], "", required_use=[])
 
     def __repr__(self) -> str:
         return f"OS:{self.name}-{self.version}"
@@ -171,6 +149,20 @@ class InstallableCandidate(Candidate):
     A candidate that is installable either to PREFIX_BUILD or
     PREFIX_BUILD_VERSIONED (e.g. ports defined by a port.def.sh)
     """
+
+    def __init__(
+        self,
+        *args,
+        definition_path: str,
+        **kwargs,
+    ) -> None:
+        super().__init__(*args, **kwargs)
+        self.needed_by: list[Candidate] = []
+        self.installed = False
+        self.build_tests = False
+        self.user_required = False
+
+        self.definition_path = definition_path
 
     @property
     def install_path(self) -> str:
@@ -281,3 +273,8 @@ class InstallableCandidate(Candidate):
 
         if "ports_installed" in kwargs:
             kwargs["ports_installed"].append(self)
+
+    def to_dict(self, ports_dir: str) -> dict[str, str | list | dict]:
+        return super().to_dict(ports_dir) | {
+            "port_def_path": str(Path(self.definition_path).relative_to(ports_dir)),
+        }

@@ -27,7 +27,7 @@ import yaml
 from build_core.logger import logger, render_process_log
 
 if TYPE_CHECKING:
-    from .candidates import Candidate
+    from .candidates import InstallableCandidate
 
 
 PORT_MGMT_DIR = Path(__file__).parent
@@ -180,7 +180,7 @@ def init_build_log_path(env: dict[str, str]) -> str:
 
 
 def prepare_cand(
-    cand: Candidate, env: dict[str, str], roll_logs: bool
+    cand: InstallableCandidate, env: dict[str, str], roll_logs: bool
 ) -> dict[str, str]:
     """Invokes port_prepare.sh on a candidate. Captures the resulting shell
     environment"""
@@ -224,7 +224,7 @@ def prepare_cand(
     return build_env
 
 
-def clean_cand(cand: Candidate, env: dict[str, str]):
+def clean_cand(cand: InstallableCandidate, env: dict[str, str]):
     """Invokes port_clean.sh on a candidate"""
     result = subprocess.run(
         ["bash", str(PORT_MGMT_DIR / "port_clean.sh"), cand.definition_path],
@@ -238,7 +238,7 @@ def clean_cand(cand: Candidate, env: dict[str, str]):
         sys.exit(1)
 
 
-def build_cand(cand: Candidate, env: dict[str, str], roll_logs: bool):
+def build_cand(cand: InstallableCandidate, env: dict[str, str], roll_logs: bool):
     """Invokes port_build.sh on a candidate"""
     log_file_path = init_build_log_path(env)
 
