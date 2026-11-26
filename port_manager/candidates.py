@@ -18,6 +18,7 @@ import time
 import sys
 
 from pathlib import Path
+from enum import IntEnum
 
 from build_core.logger import logger
 
@@ -25,6 +26,12 @@ from .requirements import ConflictRequirement, ConditionalRequirement, Requireme
 from .required_use import RequiredUseExpr, validate_required_use
 from .version import PhxVersion
 from . import build_layer
+
+
+class DryMode(IntEnum):
+    OFF = 0
+    UNPACK = 1
+    FULL_DRY = 2
 
 
 class Candidate:
@@ -187,7 +194,7 @@ class InstallableCandidate(Candidate):
             logger.error(f"REQUIRED_USE violated on {self}: {err}")
             sys.exit(1)
 
-        dry = kwargs.get("dry", False)
+        dry = kwargs.get("dry", DryMode.OFF)
         roll_logs = kwargs.get("roll_logs", False)
 
         info = f"{self}"
@@ -253,7 +260,7 @@ class InstallableCandidate(Candidate):
                 dep_cand.install_path if dep_cand.installed else "<empty>",
             )
 
-        if not dry:
+        if dry == DryMode.OFF or dry == DryMode.UNPACK:
             port_env["PKG_CONFIG_PATH"] = ":".join(list(pkg_config_path_set))
 
             # export dependency lib directories as a fallback variable to be
@@ -262,6 +269,7 @@ class InstallableCandidate(Candidate):
 
             port_env = build_layer.prepare_cand(self, port_env, roll_logs)
 
+        if dry == DryMode.OFF:
             build_layer.build_cand(self, port_env, roll_logs)
 
         stop = time.time()

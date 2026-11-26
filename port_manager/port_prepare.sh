@@ -112,6 +112,9 @@ mkdir -p "${PREFIX_A}"
 cd "${PREFIX_PORT_WORKDIR:?}"
 
 [[ $(type -t p_common) == function ]] && p_common # definition is optional
-p_prepare
+
+if [ "${PM_DRY}" != "1" ]; then
+	p_prepare
+fi
 
 printenv -0 >&"${fd}"

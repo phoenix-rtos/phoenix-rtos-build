@@ -34,7 +34,7 @@ from .requirements import (
     ConditionalRequirement,
     Constraint,
 )
-from .candidates import Candidate, OsCandidate, InstallableCandidate
+from .candidates import DryMode, Candidate, OsCandidate, InstallableCandidate
 from .resolver import PhxResolver, CandidatesDict
 from .required_use import parse_required_use
 from . import build_layer
@@ -81,7 +81,7 @@ class PortManager:
     def __init__(
         self,
         argv: Sequence[str],
-        dry: bool = False,
+        dry: DryMode = DryMode.OFF,
         ports_dir: str | None = None,
         ports_yamls: str | None = None,
         find_ports: Callable[[str], Generator[tuple[dict[str, str], Path]]]
@@ -544,9 +544,16 @@ environment variables:
             self.roll_logs = True
         if build_layer.env_to_bool("BUILD_ALL_PORTS"):
             self.build_all = True
+
+        # WARN: don't assume any self.dry default, as it could be set in tests
+        # in the PortManager constructor
+        pm_dry = os.getenv("PM_DRY")
+        if pm_dry:
+            self.dry = DryMode(int(pm_dry))
         if args.dry:
-            logger.warning("Dry run")
-            self.dry = True
+            self.dry = DryMode.FULL_DRY
+        if self.dry != DryMode.OFF:
+            logger.warning(f"Dry run ({self.dry.value}: {self.dry.name})")
 
         return args
 

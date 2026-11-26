@@ -23,7 +23,7 @@ from resolvelib.resolvers import (
 
 from build_core.logger import LogLevel, logger
 
-from port_manager.port_manager import PortManager
+from port_manager.port_manager import PortManager, DryMode
 from port_manager.version import PhxVersion
 from port_manager import build_layer
 
@@ -72,7 +72,7 @@ def run_dry_build(all_ports, to_build, state_dir=None):
         [],
         get_ports_to_build=build_get_ports_to_build(to_build),
         find_ports=build_find_ports(all_ports),
-        dry=True,
+        dry=DryMode.FULL_DRY,
         ports_yamls="yaml1:yaml2",
         ports_dir="some_path",
         state_dir=str(state_dir) if state_dir else None,
@@ -386,7 +386,7 @@ def dry_build_from_yaml(ports_yaml_contents, all_ports):
         pm = PortManager(
             [],
             find_ports=build_find_ports(all_ports),
-            dry=True,
+            dry=DryMode.FULL_DRY,
             ports_yamls=f.name,
             ports_dir="some_path",
         )
