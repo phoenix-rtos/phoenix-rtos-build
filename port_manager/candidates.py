@@ -19,10 +19,11 @@ import sys
 
 from pathlib import Path
 
+from build_core.logger import logger
+
 from .requirements import ConflictRequirement, ConditionalRequirement, Requirement
 from .required_use import RequiredUseExpr, validate_required_use
 from .version import PhxVersion
-from .logger import logger
 from . import build_layer
 
 

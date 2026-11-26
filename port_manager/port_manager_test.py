@@ -17,9 +17,11 @@ from resolvelib.resolvers import (
     ResolutionImpossible,
     ResolutionTooDeep,
 )
+
+from build_core.logger import LogLevel, logger
+
 from port_manager.port_manager import PortManager
 from port_manager.version import PhxVersion
-from port_manager.logger import LogLevel, logger
 from port_manager import build_layer
 
 PREFIX_BUILD = "normal_port_install_dir"

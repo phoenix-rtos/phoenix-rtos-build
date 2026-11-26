@@ -24,7 +24,7 @@ import json
 import jinja2
 import yaml
 
-from .logger import logger, render_process_log
+from build_core.logger import logger, render_process_log
 
 if TYPE_CHECKING:
     from .candidates import Candidate

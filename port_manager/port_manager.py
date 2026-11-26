@@ -25,8 +25,9 @@ from pathlib import Path
 
 from argparse import Namespace, ArgumentParser, RawDescriptionHelpFormatter
 
+from build_core.logger import logger, LogLevel
+
 from .version import PhxVersion, PhxVersionGrammar
-from .logger import logger, LogLevel
 from .requirements import (
     BaseRequirement,
     ConflictRequirement,
