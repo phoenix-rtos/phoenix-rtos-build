@@ -208,6 +208,9 @@ export-ldflags:
 export-strip:
 	@echo $(STRIP)
 
+export-have-mmu:
+	@echo $(HAVE_MMU)
+
 export-version:
 	@$(foreach v,$(PHOENIX_VER_VARS),echo "$(v)=$($(v))";)
 

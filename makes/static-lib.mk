@@ -12,9 +12,12 @@
 # - LOCAL_CFLAGS  - additional CFLAGS for current component compilation
 # - LOCAL_CXXFLAGS  - additional CXXFLAGS for current component compilation
 # - LOCAL_PORTS_VERSIONS - additional ports configuration for current component compilation
+# - LOCAL_SBOM - CycloneDX SBOM(s) of third-party code vendored by the component (relative to current makefile, like LOCAL_SRCS)
+# - VERSION, LICENSE, CPE, PURL - component metadata for the SBOM
 #
 
-
+SBOM_MAKEFILE_PATH := $(lastword $(filter $(TOPDIR)/%,$(filter-out $(abspath $(MAKES_PATH)/..)/% %.d,$(abspath $(MAKEFILE_LIST)))))
+SBOM_MAKEFILE_PATH := $(or $(SBOM_MAKEFILE_PATH),$(TOPDIR)/Makefile)
 
 # directory with current Makefile - relative to the repository root
 # filter-out all Makefiles outside of TOPDIR
@@ -108,9 +111,25 @@ $(NAME) $(NAME)-clean: NAME:=$(NAME)
 ALL_COMPONENTS += $(NAME)
 
 include $(MAKES_PATH)/check-ports.mk
+SBOM_ARTIFACTS := $(LIBNAME)
+SBOM_VERSION := $(VERSION)
+SBOM_DEPS := $(DEPS)
+SBOM_TYPE := static-lib
+include $(MAKES_PATH)/generate-sbom.mk
+$(NAME): $(SBOM_FRAG)
 
 # cleaning vars to avoid strange errors
 NAME :=
+CPE :=
+VERSION :=
+LICENSE :=
+PURL :=
+LOCAL_SBOM :=
+SBOM_TYPE :=
+SBOM_VERSION :=
+SBOM_DEPS :=
+SBOM_ARTIFACTS :=
+SBOM_MAKEFILE_PATH :=
 LOCAL_SRCS :=
 undefine LOCAL_DIR # need to treat LOCAL_DIR="" as a valid (set-extenally) value
 LOCAL_HEADERS :=

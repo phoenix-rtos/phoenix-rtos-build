@@ -8,6 +8,8 @@
 #
 
 import argparse
+import hashlib
+import json
 import logging
 import os
 import sys
@@ -721,6 +723,24 @@ def create_ptable(flash: FlashMemory) -> Path:
     return out_fn
 
 
+def record_in_manifest(img_out_name: Path, contents: List[ProgInfo]):
+    """Appends image contents with their hashes to IMAGE_MANIFEST file (if set), used for SBOM generation"""
+    manifest = os.environ.get("IMAGE_MANIFEST")
+    if not manifest:
+        return
+
+    def sha256(path: Path) -> str:
+        with open(path, "rb") as f:
+            return hashlib.sha256(f.read()).hexdigest()
+
+    record = {
+        "image": str(Path(img_out_name).resolve()),
+        "contents": [{"path": str(prog.path.resolve()), "sha256": sha256(prog.path)} for prog in contents],
+    }
+    with open(manifest, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record) + "\n")
+
+
 def write_image(contents: List[ProgInfo], img_out_name: Path, img_max_size: int, padding_byte) -> int:
     """Creates partition/disk image with desired `contents`"""
     remove_if_exists(img_out_name)
@@ -740,6 +760,8 @@ def write_image(contents: List[ProgInfo], img_out_name: Path, img_max_size: int,
                  img_size, img_max_size, img_size / 1024, 100 * img_size // img_max_size)
 
     assert img_size <= img_max_size, f"Partition image exceeds total size {img_size} > {img_max_size}"
+
+    record_in_manifest(img_out_name, contents)
     return 0
 
 
