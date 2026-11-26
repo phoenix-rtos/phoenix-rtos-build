@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from io import BytesIO
+from typing import BinaryIO
 from dataclasses import dataclass
 from enum import Flag, IntEnum
 import struct
@@ -358,11 +358,11 @@ class ElfSymbolTable(ElfFixedSizeTable):
 
 
 class ElfParser:
-    data: BytesIO
+    data: BinaryIO
     ident: ElfEident
     header: ElfEhdr
 
-    def __init__(self, b: BytesIO):
+    def __init__(self, b: BinaryIO):
         self.data = b
         self.ident = ElfEident.parse(self.data.read(16))
         header_type = {EiClass.ELFCLASS32: Elf32Ehdr}[self.ident.get_class()]
