@@ -116,7 +116,7 @@ B_ENV="n"
 
 # GA CI passes all params as quoted first param - split on ' ' if necessary
 ARGS=("$@")
-[ "$#" -eq 1 ] && read -ra ARGS <<< "$1"
+[ "$#" -eq 1 ] && read -ra ARGS <<<"$1"
 
 for arg in "${ARGS[@]}"; do
 	case "$arg"

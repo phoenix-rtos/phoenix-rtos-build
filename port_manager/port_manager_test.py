@@ -932,7 +932,9 @@ def test_stale_via_propagated_flags(fix, tmp_path):
 def test_first_build_no_stale(fix, tmp_path):
     """First build (no saved state) should not mark anything as stale."""
     all_ports = {"foo-1.2.3": {"iuse": "ssl"}}
-    pm = run_dry_build(all_ports, {"ports": [{"name": "foo", "use": ["ssl"]}]}, state_dir=tmp_path)
+    pm = run_dry_build(
+        all_ports, {"ports": [{"name": "foo", "use": ["ssl"]}]}, state_dir=tmp_path
+    )
     assert not pm.stale_ports
 
 

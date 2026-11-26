@@ -194,8 +194,12 @@ class PortManager:
                         if req.name not in mapping:
                             continue
                         dep_cand = mapping[req.name]
-                        new_flags = set(req.propagated_use_flags) - set(dep_cand.use_flags)
-                        dep_cand.set_use_flags(req.propagated_use_flags, origin=str(cand))
+                        new_flags = set(req.propagated_use_flags) - set(
+                            dep_cand.use_flags
+                        )
+                        dep_cand.set_use_flags(
+                            req.propagated_use_flags, origin=str(cand)
+                        )
                         if new_flags:
                             changed = True
 
