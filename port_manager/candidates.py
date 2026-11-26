@@ -162,7 +162,7 @@ def track_added_files(directory: str | Path, pattern: str):
         snap = {}
         for p in base_path.rglob(pattern):
             try:
-                snap[p] = p.stat().st_mtime_ns
+                snap[p] = p.stat().st_ctime_ns
             except OSError as e:
                 logger.warning(f"Could not stat {p}: {e}")
                 pass
@@ -172,8 +172,8 @@ def track_added_files(directory: str | Path, pattern: str):
     try:
         yield added
     finally:
-        for path, mtime in snapshot().items():
-            if path not in before or mtime > before[path]:
+        for path, ctime in snapshot().items():
+            if path not in before or ctime > before[path]:
                 added.append(path)
 
 
