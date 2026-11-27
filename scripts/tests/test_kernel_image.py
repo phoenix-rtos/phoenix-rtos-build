@@ -7,6 +7,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+import re
 import struct
 
 import pytest
@@ -14,9 +15,12 @@ import pytest
 from conftest import KERNEL
 from elfgen import KERNEL_SEGMENTS, SHT_PROGBITS, Section, make_elf32, symtab_sections
 from syspage import HalImx6ull, Syspage
+from imx_hab_defs import ImxIvt, ImxBootData
 from test_syspage import ADDR, LOAD, SYSPAGEN_APPS, prog
 
 WINDOW = slice(0x20, 0x400)
+IVT_BOOT_DATA = slice(WINDOW.stop, WINDOW.stop + ImxIvt.SIZE + ImxBootData.SIZE)
+BOOT_DATA_SIZE_FIELD = slice(IVT_BOOT_DATA.start + ImxIvt.SIZE + 4, IVT_BOOT_DATA.start + ImxIvt.SIZE + 8)
 
 SCRIPT = """
     size: 0
@@ -53,11 +57,29 @@ def project(tree):
     kernel = tree.kernel()
     data = bytearray(kernel.read_bytes())
     data[WINDOW] = bytes(0x3e0)
+
+    # Pointers that will be provided through ELF symbols or IVT
+    v_base_addr = 0xc0000000
+    p_base_addr = 0x80000000
+    boot_data_start = IVT_BOOT_DATA.start + ImxIvt.SIZE
+
+    ivt = ImxIvt(
+        entry=p_base_addr,
+        boot_data=p_base_addr + boot_data_start,
+        ivt_self=p_base_addr + IVT_BOOT_DATA.start
+    )
+    boot_data = ImxBootData(p_base_addr, 0, 0)
+    data[IVT_BOOT_DATA] = ivt.pack() + boot_data.pack()
     kernel.write_bytes(data)
     (tree.root / "prog").mkdir()
     make_elf32(tree.root / "prog" / f"{KERNEL}.elf", KERNEL_SEGMENTS, [
         Section(".init", SHT_PROGBITS, bytes(4)),
-        *symtab_sections({"init_vectors": 0xc0000000, "syspage_data": 0xc0000020, "plugin_ivt": 0xc0000400}),
+        *symtab_sections({
+            "init_vectors": v_base_addr,
+            "syspage_data": v_base_addr + WINDOW.start,
+            "syspage_end": v_base_addr + WINDOW.stop,
+            "ivt": v_base_addr + IVT_BOOT_DATA.start
+        }),
     ])
 
     tree.payload("dummyfs", 0x976c)
@@ -73,10 +95,11 @@ def kernel_image(run_ib, tree, *args):
 def expected_image(tree, padding=b"\0"):
     kernel = bytearray((tree.prog / f"{KERNEL}.bin").read_bytes())
     kernel[WINDOW] = SYSPAGEN_APPS.ljust(0x3e0, b"\0")
-    img = bytes(kernel)
     for name, offs in (("dummyfs", 0x17000), ("imx6ull-uart", 0x21000), ("psh", 0x2b000)):
-        img = img.ljust(offs, padding) + (tree.prog / name).read_bytes()
-    return img
+        kernel = kernel.ljust(offs, padding) + (tree.prog / name).read_bytes()
+
+    kernel[BOOT_DATA_SIZE_FIELD] = int(len(kernel)).to_bytes(4, "little")
+    return kernel
 
 
 def test_same_as_syspagen(project, run_ib):
@@ -118,7 +141,13 @@ def test_blob(project, run_ib):
     assert kernel_image(run_ib, project, "--script", "blob.yaml", "--out", "k.img") == 0
 
     img, expected = (project.boot / "k.img").read_bytes(), expected_image(project)
-    assert (img[:0x20], img[0x400:0x4c960]) == (expected[:0x20], expected[0x400:])
+    assert img[:WINDOW.start] == expected[:WINDOW.start]
+    assert (
+        img[IVT_BOOT_DATA.start:BOOT_DATA_SIZE_FIELD.start]
+        == expected[IVT_BOOT_DATA.start:BOOT_DATA_SIZE_FIELD.start]
+    )
+    assert int.from_bytes(img[BOOT_DATA_SIZE_FIELD], 'little') == len(img)
+    assert img[BOOT_DATA_SIZE_FIELD.stop:0x4c960] == expected[BOOT_DATA_SIZE_FIELD.stop:]
     assert img[0x4c960:] == bytes(0x4d000 - 0x4c960) + (project.prog / "logo").read_bytes()
 
     # blob is not executed and has no maps (as in plo)
@@ -128,7 +157,7 @@ def test_blob(project, run_ib):
                              ("psh;-i;/etc/rc.psh", 0x2b000, 0x21960)):
         sp.add_prog(prog(argv, offs, size))
     sp.add_prog(prog("logo", 0x4d000, 0x1234, imaps=(), dmaps=(), exec=False))
-    syspage = HalImx6ull().pack(image_size=len(img)) + sp.pack(ADDR, HalImx6ull.SIZE, LOAD)
+    syspage = HalImx6ull().pack(image_size=len(img)) + sp.pack(ADDR, HalImx6ull.HAL_SYSPAGE_SIZE, LOAD)
     assert img[WINDOW] == syspage.ljust(0x3e0, b"\0")
 
 
@@ -207,7 +236,7 @@ def test_no_kernel(project, run_ib):
 
 
 def test_stripped_elf(project, run_ib):
-    with pytest.raises(ValueError, match="symbol 'init_vectors' not found"):
+    with pytest.raises(KeyError, match=re.compile(r"symbol.*init_vectors.*not found", re.IGNORECASE)):
         run_ib("kernel-image", "--kernel-elf", str(project.prog / f"{KERNEL}.elf"), "--script", "kernel.yaml",
                "--out", "k.img")
 

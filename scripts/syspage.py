@@ -13,9 +13,11 @@
 # SPDX-License-Identifier: BSD-3-Clause
 #
 
+import os
 import struct
 from dataclasses import dataclass, field
-from typing import ClassVar, Dict, List, Tuple
+from typing import BinaryIO, ClassVar, Dict, Iterable, List, Optional, Tuple
+from imx_hab_defs import ImxIvt, ImxBootData
 
 MAP_ATTRS = {"r": 0x01, "w": 0x02, "x": 0x04, "s": 0x08, "c": 0x10, "b": 0x20}
 ALIGN = 8
@@ -128,19 +130,69 @@ class Syspage:
 # plo-less boot: HAL part built on host
 
 class HalPart:
-    """hal_syspage_t - first member of syspage_t"""
-    SIZE: ClassVar[int]
+    HAL_SYSPAGE_SIZE: ClassVar[int]
+    "Size of hal_syspage_t structure for a given platform"
+    SYMBOLS: ClassVar[Iterable[str]]
+    "Symbols that will be read from the ELF file so that post-processing can use them"
 
     def pack(self, *, image_size: int) -> bytes:
+        """Returns a packed `hal_syspage_t` structure for a given platform"""
         raise NotImplementedError
+
+    def post_process(self, image: BinaryIO, symbols: Optional[Dict[str, int]] = None, *, args: Iterable[str] = ()) -> None:
+        """
+        Performs whatever additional processing is necessary for a given platform after syspage has been written.
+        It operates on the binary image directly. After exiting, the file's position will be restored.
+        """
+        # No post-processing necessary
+        pass
 
 
 class HalImx6ull(HalPart):
-    """armv7a/imx6ull: image size - read by the boot ROM plugin in the kernel (hal/armv7a/imx6ull/_init.S)"""
-    SIZE = 4
+    HAL_SYSPAGE_SIZE = 4
+    SYMBOLS = ("init_vectors", "ivt")
 
     def pack(self, *, image_size: int) -> bytes:
+        # On this platform the first word of `hal_syspage_t` must contain the total image size
+        # (see hal/armv7a/imx6ull/_init.S)
         return struct.pack("<I", image_size)
+
+    def post_process(self, image: BinaryIO, symbols: Optional[Dict[str, int]] = None, *, args: Iterable[str] = ()) -> None:
+        assert symbols is not None
+        args_set = set(args)
+        sdp_upload = "sdp-upload" in args_set
+        if sdp_upload:
+            args_set.remove("sdp-upload")
+
+        if args_set:
+            raise RuntimeError(f"Unrecognized post-processing option(s): {', '.join(args_set)}")
+
+        pos_restore = image.tell()
+        image.seek(0, os.SEEK_END)
+        image_size = image.tell()
+
+        ivt_offset = symbols["ivt"] - symbols["init_vectors"]
+        if ivt_offset < 0:
+            raise RuntimeError(f"IVT offset invalid ({ivt_offset})")
+
+        image.seek(ivt_offset)
+        ivt = ImxIvt.unpack(image.read(ImxIvt.SIZE))
+        boot_data_offset = ivt.calculate_offset(ivt.boot_data, ivt_offset)
+        image.seek(boot_data_offset)
+        boot_data = ImxBootData.unpack(image.read(ImxBootData.SIZE))
+
+        # Update size in boot data
+        boot_data.load_size = image_size
+        image.seek(boot_data_offset)
+        image.write(boot_data.pack())
+
+        # An image for upload through SDP needs to have the DCD pointer zeroed out (DCD is uploaded separately)
+        if sdp_upload:
+            ivt.dcd = 0
+            image.seek(ivt_offset)
+            image.write(ivt.pack())
+
+        image.seek(pos_restore)
 
 
 @dataclass(frozen=True)
@@ -157,7 +209,7 @@ class PlolessTarget:
 
 
 PLOLESS_TARGETS: Dict[str, PlolessTarget] = {
-    "armv7a7-imx6ull": PlolessTarget(HalImx6ull(), 0x80000000, ("init_vectors", "syspage_data", "plugin_ivt")),
+    "armv7a7-imx6ull": PlolessTarget(HalImx6ull(), 0x80000000, ("init_vectors", "syspage_data", "syspage_end")),
 }
 
 
